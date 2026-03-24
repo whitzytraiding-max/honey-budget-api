@@ -741,19 +741,37 @@ function createApp({
       }
 
       const passwordHash = await authService.hashPassword(password);
-      const user = await budgetRepository.createUser({
-        name: name.trim(),
-        email: normalizedEmail,
-        passwordHash,
-        monthlySalary: incomeAllocation.monthlySalary ?? normalizedMonthlySalary,
-        salaryPaymentMethod: incomeAllocation.salaryPaymentMethod,
-        salaryCashAmount: incomeAllocation.salaryCashAmount,
-        salaryCardAmount: incomeAllocation.salaryCardAmount,
-        salaryCashAllocationPct: incomeAllocation.salaryCashAllocationPct,
-        salaryCardAllocationPct: incomeAllocation.salaryCardAllocationPct,
-        incomeDayOfMonth: normalizedIncomeDay,
-        monthlySavingsTarget: normalizedSavingsTarget,
-      });
+      let user;
+
+      try {
+        user = await budgetRepository.createUser({
+          name: name.trim(),
+          email: normalizedEmail,
+          passwordHash,
+          monthlySalary: incomeAllocation.monthlySalary ?? normalizedMonthlySalary,
+          salaryPaymentMethod: incomeAllocation.salaryPaymentMethod,
+          salaryCashAmount: incomeAllocation.salaryCashAmount,
+          salaryCardAmount: incomeAllocation.salaryCardAmount,
+          salaryCashAllocationPct: incomeAllocation.salaryCashAllocationPct,
+          salaryCardAllocationPct: incomeAllocation.salaryCardAllocationPct,
+          incomeDayOfMonth: normalizedIncomeDay,
+          monthlySavingsTarget: normalizedSavingsTarget,
+        });
+      } catch (error) {
+        const duplicateTargets = Array.isArray(error?.meta?.target)
+          ? error.meta.target
+          : [String(error?.meta?.target ?? "")];
+
+        if (error?.code === "P2002" && duplicateTargets.some((target) => target.includes("email"))) {
+          throw new HttpError(
+            409,
+            "EMAIL_TAKEN",
+            "An account with this email already exists.",
+          );
+        }
+
+        throw error;
+      }
 
       const accessToken = authService.signAccessToken(user);
       sendData(response, 201, {

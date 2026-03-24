@@ -406,6 +406,46 @@ describe("Couples Budgeting API", () => {
     expect(meResponse.body.data.couple).toBeNull();
   });
 
+  it("returns EMAIL_TAKEN when createUser hits the email unique constraint", async () => {
+    const repository = createInMemoryBudgetRepository();
+    const duplicateApp = createApp({
+      budgetRepository: {
+        ...repository,
+        async getUserAuthByEmail() {
+          return null;
+        },
+        async createUser() {
+          const error = new Error("Unique constraint failed on the fields: (`email`)");
+          error.code = "P2002";
+          error.meta = {
+            target: ["email"],
+          };
+          throw error;
+        },
+      },
+      insightsService: createInsightsService({
+        budgetRepository: repository,
+      }),
+      jwtSecret: "test-secret",
+    });
+
+    const response = await inject(duplicateApp, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe("EMAIL_TAKEN");
+    expect(response.body.error.message).toBe("An account with this email already exists.");
+  });
+
   it("creates a couple, adds an expense, and returns a dashboard", async () => {
     const alex = await inject(app, {
       method: "POST",

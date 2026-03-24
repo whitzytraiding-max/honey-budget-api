@@ -64,6 +64,10 @@ const SAVINGS_FIELDS = {
   note: "",
   date: new Date().toISOString().slice(0, 10),
 };
+const REGISTER_BOOTSTRAP_ERROR =
+  "Your account was created, but we couldn't finish signing you in. Please log in once more.";
+const LOGIN_BOOTSTRAP_ERROR =
+  "We couldn't finish signing you in. Please try logging in again.";
 const IS_PRODUCTION_BUILD = import.meta.env.PROD;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
 
@@ -177,6 +181,7 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authInfo, setAuthInfo] = useState("");
   const [previewResetUrl, setPreviewResetUrl] = useState("");
+  const [postAuthFailureMessage, setPostAuthFailureMessage] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [dashboardBusy, setDashboardBusy] = useState(false);
   const [insightsBusy, setInsightsBusy] = useState(false);
@@ -355,6 +360,9 @@ export default function App() {
       setMonthTransactions([]);
       setRemainingBudget(0);
     }
+
+    setPostAuthFailureMessage("");
+    setAuthInfo("");
   }
 
   useEffect(() => {
@@ -363,7 +371,10 @@ export default function App() {
     }
 
     refreshDashboardBundle().catch((error) => {
-      setPageError(error.message);
+      setAuthError(postAuthFailureMessage || error.message);
+      setAuthInfo("");
+      setPreviewResetUrl("");
+      setPageError("");
       localStorage.removeItem("budget_token");
       setToken("");
       setSession(null);
@@ -426,6 +437,7 @@ export default function App() {
     setAuthError("");
     setAuthInfo("");
     setPreviewResetUrl("");
+    setPostAuthFailureMessage("");
     setAuthMode(nextMode);
 
     if (nextMode === "login" && route === "reset-password") {
@@ -498,16 +510,26 @@ export default function App() {
     setAuthError("");
     setAuthInfo("");
     setPreviewResetUrl("");
+    setPostAuthFailureMessage("");
+
+    const normalizedEmail = registerForm.email.trim().toLowerCase();
 
     try {
       const data = await apiFetch("/api/auth/register", {
         method: "POST",
         body: JSON.stringify({
           ...registerForm,
+          email: normalizedEmail,
           monthlySalary: Number(registerForm.monthlySalary),
         }),
       });
 
+      setPostAuthFailureMessage(REGISTER_BOOTSTRAP_ERROR);
+      setLoginForm({
+        email: normalizedEmail,
+        password: registerForm.password,
+      });
+      setAuthMode("login");
       localStorage.setItem("budget_token", data.accessToken);
       setToken(data.accessToken);
       setRegisterForm(REGISTER_FIELDS);
@@ -524,13 +546,20 @@ export default function App() {
     setAuthError("");
     setAuthInfo("");
     setPreviewResetUrl("");
+    setPostAuthFailureMessage("");
+
+    const normalizedEmail = loginForm.email.trim().toLowerCase();
 
     try {
       const data = await apiFetch("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify(loginForm),
+        body: JSON.stringify({
+          ...loginForm,
+          email: normalizedEmail,
+        }),
       });
 
+      setPostAuthFailureMessage(LOGIN_BOOTSTRAP_ERROR);
       localStorage.setItem("budget_token", data.accessToken);
       setToken(data.accessToken);
       setLoginForm(LOGIN_FIELDS);
