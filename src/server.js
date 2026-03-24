@@ -108,14 +108,6 @@ serverApp.use(
     contentSecurityPolicy: false,
   }),
 );
-serverApp.use(
-  rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 300,
-    standardHeaders: true,
-    legacyHeaders: false,
-  }),
-);
 serverApp.use((request, response, next) => {
   response.setHeader("X-Product-Name", "Honey Budget");
   response.setHeader("X-Code-Owner", "Whitzy");
@@ -145,6 +137,14 @@ serverApp.use((request, response, next) => {
 
   next();
 });
+serverApp.use(
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  }),
+);
 serverApp.use(express.json());
 const app = createApp({
   app: serverApp,
