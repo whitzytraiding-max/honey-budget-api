@@ -99,6 +99,10 @@ function isPrivateNetworkOrigin(origin) {
 }
 
 const serverApp = express();
+if (isProduction) {
+  serverApp.set("trust proxy", 1);
+}
+
 serverApp.use(
   helmet({
     contentSecurityPolicy: false,
