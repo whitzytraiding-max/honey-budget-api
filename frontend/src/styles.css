@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  color: #153241;
+  background:
+    radial-gradient(circle at top left, rgba(134, 239, 172, 0.35), transparent 34%),
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%),
+    linear-gradient(180deg, #f4fbf7 0%, #eef7fb 52%, #f9fcfa 100%);
+  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top left, rgba(134, 239, 172, 0.35), transparent 34%),
+    radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%),
+    linear-gradient(180deg, #f4fbf7 0%, #eef7fb 52%, #f9fcfa 100%);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: transparent;
+  padding-top: var(--safe-top);
+  padding-right: var(--safe-right);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  touch-action: manipulation;
+}

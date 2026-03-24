@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Honey Budget",
+  "short_name": "HoneyBudget",
+  "description": "Track household income, shared expenses, AI insights, and daily spending comfort in Honey Budget for couples.",
+  "start_url": "/#/",
+  "display": "standalone",
+  "background_color": "#f4fbf7",
+  "theme_color": "#153241",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/app-icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

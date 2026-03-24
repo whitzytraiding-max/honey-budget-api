@@ -1,0 +1,36 @@
+{
+  "name": "couples-budgeting-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "author": "Whitzy",
+  "license": "UNLICENSED",
+  "copyright": "Whitzy",
+  "scripts": {
+    "dev": "vite",
+    "dev:host": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:mobile": "vite build",
+    "cap:sync": "npx cap sync",
+    "cap:copy": "npx cap copy",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/ios": "^8.2.0",
+    "lucide-react": "^0.542.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.13",
+    "@vitejs/plugin-react": "^5.0.2",
+    "tailwindcss": "^4.1.13",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.5"
+  }
+}
