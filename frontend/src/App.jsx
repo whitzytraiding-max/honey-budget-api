@@ -193,6 +193,7 @@ export default function App() {
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const [householdIncome, setHouseholdIncome] = useState(0);
   const [remainingBudget, setRemainingBudget] = useState(0);
   const [savingsData, setSavingsData] = useState(null);
@@ -268,6 +269,7 @@ export default function App() {
         outgoing: [],
       },
     );
+    setNotificationsLoaded(true);
 
     return data;
   }
@@ -364,11 +366,13 @@ export default function App() {
         headers: authHeaders,
       });
       setNotificationsData(data);
+      setNotificationsLoaded(true);
     } catch (error) {
       setNotificationsData({
         incoming: [],
         outgoing: [],
       });
+      setNotificationsLoaded(false);
       setPageError(error.message);
     } finally {
       setNotificationsBusy(false);
@@ -420,6 +424,7 @@ export default function App() {
         incoming: [],
         outgoing: [],
       });
+      setNotificationsLoaded(false);
     });
   }, [token]);
 
@@ -428,7 +433,7 @@ export default function App() {
       return;
     }
 
-    if (route === "notifications" && !notificationsBusy) {
+    if (route === "notifications" && !notificationsBusy && !notificationsLoaded) {
       loadNotifications().catch((error) => {
         setPageError(error.message);
       });
@@ -458,6 +463,7 @@ export default function App() {
     insightsBusy,
     savingsData,
     notificationsBusy,
+    notificationsLoaded,
   ]);
 
   useEffect(() => {
@@ -990,6 +996,11 @@ export default function App() {
       setMonthSummary(null);
       setMonthTransactions([]);
       setHouseholdIncome(0);
+    setNotificationsData({
+      incoming: [],
+      outgoing: [],
+    });
+    setNotificationsLoaded(false);
     setRemainingBudget(0);
     setPageError("");
     setAuthError("");
