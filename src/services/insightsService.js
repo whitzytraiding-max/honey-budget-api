@@ -5,6 +5,21 @@ function roundCurrency(value) {
   return Number(Number(value).toFixed(2));
 }
 
+const FIXED_ESSENTIAL_CATEGORIES = new Set([
+  "housing",
+  "rent",
+  "mortgage",
+  "insurance",
+  "utilities",
+  "phone & internet",
+  "taxes",
+  "childcare",
+]);
+
+function isFixedEssentialCategory(category) {
+  return FIXED_ESSENTIAL_CATEGORIES.has(String(category ?? "").trim().toLowerCase());
+}
+
 function buildBehaviorFlags(snapshot) {
   const topCategory = snapshot.topCategories[0] ?? null;
   const topSpender = [...snapshot.users]
@@ -96,10 +111,20 @@ function createEmptyInsights(snapshot) {
 function createFallbackInsights(snapshot) {
   const { topCategory, topSpender, biggestOneTime, recurringCategories } =
     buildBehaviorFlags(snapshot);
+  const topRecurringCategory = recurringCategories[0] ?? null;
+  const topCategoryIsFixedEssential =
+    topCategory &&
+    isFixedEssentialCategory(topCategory.category) &&
+    topRecurringCategory?.category?.toLowerCase?.() === topCategory.category.toLowerCase();
+  const spenderLeadCategory = topSpender?.topCategories?.[0] ?? null;
+  const spenderLeadCategoryIsFixedEssential =
+    spenderLeadCategory &&
+    isFixedEssentialCategory(spenderLeadCategory.category) &&
+    topRecurringCategory?.category?.toLowerCase?.() ===
+      spenderLeadCategory.category.toLowerCase();
   const tips = [];
 
-  if (topSpender && topSpender.sharePct >= 60) {
-    const spenderLeadCategory = topSpender.topCategories[0];
+  if (topSpender && topSpender.sharePct >= 60 && !spenderLeadCategoryIsFixedEssential) {
     tips.push({
       title: `${topSpender.name} should slow down on ${spenderLeadCategory?.category ?? "discretionary spending"}`,
       action: spenderLeadCategory
@@ -123,11 +148,17 @@ function createFallbackInsights(snapshot) {
     });
   }
 
-  if (topCategory) {
+  if (topCategory && !topCategoryIsFixedEssential) {
     tips.push({
       title: `Treat ${topCategory.category} as this month’s pressure point`,
       action: `Cut ${topCategory.category} spending by 20% for the next two weeks and move the saved amount into a named goal the same day.`,
       reason: `${topCategory.category} is your largest category at ${topCategory.sharePct}% of total spending, so it is the most effective place to tighten up without touching every category.`,
+    });
+  } else if (topCategoryIsFixedEssential) {
+    tips.push({
+      title: `Plan around ${topCategory.category.toLowerCase()} instead of treating it like flexible spend`,
+      action: `Keep ${topRecurringCategory.amount} ring-fenced for ${topCategory.category.toLowerCase()} as soon as income lands, then judge the rest of the month on what remains after that fixed bill is covered.`,
+      reason: `${topCategory.category} is large, but it appears to be a recurring essential rather than a category you can realistically trim mid-month.`,
     });
   } else {
     tips.push({
@@ -238,6 +269,8 @@ function createInsightsService({
             "At least one tip must directly reference the cash versus card spending mix.",
             "At least one tip must mention a real category or purchase pattern from the data.",
             "If one person is clearly driving spending, say so directly but without shaming them.",
+            "Do not tell the couple to 'slow down' on fixed essential recurring costs like rent, housing, mortgage, insurance, utilities, taxes, or childcare unless the data shows those costs are unusually variable or avoidable.",
+            "If a fixed essential category is large, frame it as something to pre-fund, ring-fence, or plan around before discretionary spending begins.",
             "Do not give generic filler like 'save more' or 'make a budget'.",
             "Include a fair recurring-bill split recommendation based on the two salaries.",
             "Be specific, concise, and non-judgmental.",
