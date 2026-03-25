@@ -20,6 +20,10 @@ function isFixedEssentialCategory(category) {
   return FIXED_ESSENTIAL_CATEGORIES.has(String(category ?? "").trim().toLowerCase());
 }
 
+function firstFlexibleCategory(categories = []) {
+  return categories.find((entry) => !isFixedEssentialCategory(entry?.category)) ?? null;
+}
+
 function buildBehaviorFlags(snapshot) {
   const topCategory = snapshot.topCategories[0] ?? null;
   const topSpender = [...snapshot.users]
@@ -112,24 +116,15 @@ function createFallbackInsights(snapshot) {
   const { topCategory, topSpender, biggestOneTime, recurringCategories } =
     buildBehaviorFlags(snapshot);
   const topRecurringCategory = recurringCategories[0] ?? null;
-  const topCategoryIsFixedEssential =
-    topCategory &&
-    isFixedEssentialCategory(topCategory.category) &&
-    topRecurringCategory?.category?.toLowerCase?.() === topCategory.category.toLowerCase();
-  const spenderLeadCategory = topSpender?.topCategories?.[0] ?? null;
-  const spenderLeadCategoryIsFixedEssential =
-    spenderLeadCategory &&
-    isFixedEssentialCategory(spenderLeadCategory.category) &&
-    topRecurringCategory?.category?.toLowerCase?.() ===
-      spenderLeadCategory.category.toLowerCase();
+  const topFlexibleCategory = firstFlexibleCategory(snapshot.topCategories);
+  const topFlexibleRecurringCategory = firstFlexibleCategory(recurringCategories);
+  const spenderLeadCategory = firstFlexibleCategory(topSpender?.topCategories ?? []);
   const tips = [];
 
-  if (topSpender && topSpender.sharePct >= 60 && !spenderLeadCategoryIsFixedEssential) {
+  if (topSpender && topSpender.sharePct >= 60 && spenderLeadCategory) {
     tips.push({
-      title: `${topSpender.name} should slow down on ${spenderLeadCategory?.category ?? "discretionary spending"}`,
-      action: spenderLeadCategory
-        ? `Put a ${spenderLeadCategory.category.toLowerCase()} cooldown in place for ${topSpender.name}: no new ${spenderLeadCategory.category.toLowerCase()} purchases for 5 days, then revisit with a smaller cap.`
-        : `Pause non-essential purchases for ${topSpender.name} for the next 5 days and revisit the budget before restarting discretionary spend.`,
+      title: `${topSpender.name} should slow down on ${spenderLeadCategory.category}`,
+      action: `Put a ${spenderLeadCategory.category.toLowerCase()} cooldown in place for ${topSpender.name}: no new ${spenderLeadCategory.category.toLowerCase()} purchases for 5 days, then revisit with a smaller cap.`,
       reason: `${topSpender.name} drove ${topSpender.sharePct}% of the last ${snapshot.period.days} days of spending, so one person's habits are shaping the budget more than the household average.`,
     });
   } else if (snapshot.summary.cashSharePct >= 40) {
@@ -148,24 +143,18 @@ function createFallbackInsights(snapshot) {
     });
   }
 
-  if (topCategory && !topCategoryIsFixedEssential) {
+  if (topFlexibleCategory) {
     tips.push({
-      title: `Treat ${topCategory.category} as this month’s pressure point`,
-      action: `Cut ${topCategory.category} spending by 20% for the next two weeks and move the saved amount into a named goal the same day.`,
-      reason: `${topCategory.category} is your largest category at ${topCategory.sharePct}% of total spending, so it is the most effective place to tighten up without touching every category.`,
-    });
-  } else if (topCategoryIsFixedEssential) {
-    tips.push({
-      title: `Plan around ${topCategory.category.toLowerCase()} instead of treating it like flexible spend`,
-      action: `Keep ${topRecurringCategory.amount} ring-fenced for ${topCategory.category.toLowerCase()} as soon as income lands, then judge the rest of the month on what remains after that fixed bill is covered.`,
-      reason: `${topCategory.category} is large, but it appears to be a recurring essential rather than a category you can realistically trim mid-month.`,
+      title: `Treat ${topFlexibleCategory.category} as this month’s pressure point`,
+      action: `Cut ${topFlexibleCategory.category} spending by 20% for the next two weeks and move the saved amount into a named goal the same day.`,
+      reason: `${topFlexibleCategory.category} is your largest flexible category at ${topFlexibleCategory.sharePct}% of total spending, so it is the most effective place to tighten up without touching fixed bills.`,
     });
   } else {
     tips.push({
-      title: "Start a shared surprise-cost fund",
+      title: "Set a small shared flex-spend cap after bills clear",
       action:
-        "Move a fixed amount from both salaries into a joint emergency bucket on payday before discretionary spending starts.",
-      reason: "You do not have enough recent spend history yet, so building a buffer early protects the budget from one-off shocks.",
+        "After recurring bills are covered, give each partner a fixed weekly personal spending cap and pause any extra non-essential purchases once it is used.",
+      reason: "Most of your tracked spend is fixed, so the best lever left is putting clearer guardrails around the flexible money that remains.",
     });
   }
 
@@ -182,18 +171,18 @@ function createFallbackInsights(snapshot) {
         "Use two distinct sinking funds: one for lifestyle treats and one for repairs or urgent costs, then fund both every payday.",
       reason: "One-time spending is matching or exceeding recurring bills, which makes cash flow less predictable.",
     });
-  } else if (recurringCategories[0]) {
+  } else if (topFlexibleRecurringCategory) {
     tips.push({
-      title: `Pre-fund ${recurringCategories[0].category.toLowerCase()} before discretionary spend`,
-      action: `Set aside ${recurringCategories[0].amount} for ${recurringCategories[0].category.toLowerCase()} as soon as income lands, then budget what remains for flexible spend.`,
-      reason: `${recurringCategories[0].category} is your heaviest recurring line item, so covering it first reduces end-of-month pressure.`,
+      title: `Trim the recurring ${topFlexibleRecurringCategory.category.toLowerCase()} spend first`,
+      action: `Review every ${topFlexibleRecurringCategory.category.toLowerCase()} charge this week and remove, downgrade, or pause at least one item before the next billing cycle.`,
+      reason: `${topFlexibleRecurringCategory.category} is your heaviest flexible recurring category, so it is the cleanest recurring place to reduce pressure without touching essentials.`,
     });
   } else {
     tips.push({
-      title: "Pre-fund recurring bills by salary ratio",
+      title: "Create a post-bills weekly allowance",
       action:
-        "Transfer each partner's recurring-bill share into a joint bills account on salary day before either of you start discretionary spending.",
-      reason: "Recurring bills are predictable, so paying them first using the fair split removes the biggest monthly pressure point.",
+        "Once fixed bills are covered, split the remaining flexible money into weekly allowances so overspending shows up earlier instead of at month-end.",
+      reason: "Your current data is dominated by fixed expenses, so a weekly allowance is the clearest way to keep the changeable part of the budget under control.",
     });
   }
 
@@ -270,7 +259,8 @@ function createInsightsService({
             "At least one tip must mention a real category or purchase pattern from the data.",
             "If one person is clearly driving spending, say so directly but without shaming them.",
             "Do not tell the couple to 'slow down' on fixed essential recurring costs like rent, housing, mortgage, insurance, utilities, taxes, or childcare unless the data shows those costs are unusually variable or avoidable.",
-            "If a fixed essential category is large, frame it as something to pre-fund, ring-fence, or plan around before discretionary spending begins.",
+            "Keep fixed essential recurring bills out of the three headline tips whenever possible.",
+            "Reserve the three headline tips for flexible categories, discretionary behavior, one-time purchases, or spending habits the couple can realistically change.",
             "Do not give generic filler like 'save more' or 'make a budget'.",
             "Include a fair recurring-bill split recommendation based on the two salaries.",
             "Be specific, concise, and non-judgmental.",

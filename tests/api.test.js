@@ -1005,7 +1005,7 @@ describe("Couples Budgeting API", () => {
     expect(insightsResponse.body.data.snapshot.fairSplit[1].sharePct).toBe(40);
   });
 
-  it("does not frame recurring housing costs like rent as a category to slow down", async () => {
+  it("keeps recurring housing costs out of the three headline tips", async () => {
     const alex = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
@@ -1064,16 +1064,10 @@ describe("Couples Budgeting API", () => {
     expect(insightsResponse.status).toBe(200);
     expect(
       insightsResponse.body.data.insights.tips.some((tip) =>
-        /slow down on housing/i.test(`${tip.title} ${tip.action} ${tip.reason}`),
+        /housing|rent/i.test(`${tip.title} ${tip.action}`),
       ),
     ).toBe(false);
-    expect(
-      insightsResponse.body.data.insights.tips.some((tip) =>
-        /plan around housing|ring-fenced for housing|pre-fund housing/i.test(
-          `${tip.title} ${tip.action}`,
-        ),
-      ),
-    ).toBe(true);
+    expect(insightsResponse.body.data.insights.tips).toHaveLength(3);
   });
 
   it("accepts transaction amount when it arrives as a numeric string", async () => {
