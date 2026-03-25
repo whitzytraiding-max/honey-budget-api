@@ -13,12 +13,27 @@
   --safe-left: env(safe-area-inset-left, 0px);
 }
 
+:root[data-theme="dark"] {
+  color: #e5eef6;
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 30%),
+    linear-gradient(180deg, #09111b 0%, #0c1622 55%, #0f1724 100%);
+}
+
 html {
   min-height: 100%;
   background:
     radial-gradient(circle at top left, rgba(134, 239, 172, 0.35), transparent 34%),
     radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%),
     linear-gradient(180deg, #f4fbf7 0%, #eef7fb 52%, #f9fcfa 100%);
+}
+
+html[data-theme="dark"] {
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 30%),
+    linear-gradient(180deg, #09111b 0%, #0c1622 55%, #0f1724 100%);
 }
 
 body {
@@ -64,4 +79,66 @@ textarea {
 
 button {
   touch-action: manipulation;
+}
+
+html[data-theme="dark"] body {
+  color: #e5eef6;
+}
+
+html[data-theme="dark"] .bg-white,
+html[data-theme="dark"] .bg-white\/70,
+html[data-theme="dark"] .bg-white\/80,
+html[data-theme="dark"] .bg-white\/92,
+html[data-theme="dark"] .bg-slate-50,
+html[data-theme="dark"] .bg-slate-50\/70,
+html[data-theme="dark"] .bg-slate-100 {
+  background-color: rgba(15, 23, 36, 0.88) !important;
+}
+
+html[data-theme="dark"] .bg-emerald-100,
+html[data-theme="dark"] .bg-amber-100 {
+  background-color: rgba(30, 41, 59, 0.9) !important;
+}
+
+html[data-theme="dark"] .bg-slate-900 {
+  background-color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .text-white {
+  color: #0f1724 !important;
+}
+
+html[data-theme="dark"] .text-slate-900,
+html[data-theme="dark"] .text-slate-700,
+html[data-theme="dark"] .text-slate-600,
+html[data-theme="dark"] .text-slate-500,
+html[data-theme="dark"] .text-emerald-900,
+html[data-theme="dark"] .text-amber-950 {
+  color: #e5eef6 !important;
+}
+
+html[data-theme="dark"] .border-slate-100,
+html[data-theme="dark"] .border-slate-200,
+html[data-theme="dark"] .border-slate-300,
+html[data-theme="dark"] .border-white\/70,
+html[data-theme="dark"] .border-white\/80 {
+  border-color: rgba(71, 85, 105, 0.72) !important;
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background-color: rgba(15, 23, 36, 0.92) !important;
+  border-color: rgba(71, 85, 105, 0.72) !important;
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .shadow-sm,
+html[data-theme="dark"] .shadow-\[0_20px_60px_-24px_rgba\(21\,50\,65\,0\.35\)\] {
+  box-shadow: 0 20px 60px -28px rgba(2, 6, 23, 0.8) !important;
 }

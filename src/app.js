@@ -7,6 +7,7 @@ import express from "express";
 import { createAuthService, createRequireAuth } from "./lib/auth.js";
 import { HttpError, asyncHandler, sendData } from "./lib/http.js";
 import { buildBudgetSnapshot } from "./services/dashboardService.js";
+import { createExchangeRateService } from "./services/exchangeRateService.js";
 
 function parsePaymentMethod(value) {
   return value === "cash" || value === "card" ? value : null;
@@ -167,6 +168,10 @@ function validateIsoDate(value) {
 
 function validateYearMonth(value) {
   return /^\d{4}-\d{2}$/.test(value);
+}
+
+function validateCurrencyCode(value) {
+  return /^[A-Z]{3}$/.test(String(value ?? "").trim().toUpperCase());
 }
 
 function sanitizeUser(user) {
@@ -650,6 +655,7 @@ function createApp({
   app = express(),
   budgetRepository,
   insightsService,
+  exchangeRateService = createExchangeRateService(),
   emailService = null,
   resetPasswordUrlBase = process.env.RESET_PASSWORD_URL_BASE || process.env.APP_BASE_URL || "",
   jwtSecret = process.env.JWT_SECRET || "",
@@ -681,6 +687,29 @@ function createApp({
   app.get("/health", (_request, response) => {
     sendData(response, 200, { status: "ok" });
   });
+
+  app.get(
+    "/api/exchange-rate",
+    asyncHandler(async (request, response) => {
+      const from = String(request.query.from ?? "")
+        .trim()
+        .toUpperCase();
+      const to = String(request.query.to ?? "")
+        .trim()
+        .toUpperCase();
+
+      if (!validateCurrencyCode(from) || !validateCurrencyCode(to)) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "from and to must be ISO 4217 currency codes.",
+        );
+      }
+
+      const rate = await exchangeRateService.getRate({ from, to });
+      sendData(response, 200, rate);
+    }),
+  );
 
   app.post(
     "/api/auth/register",

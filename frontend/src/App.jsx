@@ -16,6 +16,8 @@ import NotificationsPage from "./components/pages/NotificationsPage.jsx";
 import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import { ActionButton, EmptyState } from "./components/ui.jsx";
+import { setCurrencyConversionPreferences } from "./lib/format.js";
+import { useLanguage } from "./i18n/LanguageProvider.jsx";
 
 const REGISTER_FIELDS = {
   name: "",
@@ -72,6 +74,8 @@ const LOGIN_BOOTSTRAP_ERROR =
   "We couldn't finish signing you in. Please try logging in again.";
 const IS_PRODUCTION_BUILD = import.meta.env.PROD;
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/$/, "");
+const SUPPORTED_THEMES = new Set(["light", "dark", "system"]);
+const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "MMK"]);
 
 if (IS_PRODUCTION_BUILD && !API_BASE_URL) {
   console.error("VITE_API_BASE_URL is required in production.");
@@ -141,6 +145,37 @@ function createSavingsGoalDraft(goal) {
   };
 }
 
+function getInitialTheme() {
+  if (typeof window === "undefined") {
+    return "system";
+  }
+
+  const savedTheme = window.localStorage.getItem("budget_theme");
+  if (savedTheme && SUPPORTED_THEMES.has(savedTheme)) {
+    return savedTheme;
+  }
+
+  return "system";
+}
+
+function getInitialCurrency() {
+  if (typeof window === "undefined") {
+    return "USD";
+  }
+
+  const savedCurrency = window.localStorage.getItem("budget_currency");
+  return savedCurrency && SUPPORTED_CURRENCIES.has(savedCurrency) ? savedCurrency : "USD";
+}
+
+function getInitialBaseCurrency() {
+  if (typeof window === "undefined") {
+    return "USD";
+  }
+
+  const savedCurrency = window.localStorage.getItem("budget_base_currency");
+  return savedCurrency && SUPPORTED_CURRENCIES.has(savedCurrency) ? savedCurrency : "USD";
+}
+
 async function apiFetch(path, options = {}) {
   if (!path.startsWith("http") && !API_BASE_URL) {
     if (IS_PRODUCTION_BUILD) {
@@ -171,6 +206,7 @@ async function apiFetch(path, options = {}) {
 }
 
 export default function App() {
+  const { locale } = useLanguage();
   const [token, setToken] = useState(() => localStorage.getItem("budget_token") || "");
   const [hashLocation, setHashLocation] = useState(() => getHashLocation());
   const [authMode, setAuthMode] = useState("register");
@@ -214,6 +250,11 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
   const [monthSummary, setMonthSummary] = useState(null);
   const [monthTransactions, setMonthTransactions] = useState([]);
+  const [theme, setTheme] = useState(getInitialTheme);
+  const [currencyCode, setCurrencyCode] = useState(getInitialCurrency);
+  const [baseCurrencyCode, setBaseCurrencyCode] = useState(getInitialBaseCurrency);
+  const [exchangeRate, setExchangeRate] = useState(1);
+  const [exchangeRateLabel, setExchangeRateLabel] = useState("");
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
     return new URLSearchParams(hashLocation.query).get("token")?.trim() || "";
@@ -244,6 +285,87 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const resolvedTheme =
+      theme === "system" ? (mediaQuery?.matches ? "dark" : "light") : theme;
+
+    document.documentElement.dataset.theme = resolvedTheme;
+    document.documentElement.style.colorScheme = resolvedTheme;
+    window.localStorage.setItem("budget_theme", theme);
+
+    if (theme !== "system" || !mediaQuery) {
+      return undefined;
+    }
+
+    const handleThemeChange = (event) => {
+      const nextTheme = event.matches ? "dark" : "light";
+      document.documentElement.dataset.theme = nextTheme;
+      document.documentElement.style.colorScheme = nextTheme;
+    };
+
+    mediaQuery.addEventListener("change", handleThemeChange);
+    return () => mediaQuery.removeEventListener("change", handleThemeChange);
+  }, [theme]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("budget_currency", currencyCode);
+    }
+  }, [currencyCode]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("budget_base_currency", baseCurrencyCode);
+    }
+  }, [baseCurrencyCode]);
+
+  useEffect(() => {
+    let active = true;
+
+    if (currencyCode === baseCurrencyCode) {
+      setExchangeRate(1);
+      setExchangeRateLabel("");
+      return undefined;
+    }
+
+    async function loadExchangeRate() {
+      try {
+        const data = await apiFetch(
+          `/api/exchange-rate?from=${baseCurrencyCode}&to=${currencyCode}`,
+        );
+        const nextRate = Number(data?.rate ?? 0);
+
+        if (!active || !Number.isFinite(nextRate) || nextRate <= 0) {
+          return;
+        }
+
+        setExchangeRate(nextRate);
+        setExchangeRateLabel(
+          data?.date
+            ? `1 ${baseCurrencyCode} = ${nextRate.toFixed(4)} ${currencyCode} · ${data.cached ? "cached" : "live"} · ${data.date}`
+            : "",
+        );
+      } catch (error) {
+        console.error("Exchange rate lookup failed:", error);
+        if (active) {
+          setExchangeRate(1);
+          setExchangeRateLabel("Latest exchange rate unavailable");
+        }
+      }
+    }
+
+    loadExchangeRate();
+
+    return () => {
+      active = false;
+    };
+  }, [baseCurrencyCode, currencyCode]);
+
+  useEffect(() => {
     if (token) {
       return;
     }
@@ -255,6 +377,12 @@ export default function App() {
 
     setAuthMode((current) => (current === "reset" ? "login" : current));
   }, [route, token]);
+
+  useEffect(() => {
+    if (route === "notifications" && session?.couple) {
+      navigate("more");
+    }
+  }, [route, session?.couple]);
 
   async function fetchHouseholdData() {
     const data = await apiFetch("/api/auth/me", {
@@ -505,6 +633,18 @@ export default function App() {
     if (nextMode === "login" && route === "reset-password") {
       navigate("home");
     }
+  }
+
+  function handleThemeChange(event) {
+    setTheme(event.target.value);
+  }
+
+  function handleCurrencyChange(event) {
+    setCurrencyCode(event.target.value);
+  }
+
+  function handleBaseCurrencyChange(event) {
+    setBaseCurrencyCode(event.target.value);
   }
 
   function updateRegisterForm(event) {
@@ -1102,6 +1242,13 @@ export default function App() {
     ? `${couple.userOne.name} + ${couple.userTwo.name}`
     : session?.user?.name;
 
+  setCurrencyConversionPreferences({
+    displayCurrency: currencyCode,
+    baseCurrency: baseCurrencyCode,
+    locale,
+    exchangeRate,
+  });
+
   function renderCurrentPage() {
     if (!couple && route !== "settings" && route !== "more" && route !== "notifications") {
       return (
@@ -1161,7 +1308,7 @@ export default function App() {
           />
         );
       case "more":
-        return <MorePage onNavigate={navigate} />;
+        return <MorePage onNavigate={navigate} showNotifications={!couple} />;
       case "notifications":
         return (
           <NotificationsPage
@@ -1204,6 +1351,13 @@ export default function App() {
             onIncomeProfileChange={updateIncomeProfileForm}
             onIncomeProfileSubmit={handleIncomeProfileSubmit}
             incomeProfileBusy={incomeProfileBusy}
+            theme={theme}
+            currencyCode={currencyCode}
+            baseCurrencyCode={baseCurrencyCode}
+            exchangeRateLabel={exchangeRateLabel}
+            onThemeChange={handleThemeChange}
+            onCurrencyChange={handleCurrencyChange}
+            onBaseCurrencyChange={handleBaseCurrencyChange}
           />
         );
       case "home":
@@ -1224,6 +1378,7 @@ export default function App() {
       onNavigate={navigate}
       coupleNames={coupleNames}
       remainingBudget={remainingBudget}
+      showNotifications={!couple}
       onLogout={handleLogout}
       pageError={pageError}
     >

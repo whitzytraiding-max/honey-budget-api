@@ -119,6 +119,14 @@ const translations = {
       household: "Household setup",
       save: "Save income settings",
       language: "Language",
+      currency: "Currency",
+      baseCurrency: "Home currency",
+      displayCurrency: "Display currency",
+      currencyHint: "Amounts are stored in your home currency and converted for display when needed.",
+      theme: "Theme",
+      systemMode: "System",
+      lightMode: "Light",
+      darkMode: "Dark",
       subtitle:
         "Change the exact cash and card amounts here instead of keeping controls on the homepage.",
       householdSubtitle:
@@ -322,6 +330,14 @@ const translations = {
       household: "Configuración del hogar",
       save: "Guardar ajustes de ingresos",
       language: "Idioma",
+      currency: "Moneda",
+      baseCurrency: "Moneda base",
+      displayCurrency: "Moneda visible",
+      currencyHint: "Los montos se guardan en tu moneda base y se convierten para mostrarse cuando haga falta.",
+      theme: "Tema",
+      systemMode: "Sistema",
+      lightMode: "Claro",
+      darkMode: "Oscuro",
       subtitle:
         "Cambia aquí los montos exactos de efectivo y tarjeta en vez de ver controles en la página principal.",
       householdSubtitle:

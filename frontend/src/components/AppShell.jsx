@@ -24,6 +24,7 @@ function AppShell({
   onNavigate,
   coupleNames,
   remainingBudget,
+  showNotifications,
   onLogout,
   children,
   pageError,
@@ -33,12 +34,18 @@ function AppShell({
     { ...NAV_ITEMS[0], label: t("nav.home") },
     { ...NAV_ITEMS[1], label: t("nav.expenses") },
     { ...NAV_ITEMS[2], label: t("nav.savings") },
-    { ...NAV_ITEMS[3], label: t("nav.notifications") },
     { ...NAV_ITEMS[4], label: t("nav.calendar") },
     { ...NAV_ITEMS[5], label: t("nav.insights") },
     { ...NAV_ITEMS[6], label: t("nav.history") },
     { ...NAV_ITEMS[7], label: t("nav.settings") },
   ];
+  const desktopNavItems = showNotifications
+    ? [
+        ...localizedNavItems.slice(0, 3),
+        { ...NAV_ITEMS[3], label: t("nav.notifications") },
+        ...localizedNavItems.slice(3),
+      ]
+    : localizedNavItems;
   const mobileNavItems = [
     { key: "home", label: t("nav.home"), icon: House },
     { key: "expenses", label: t("nav.expenses"), icon: Wallet },
@@ -83,8 +90,8 @@ function AppShell({
             </div>
           </div>
 
-          <nav className="mt-5 hidden grid-cols-8 gap-3 md:grid">
-            {localizedNavItems.map((item) => {
+          <nav className={`mt-5 hidden gap-3 md:grid ${showNotifications ? "grid-cols-8" : "grid-cols-7"}`}>
+            {desktopNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = route === item.key;
 

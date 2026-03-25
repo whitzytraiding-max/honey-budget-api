@@ -9,8 +9,9 @@ const MORE_ITEMS = [
   { key: "settings", icon: Settings2 },
 ];
 
-function MorePage({ onNavigate }) {
+function MorePage({ onNavigate, showNotifications }) {
   const { t } = useLanguage();
+  const items = showNotifications ? MORE_ITEMS : MORE_ITEMS.filter((item) => item.key !== "notifications");
 
   return (
     <section className="rounded-[1.75rem] border border-white/70 bg-white/82 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
@@ -20,7 +21,7 @@ function MorePage({ onNavigate }) {
       </div>
 
       <div className="mt-4 space-y-3">
-        {MORE_ITEMS.map((item) => {
+        {items.map((item) => {
           const Icon = item.icon;
 
           return (

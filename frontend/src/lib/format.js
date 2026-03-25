@@ -1,10 +1,77 @@
+const SUPPORTED_CURRENCIES = [
+  { value: "USD" },
+  { value: "EUR" },
+  { value: "GBP" },
+  { value: "CAD" },
+  { value: "AUD" },
+  { value: "MMK" },
+];
+
+let activeCurrency = "USD";
+let activeBaseCurrency = "USD";
+let activeLocale = "en-US";
+let activeExchangeRate = 1;
+
+function normalizeLocale(locale) {
+  if (!locale) {
+    return "en-US";
+  }
+
+  if (locale === "en") {
+    return "en-US";
+  }
+
+  if (locale === "es") {
+    return "es-ES";
+  }
+
+  return locale;
+}
+
+function setFormatPreferences({ currency: nextCurrency, locale: nextLocale } = {}) {
+  if (nextCurrency) {
+    activeCurrency = nextCurrency;
+  }
+
+  if (nextLocale) {
+    activeLocale = normalizeLocale(nextLocale);
+  }
+}
+
+function setCurrencyConversionPreferences({
+  displayCurrency,
+  baseCurrency,
+  locale,
+  exchangeRate,
+} = {}) {
+  if (displayCurrency) {
+    activeCurrency = displayCurrency;
+  }
+
+  if (baseCurrency) {
+    activeBaseCurrency = baseCurrency;
+  }
+
+  if (locale) {
+    activeLocale = normalizeLocale(locale);
+  }
+
+  if (typeof exchangeRate === "number" && Number.isFinite(exchangeRate) && exchangeRate > 0) {
+    activeExchangeRate = exchangeRate;
+  }
+}
+
 function currency(value) {
-  return new Intl.NumberFormat("en-US", {
+  const numericValue = Number(value ?? 0);
+  const convertedValue =
+    activeBaseCurrency === activeCurrency ? numericValue : numericValue * activeExchangeRate;
+
+  return new Intl.NumberFormat(activeLocale, {
     style: "currency",
-    currency: "USD",
+    currency: activeCurrency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  }).format(convertedValue);
 }
 
 function formatShortDate(value) {
@@ -12,7 +79,7 @@ function formatShortDate(value) {
     return "";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(activeLocale, {
     month: "short",
     day: "numeric",
   }).format(new Date(`${value}T00:00:00`));
@@ -44,4 +111,28 @@ function getRemainingTone(remainingBudget, householdIncome) {
   };
 }
 
-export { currency, formatShortDate, getRemainingTone };
+function getCurrencyOptions(locale) {
+  const normalizedLocale = normalizeLocale(locale);
+  const displayNames =
+    typeof Intl.DisplayNames === "function"
+      ? new Intl.DisplayNames([normalizedLocale], { type: "currency" })
+      : null;
+
+  return SUPPORTED_CURRENCIES.map((entry) => {
+    const name = displayNames?.of(entry.value) ?? entry.value;
+    return {
+      value: entry.value,
+      label: `${name} (${entry.value})`,
+    };
+  });
+}
+
+export {
+  SUPPORTED_CURRENCIES,
+  currency,
+  formatShortDate,
+  getCurrencyOptions,
+  getRemainingTone,
+  setCurrencyConversionPreferences,
+  setFormatPreferences,
+};

@@ -604,6 +604,41 @@ describe("Couples Budgeting API", () => {
     expect(response.body.error.message).toBe("An account with this email already exists.");
   });
 
+  it("returns a cached exchange rate from the backend service", async () => {
+    let exchangeLookupCount = 0;
+    const exchangeApp = createApp({
+      budgetRepository: repository,
+      insightsService: createInsightsService({
+        budgetRepository: repository,
+      }),
+      exchangeRateService: {
+        async getRate({ from, to }) {
+          exchangeLookupCount += 1;
+          return {
+            from,
+            to,
+            rate: 0.92,
+            date: "2026-03-25",
+            cached: exchangeLookupCount > 1,
+          };
+        },
+      },
+      jwtSecret: "test-secret",
+      jsonParser: (_request, _response, next) => next(),
+    });
+
+    const response = await inject(exchangeApp, {
+      method: "GET",
+      url: "/api/exchange-rate?from=USD&to=EUR",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.from).toBe("USD");
+    expect(response.body.data.to).toBe("EUR");
+    expect(response.body.data.rate).toBe(0.92);
+    expect(response.body.data.date).toBe("2026-03-25");
+  });
+
   it("creates a couple, adds an expense, and returns a dashboard", async () => {
     const alex = await inject(app, {
       method: "POST",

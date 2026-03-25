@@ -1,6 +1,6 @@
 import { Settings2, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
-import { currency } from "../../lib/format.js";
+import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
 
 function SettingsPage({
@@ -9,8 +9,16 @@ function SettingsPage({
   onIncomeProfileChange,
   onIncomeProfileSubmit,
   incomeProfileBusy,
+  theme,
+  currencyCode,
+  baseCurrencyCode,
+  exchangeRateLabel,
+  onThemeChange,
+  onCurrencyChange,
+  onBaseCurrencyChange,
 }) {
   const { locale, setLocale, supportedLocales, t } = useLanguage();
+  const currencyOptions = getCurrencyOptions(locale);
   const user = session?.user;
   const partner =
     session?.couple && session.couple.userOne.id === session.user.id
@@ -81,7 +89,7 @@ function SettingsPage({
           </ActionButton>
         </form>
 
-        <div className="mt-6 border-t border-slate-100 pt-6">
+        <div className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
           <Select
             label={t("settings.language")}
             value={locale}
@@ -91,7 +99,32 @@ function SettingsPage({
               label: entry === "en" ? "English" : "Español",
             }))}
           />
+          <Select
+            label={t("settings.baseCurrency")}
+            value={baseCurrencyCode}
+            onChange={onBaseCurrencyChange}
+            options={currencyOptions}
+          />
+          <Select
+            label={t("settings.displayCurrency")}
+            value={currencyCode}
+            onChange={onCurrencyChange}
+            options={currencyOptions}
+          />
+          <Select
+            label={t("settings.theme")}
+            value={theme}
+            onChange={onThemeChange}
+            options={[
+              { value: "system", label: t("settings.systemMode") },
+              { value: "light", label: t("settings.lightMode") },
+              { value: "dark", label: t("settings.darkMode") },
+            ]}
+          />
         </div>
+        <p className="mt-3 text-xs text-slate-500">
+          {exchangeRateLabel || t("settings.currencyHint")}
+        </p>
       </section>
 
       <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
