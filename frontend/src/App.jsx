@@ -1287,6 +1287,8 @@ export default function App() {
             onExpenseSubmit={handleExpenseSubmit}
             expenseBusy={expenseBusy}
             transactions={transactions}
+            baseCurrencyCode={baseCurrencyCode}
+            currencyCode={currencyCode}
           />
         );
       case "insights":

@@ -163,6 +163,7 @@ function AuthPanel({
                   ]}
                 />
               </div>
+              <p className="text-sm leading-6 text-slate-600">{t("auth.currencySetupHelp")}</p>
               <ActionButton busy={isSubmitting}>{t("auth.createAccount")}</ActionButton>
             </form>
           ) : null}

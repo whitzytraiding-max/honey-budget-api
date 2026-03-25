@@ -34,6 +34,8 @@ function ExpensesPage({
   onExpenseSubmit,
   expenseBusy,
   transactions,
+  baseCurrencyCode,
+  currencyCode,
 }) {
   const { t } = useLanguage();
   const recentTransactions = transactions.slice(0, 10);
@@ -47,6 +49,17 @@ function ExpensesPage({
             <h2 className="text-xl font-semibold sm:text-2xl">{t("expenses.title")}</h2>
             <p className="text-sm text-slate-600">{t("expenses.subtitle")}</p>
           </div>
+        </div>
+
+        <div className="mt-4 rounded-[1.2rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
+          <p>
+            <span className="font-semibold text-slate-900">{t("expenses.entryCurrencyLabel")}:</span>{" "}
+            {baseCurrencyCode} {t("expenses.entryCurrencyHelp")}
+          </p>
+          <p className="mt-2">
+            <span className="font-semibold text-slate-900">{t("expenses.displayCurrencyLabel")}:</span>{" "}
+            {currencyCode} {t("expenses.displayCurrencyHelp")}
+          </p>
         </div>
 
         <form className="mt-4 grid gap-3 sm:mt-6 sm:gap-4" onSubmit={onExpenseSubmit}>

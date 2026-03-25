@@ -133,6 +133,23 @@ function SettingsPage({
           </p>
           <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
         </div>
+
+        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {t("settings.howItWorks")}
+          </p>
+          <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+            <p>
+              <span className="font-semibold text-slate-900">{t("settings.homeCurrencyLabel")}:</span>{" "}
+              {baseCurrencyCode} {t("settings.howItWorksLineOne")}
+            </p>
+            <p>
+              <span className="font-semibold text-slate-900">{t("settings.displayCurrencyLabel")}:</span>{" "}
+              {currencyCode} {t("settings.howItWorksLineTwo")}
+            </p>
+            <p>{t("settings.howItWorksLineThree")}</p>
+          </div>
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
