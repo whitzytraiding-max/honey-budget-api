@@ -113,8 +113,22 @@ html[data-theme="dark"] .text-slate-700,
 html[data-theme="dark"] .text-slate-600,
 html[data-theme="dark"] .text-slate-500,
 html[data-theme="dark"] .text-emerald-900,
-html[data-theme="dark"] .text-amber-950 {
+html[data-theme="dark"] .text-amber-950,
+html[data-theme="dark"] .text-emerald-700,
+html[data-theme="dark"] .text-emerald-800,
+html[data-theme="dark"] .text-amber-600,
+html[data-theme="dark"] .text-amber-800,
+html[data-theme="dark"] .text-rose-600,
+html[data-theme="dark"] .text-rose-700,
+html[data-theme="dark"] .text-sky-700,
+html[data-theme="dark"] .text-cyan-700 {
   color: #e5eef6 !important;
+}
+
+html[data-theme="dark"] .text-white\/70,
+html[data-theme="dark"] .text-white\/72,
+html[data-theme="dark"] .text-white\/90 {
+  color: rgba(226, 232, 240, 0.88) !important;
 }
 
 html[data-theme="dark"] .border-slate-100,

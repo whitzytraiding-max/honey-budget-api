@@ -122,9 +122,17 @@ function SettingsPage({
             ]}
           />
         </div>
-        <p className="mt-3 text-xs text-slate-500">
-          {exchangeRateLabel || t("settings.currencyHint")}
-        </p>
+        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {t("settings.exchangeRate")}
+          </p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">
+            {baseCurrencyCode === currencyCode
+              ? t("settings.noConversionNeeded")
+              : exchangeRateLabel || t("settings.loadingRate")}
+          </p>
+          <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
