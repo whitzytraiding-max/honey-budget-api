@@ -111,6 +111,24 @@ function mapSavingsEntry(entry) {
   };
 }
 
+function mapSavingsGoal(goal) {
+  if (!goal) {
+    return null;
+  }
+
+  return {
+    id: goal.id,
+    coupleId: goal.coupleId,
+    title: goal.title,
+    targetAmount: toNumber(goal.targetAmount),
+    targetDate: goal.targetDate
+      ? goal.targetDate.toISOString?.().slice(0, 10) ?? goal.targetDate
+      : null,
+    createdAt: goal.createdAt?.toISOString?.() ?? goal.createdAt,
+    updatedAt: goal.updatedAt?.toISOString?.() ?? goal.updatedAt,
+  };
+}
+
 function mapCoupleInvite(invite) {
   if (!invite) {
     return null;
@@ -741,6 +759,37 @@ function createPrismaBudgetRepository({ prisma }) {
       return entries
         .map(mapSavingsEntry)
         .sort((left, right) => right.date.localeCompare(left.date) || right.id - left.id);
+    },
+
+    async getSavingsGoalForCouple(coupleId) {
+      const goal = await prisma.savingsGoal.findUnique({
+        where: {
+          coupleId,
+        },
+      });
+
+      return mapSavingsGoal(goal);
+    },
+
+    async upsertSavingsGoalForCouple({ coupleId, title, targetAmount, targetDate }) {
+      const goal = await prisma.savingsGoal.upsert({
+        where: {
+          coupleId,
+        },
+        update: {
+          title,
+          targetAmount,
+          targetDate,
+        },
+        create: {
+          coupleId,
+          title,
+          targetAmount,
+          targetDate,
+        },
+      });
+
+      return mapSavingsGoal(goal);
     },
   };
 }

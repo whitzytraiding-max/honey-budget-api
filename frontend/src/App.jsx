@@ -133,6 +133,14 @@ function createIncomeProfileDraft(user) {
   };
 }
 
+function createSavingsGoalDraft(goal) {
+  return {
+    title: String(goal?.title ?? ""),
+    targetAmount: String(goal?.targetAmount ?? ""),
+    targetDate: String(goal?.targetDate ?? ""),
+  };
+}
+
 async function apiFetch(path, options = {}) {
   if (!path.startsWith("http") && !API_BASE_URL) {
     if (IS_PRODUCTION_BUILD) {
@@ -202,6 +210,7 @@ export default function App() {
     outgoing: [],
   });
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
+  const [savingsGoalForm, setSavingsGoalForm] = useState(() => createSavingsGoalDraft(null));
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
   const [monthSummary, setMonthSummary] = useState(null);
   const [monthTransactions, setMonthTransactions] = useState([]);
@@ -352,6 +361,7 @@ export default function App() {
         headers: authHeaders,
       });
       setSavingsData(data);
+      setSavingsGoalForm(createSavingsGoalDraft(data.longTermGoal));
     } catch (error) {
       setSavingsData(null);
       setPageError(error.message);
@@ -551,6 +561,14 @@ export default function App() {
   function updateSavingsForm(event) {
     setPageError("");
     setSavingsForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
+  function updateSavingsGoalForm(event) {
+    setPageError("");
+    setSavingsGoalForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
     }));
@@ -931,6 +949,48 @@ export default function App() {
     }
   }
 
+  async function handleSavingsGoalSubmit(event) {
+    event.preventDefault();
+    setSavingsTargetBusy(true);
+    setPageError("");
+
+    const targetAmount = Number.parseFloat(savingsGoalForm.targetAmount);
+    const title = savingsGoalForm.title.trim();
+
+    if (!title) {
+      setPageError("Enter a name for the shared savings goal.");
+      setSavingsTargetBusy(false);
+      return;
+    }
+
+    if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+      setPageError("Enter a valid savings goal amount.");
+      setSavingsTargetBusy(false);
+      return;
+    }
+
+    try {
+      await apiFetch("/api/savings/goal", {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          targetAmount,
+          targetDate: savingsGoalForm.targetDate || null,
+        }),
+      });
+
+      await loadSavings();
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setSavingsTargetBusy(false);
+    }
+  }
+
   async function handleSavingsSubmit(event) {
     event.preventDefault();
     setSavingsBusy(true);
@@ -1116,10 +1176,13 @@ export default function App() {
             savingsData={savingsData}
             savingsForm={savingsForm}
             savingsTargetForm={incomeProfileForm}
+            savingsGoalForm={savingsGoalForm}
             onSavingsChange={updateSavingsForm}
             onSavingsTargetChange={updateIncomeProfileForm}
+            onSavingsGoalChange={updateSavingsGoalForm}
             onSavingsSubmit={handleSavingsSubmit}
             onSavingsTargetSubmit={handleSavingsTargetSubmit}
+            onSavingsGoalSubmit={handleSavingsGoalSubmit}
             savingsBusy={savingsBusy}
             savingsTargetBusy={savingsTargetBusy}
           />

@@ -7,10 +7,13 @@ function SavingsPage({
   savingsData,
   savingsForm,
   savingsTargetForm,
+  savingsGoalForm,
   onSavingsChange,
   onSavingsTargetChange,
+  onSavingsGoalChange,
   onSavingsSubmit,
   onSavingsTargetSubmit,
+  onSavingsGoalSubmit,
   savingsBusy,
   savingsTargetBusy,
 }) {
@@ -48,10 +51,20 @@ function SavingsPage({
             </div>
             <div className="rounded-[1.2rem] bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {t("savings.savedAllTime")}
+              </p>
+              <p className="mt-2 text-xl font-semibold text-emerald-700">
+                {currency(savingsData?.allTimeSaved ?? 0)}
+              </p>
+            </div>
+            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.remainingToGoal")}
               </p>
               <p className="mt-2 text-xl font-semibold text-slate-900">
-                {currency(savingsData?.remainingToGoal ?? 0)}
+                {currency(
+                  savingsData?.longTermGoal?.remainingAmount ?? savingsData?.remainingToGoal ?? 0,
+                )}
               </p>
             </div>
             <div className="rounded-[1.2rem] bg-slate-50 p-4">
@@ -67,7 +80,9 @@ function SavingsPage({
           <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner">
             <div
               className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 transition-all duration-500"
-              style={{ width: `${savingsData?.targetProgressPct ?? 0}%` }}
+              style={{
+                width: `${savingsData?.longTermGoal?.progressPct ?? savingsData?.targetProgressPct ?? 0}%`,
+              }}
             />
           </div>
         </section>
@@ -76,7 +91,47 @@ function SavingsPage({
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-sky-700" />
             <div>
-              <h3 className="text-lg font-semibold">{t("savings.yourTarget")}</h3>
+              <h3 className="text-lg font-semibold">{t("savings.longTermGoal")}</h3>
+              <p className="text-sm text-slate-600">{t("savings.longTermGoalBody")}</p>
+            </div>
+          </div>
+
+          <form className="mt-4 space-y-4" onSubmit={onSavingsGoalSubmit}>
+            <Input
+              label={t("savings.goalName")}
+              name="title"
+              value={savingsGoalForm.title}
+              onChange={onSavingsGoalChange}
+              placeholder={t("savings.goalNamePlaceholder")}
+            />
+            <Input
+              label={t("savings.goalAmount")}
+              name="targetAmount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={savingsGoalForm.targetAmount}
+              onChange={onSavingsGoalChange}
+              placeholder="5000.00"
+            />
+            <Input
+              label={t("savings.goalDate")}
+              name="targetDate"
+              type="date"
+              value={savingsGoalForm.targetDate}
+              onChange={onSavingsGoalChange}
+            />
+            <ActionButton busy={savingsTargetBusy} className="sm:w-auto">
+              {t("savings.saveGoal")}
+            </ActionButton>
+          </form>
+        </section>
+
+        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+          <div className="flex items-center gap-3">
+            <Target className="h-5 w-5 text-slate-700" />
+            <div>
+              <h3 className="text-lg font-semibold">{t("savings.monthlyTarget")}</h3>
             </div>
           </div>
 

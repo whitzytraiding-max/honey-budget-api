@@ -56,6 +56,7 @@ model Couple {
   updatedAt DateTime @updatedAt @map("updated_at")
   userOne   User     @relation("CoupleUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
   userTwo   User     @relation("CoupleUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+  savingsGoal SavingsGoal?
 
   @@map("couples")
 }
@@ -105,4 +106,17 @@ model SavingsEntry {
 
   @@index([userId, date])
   @@map("savings_entries")
+}
+
+model SavingsGoal {
+  id           Int       @id @default(autoincrement())
+  coupleId     Int       @unique @map("couple_id")
+  title        String
+  targetAmount Decimal   @db.Decimal(12, 2) @map("target_amount")
+  targetDate   DateTime? @db.Date @map("target_date")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  couple       Couple    @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+
+  @@map("savings_goals")
 }

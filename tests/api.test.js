@@ -93,12 +93,14 @@ function createInMemoryBudgetRepository() {
   let savingsEntryId = 1;
   let passwordResetTokenId = 1;
   let coupleInviteId = 1;
+  let savingsGoalId = 1;
   const users = [];
   const couples = [];
   const transactions = [];
   const savingsEntries = [];
   const passwordResetTokens = [];
   const coupleInvites = [];
+  const savingsGoals = [];
 
   function sanitizeUser(user) {
     if (!user) {
@@ -413,6 +415,33 @@ function createInMemoryBudgetRepository() {
       return savingsEntries
         .filter((entry) => userIds.includes(entry.userId) && entry.date >= cutoff)
         .sort((left, right) => right.date.localeCompare(left.date) || right.id - left.id);
+    },
+
+    async getSavingsGoalForCouple(coupleId) {
+      return savingsGoals.find((goal) => goal.coupleId === coupleId) ?? null;
+    },
+
+    async upsertSavingsGoalForCouple({ coupleId, title, targetAmount, targetDate }) {
+      const existing = savingsGoals.find((goal) => goal.coupleId === coupleId);
+      if (existing) {
+        existing.title = title;
+        existing.targetAmount = targetAmount;
+        existing.targetDate = targetDate ? targetDate.toISOString().slice(0, 10) : null;
+        existing.updatedAt = new Date().toISOString();
+        return existing;
+      }
+
+      const goal = {
+        id: savingsGoalId++,
+        coupleId,
+        title,
+        targetAmount,
+        targetDate: targetDate ? targetDate.toISOString().slice(0, 10) : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      savingsGoals.push(goal);
+      return goal;
     },
 
     async listCoupleTransactions({ coupleId, days = 30, fromDate, toDate }) {
@@ -1275,6 +1304,23 @@ describe("Couples Budgeting API", () => {
       partnerUserId: sam.body.data.user.id,
     });
 
+    const goalResponse = await inject(app, {
+      method: "POST",
+      url: "/api/savings/goal",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        title: "Emergency fund",
+        targetAmount: 5000,
+        targetDate: "2026-12-31",
+      },
+    });
+
+    expect(goalResponse.status).toBe(200);
+    expect(goalResponse.body.data.goal.title).toBe("Emergency fund");
+    expect(goalResponse.body.data.goal.targetAmount).toBe(5000);
+
     const saveResponse = await inject(app, {
       method: "POST",
       url: "/api/savings",
@@ -1302,6 +1348,11 @@ describe("Couples Budgeting API", () => {
     expect(summaryResponse.status).toBe(200);
     expect(summaryResponse.body.data.householdSavingsTarget).toBe(500);
     expect(summaryResponse.body.data.totalSavedThisWindow).toBe(125);
+    expect(summaryResponse.body.data.allTimeSaved).toBe(125);
+    expect(summaryResponse.body.data.longTermGoal.title).toBe("Emergency fund");
+    expect(summaryResponse.body.data.longTermGoal.targetAmount).toBe(5000);
+    expect(summaryResponse.body.data.longTermGoal.totalSaved).toBe(125);
+    expect(summaryResponse.body.data.longTermGoal.remainingAmount).toBe(4875);
     expect(summaryResponse.body.data.entries[0].note).toBe("Emergency fund transfer");
   });
 

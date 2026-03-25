@@ -522,9 +522,14 @@ async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser,
 async function buildSavingsSummary({ budgetRepository, currentUser, partnerUser }) {
   const users = [currentUser, partnerUser].filter(Boolean);
   const budgetWindow = getBudgetWindowForUsers(users);
+  const couple =
+    partnerUser && currentUser
+      ? await budgetRepository.getCoupleForUser(currentUser.id)
+      : null;
+  const goal = couple ? await budgetRepository.getSavingsGoalForCouple(couple.id) : null;
   const entries = await budgetRepository.listSavingsEntriesForUserIds({
     userIds: users.map((user) => user.id),
-    days: 365,
+    days: 3650,
   });
   const currentWindowEntries = entries.filter(
     (entry) => entry.date >= budgetWindow.from && entry.date <= budgetWindow.to,
@@ -537,6 +542,7 @@ async function buildSavingsSummary({ budgetRepository, currentUser, partnerUser 
     (sum, user) => sum + Number(user.monthlySavingsTarget ?? 0),
     0,
   );
+  const allTimeSaved = entries.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
   const remainingToGoal = Math.max(0, Number((householdTarget - totalSaved).toFixed(2)));
   const targetProgressPct =
     householdTarget > 0
@@ -551,9 +557,26 @@ async function buildSavingsSummary({ budgetRepository, currentUser, partnerUser 
     period: budgetWindow,
     householdSavingsTarget: Number(householdTarget.toFixed(2)),
     totalSavedThisWindow: Number(totalSaved.toFixed(2)),
+    allTimeSaved: Number(allTimeSaved.toFixed(2)),
     remainingToGoal,
     targetProgressPct,
     suggestedDailySave,
+    longTermGoal: goal
+      ? {
+          ...goal,
+          totalSaved: Number(allTimeSaved.toFixed(2)),
+          remainingAmount: Math.max(
+            0,
+            Number((Number(goal.targetAmount ?? 0) - allTimeSaved).toFixed(2)),
+          ),
+          progressPct:
+            Number(goal.targetAmount ?? 0) > 0
+              ? Number(
+                  Math.min(100, (allTimeSaved / Number(goal.targetAmount ?? 0)) * 100).toFixed(1),
+                )
+              : 0,
+        }
+      : null,
     entries: entries.slice(0, 20),
     users: users.map((user) => ({
       userId: user.id,
@@ -1324,6 +1347,54 @@ function createApp({
       });
 
       sendData(response, 200, savings);
+    }),
+  );
+
+  app.post(
+    "/api/savings/goal",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const partnerUser = await resolvePartnerUser({
+        budgetRepository,
+        user: request.user,
+      });
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      const title = String(request.body?.title ?? "").trim();
+      const targetAmount = parseMoney(request.body?.targetAmount);
+      const targetDate = request.body?.targetDate?.trim?.() || null;
+
+      if (!couple || !partnerUser) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before setting a shared savings goal.",
+        );
+      }
+
+      if (!title) {
+        throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
+      }
+
+      if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "targetAmount must be a positive number.",
+        );
+      }
+
+      if (targetDate && !validateIsoDate(targetDate)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "targetDate must use YYYY-MM-DD.");
+      }
+
+      const goal = await budgetRepository.upsertSavingsGoalForCouple({
+        coupleId: couple.id,
+        title,
+        targetAmount,
+        targetDate: targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null,
+      });
+
+      sendData(response, 200, { goal });
     }),
   );
 
