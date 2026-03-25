@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Whitzy. All rights reserved.
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
-import { Brain, CalendarDays, ClipboardList, Ellipsis, House, Settings2, Wallet } from "lucide-react";
+import { Bell, Brain, CalendarDays, ClipboardList, Ellipsis, House, Settings2, Wallet } from "lucide-react";
 import { PiggyBank } from "lucide-react";
 import { currency } from "../lib/format.js";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { key: "home", label: "Home", icon: House },
   { key: "expenses", label: "Expenses", icon: Wallet },
   { key: "savings", label: "Savings", icon: PiggyBank },
+  { key: "notifications", label: "Notifications", icon: Bell },
   { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "insights", label: "Insights", icon: Brain },
   { key: "history", label: "History", icon: ClipboardList },
@@ -32,10 +33,11 @@ function AppShell({
     { ...NAV_ITEMS[0], label: t("nav.home") },
     { ...NAV_ITEMS[1], label: t("nav.expenses") },
     { ...NAV_ITEMS[2], label: t("nav.savings") },
-    { ...NAV_ITEMS[3], label: t("nav.calendar") },
-    { ...NAV_ITEMS[4], label: t("nav.insights") },
-    { ...NAV_ITEMS[5], label: t("nav.history") },
-    { ...NAV_ITEMS[6], label: t("nav.settings") },
+    { ...NAV_ITEMS[3], label: t("nav.notifications") },
+    { ...NAV_ITEMS[4], label: t("nav.calendar") },
+    { ...NAV_ITEMS[5], label: t("nav.insights") },
+    { ...NAV_ITEMS[6], label: t("nav.history") },
+    { ...NAV_ITEMS[7], label: t("nav.settings") },
   ];
   const mobileNavItems = [
     { key: "home", label: t("nav.home"), icon: House },
@@ -43,7 +45,8 @@ function AppShell({
     { key: "savings", label: t("nav.savings"), icon: PiggyBank },
     { key: "more", label: t("nav.more"), icon: Ellipsis },
   ];
-  const isMoreRoute = route === "more" || ["calendar", "insights", "history", "settings"].includes(route);
+  const isMoreRoute =
+    route === "more" || ["notifications", "calendar", "insights", "history", "settings"].includes(route);
 
   return (
     <div className="min-h-screen bg-transparent px-3 py-4 text-slate-900 sm:px-6 lg:px-8">
@@ -80,7 +83,7 @@ function AppShell({
             </div>
           </div>
 
-          <nav className="mt-5 hidden grid-cols-7 gap-3 md:grid">
+          <nav className="mt-5 hidden grid-cols-8 gap-3 md:grid">
             {localizedNavItems.map((item) => {
               const Icon = item.icon;
               const isActive = route === item.key;

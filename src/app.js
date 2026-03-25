@@ -910,10 +910,14 @@ function createApp({
     requireAuth,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      const notifications = await budgetRepository.listPendingCoupleInvitesForUser(
+        request.user.id,
+      );
 
       sendData(response, 200, {
         user: sanitizeUser(request.user),
         couple,
+        notifications,
       });
     }),
   );
@@ -1009,30 +1013,15 @@ function createApp({
         throw new HttpError(404, "USER_NOT_FOUND", "Partner user not found.");
       }
 
-      const currentCouple = await budgetRepository.getCoupleForUser(request.user.id);
-      if (currentCouple) {
-        throw new HttpError(
-          409,
-          "COUPLE_EXISTS",
-          "Current user is already linked to a couple.",
-        );
-      }
-
-      const partnerCouple = await budgetRepository.getCoupleForUser(partnerUserId);
-      if (partnerCouple) {
-        throw new HttpError(
-          409,
-          "COUPLE_EXISTS",
-          "Partner user is already linked to a couple.",
-        );
-      }
-
-      const couple = await budgetRepository.createCouple({
-        userOneId: request.user.id,
-        userTwoId: partnerUserId,
+      const invite = await budgetRepository.linkCoupleByPartnerEmail({
+        userId: request.user.id,
+        partnerEmail: partner.email,
       });
 
-      sendData(response, 201, { couple });
+      sendData(response, 201, {
+        invite,
+        message: "Invite sent. Your partner needs to accept it before you are linked.",
+      });
     }),
   );
 
@@ -1056,12 +1045,56 @@ function createApp({
         );
       }
 
-      const couple = await budgetRepository.linkCoupleByPartnerEmail({
+      const invite = await budgetRepository.linkCoupleByPartnerEmail({
         userId: request.user.id,
         partnerEmail: normalizedPartnerEmail,
       });
 
-      sendData(response, 201, { couple });
+      sendData(response, 201, {
+        invite,
+        message: "Invite sent. Your partner needs to accept it before you are linked.",
+      });
+    }),
+  );
+
+  app.get(
+    "/api/notifications",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const notifications = await budgetRepository.listPendingCoupleInvitesForUser(
+        request.user.id,
+      );
+
+      sendData(response, 200, notifications);
+    }),
+  );
+
+  app.post(
+    "/api/couples/invites/:inviteId/respond",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const inviteId = Number.parseInt(request.params.inviteId, 10);
+      const action = String(request.body?.action ?? "").trim().toLowerCase();
+
+      if (!Number.isInteger(inviteId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "inviteId must be an integer.");
+      }
+
+      if (action !== "accept" && action !== "decline") {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "action must be 'accept' or 'decline'.",
+        );
+      }
+
+      const result = await budgetRepository.respondToCoupleInvite({
+        inviteId,
+        userId: request.user.id,
+        action,
+      });
+
+      sendData(response, 200, result);
     }),
   );
 

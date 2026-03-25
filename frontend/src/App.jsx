@@ -12,6 +12,7 @@ import HistoryPage from "./components/pages/HistoryPage.jsx";
 import HomePage from "./components/pages/HomePage.jsx";
 import InsightsPage from "./components/pages/InsightsPage.jsx";
 import MorePage from "./components/pages/MorePage.jsx";
+import NotificationsPage from "./components/pages/NotificationsPage.jsx";
 import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import { ActionButton, EmptyState } from "./components/ui.jsx";
@@ -52,6 +53,7 @@ const APP_ROUTES = new Set([
   "expenses",
   "savings",
   "more",
+  "notifications",
   "calendar",
   "insights",
   "history",
@@ -190,9 +192,14 @@ export default function App() {
   const [incomeProfileBusy, setIncomeProfileBusy] = useState(false);
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
+  const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [householdIncome, setHouseholdIncome] = useState(0);
   const [remainingBudget, setRemainingBudget] = useState(0);
   const [savingsData, setSavingsData] = useState(null);
+  const [notificationsData, setNotificationsData] = useState({
+    incoming: [],
+    outgoing: [],
+  });
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
   const [monthSummary, setMonthSummary] = useState(null);
@@ -255,6 +262,12 @@ export default function App() {
       Number(data.user?.monthlySalary || 0) + Number(partner?.monthlySalary || 0),
     );
     setIncomeProfileForm(createIncomeProfileDraft(data.user));
+    setNotificationsData(
+      data.notifications ?? {
+        incoming: [],
+        outgoing: [],
+      },
+    );
 
     return data;
   }
@@ -343,6 +356,25 @@ export default function App() {
     }
   }
 
+  async function loadNotifications() {
+    setNotificationsBusy(true);
+
+    try {
+      const data = await apiFetch("/api/notifications", {
+        headers: authHeaders,
+      });
+      setNotificationsData(data);
+    } catch (error) {
+      setNotificationsData({
+        incoming: [],
+        outgoing: [],
+      });
+      setPageError(error.message);
+    } finally {
+      setNotificationsBusy(false);
+    }
+  }
+
   async function refreshDashboardBundle() {
     const me = await fetchHouseholdData();
 
@@ -384,11 +416,25 @@ export default function App() {
       setMonthSummary(null);
       setMonthTransactions([]);
       setSavingsData(null);
+      setNotificationsData({
+        incoming: [],
+        outgoing: [],
+      });
     });
   }, [token]);
 
   useEffect(() => {
-    if (!token || !session?.couple) {
+    if (!token) {
+      return;
+    }
+
+    if (route === "notifications" && !notificationsBusy) {
+      loadNotifications().catch((error) => {
+        setPageError(error.message);
+      });
+    }
+
+    if (!session?.couple) {
       return;
     }
 
@@ -403,7 +449,6 @@ export default function App() {
         setPageError(error.message);
       });
     }
-
   }, [
     token,
     route,
@@ -412,6 +457,7 @@ export default function App() {
     insightData,
     insightsBusy,
     savingsData,
+    notificationsBusy,
   ]);
 
   useEffect(() => {
@@ -673,12 +719,38 @@ export default function App() {
       });
 
       setPartnerEmail("");
-      await refreshDashboardBundle();
-      navigate("home");
+      await Promise.all([fetchHouseholdData(), loadNotifications()]);
+      navigate("notifications");
     } catch (error) {
       setPageError(error.message);
     } finally {
       setLinkBusy(false);
+    }
+  }
+
+  async function handleInviteResponse(inviteId, action) {
+    setNotificationsBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch(`/api/couples/invites/${inviteId}/respond`, {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      await Promise.all([refreshDashboardBundle(), loadNotifications()]);
+
+      if (action === "accept") {
+        navigate("home");
+      }
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setNotificationsBusy(false);
     }
   }
 
@@ -960,11 +1032,11 @@ export default function App() {
     : session?.user?.name;
 
   function renderCurrentPage() {
-    if (!couple && route !== "settings") {
+    if (!couple && route !== "settings" && route !== "more" && route !== "notifications") {
       return (
         <EmptyState
-          title="Link your partner to unlock the shared dashboard"
-          body="Have your partner create an account first, then enter the exact email they used to register. Once linked, the homepage, logging, insights, history, and settings will all stay in sync."
+          title="Invite your partner to unlock the shared dashboard"
+          body="Send an invite to your partner's email. They will need to accept it from Notifications before your accounts are linked."
           action={
             <form
               className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
@@ -980,7 +1052,7 @@ export default function App() {
                 onChange={(event) => setPartnerEmail(event.target.value)}
               />
               <ActionButton busy={linkBusy} className="sm:w-auto">
-                Link partner
+                Send invite
               </ActionButton>
             </form>
           }
@@ -1019,6 +1091,14 @@ export default function App() {
         );
       case "more":
         return <MorePage onNavigate={navigate} />;
+      case "notifications":
+        return (
+          <NotificationsPage
+            notifications={notificationsData}
+            notificationsBusy={notificationsBusy}
+            onRespond={handleInviteResponse}
+          />
+        );
       case "savings":
         return (
           <SavingsPage

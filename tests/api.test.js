@@ -41,17 +41,64 @@ async function inject(app, { method, url, headers = {}, body }) {
   };
 }
 
+async function connectUsersByInvite({
+  app,
+  inviterToken,
+  recipientToken,
+  partnerUserId,
+}) {
+  const inviteResponse = await inject(app, {
+    method: "POST",
+    url: "/api/couples",
+    headers: {
+      authorization: `Bearer ${inviterToken}`,
+    },
+    body: {
+      partnerUserId,
+    },
+  });
+
+  const notificationsResponse = await inject(app, {
+    method: "GET",
+    url: "/api/notifications",
+    headers: {
+      authorization: `Bearer ${recipientToken}`,
+    },
+  });
+
+  const inviteId = notificationsResponse.body?.data?.incoming?.[0]?.id;
+
+  const acceptResponse = await inject(app, {
+    method: "POST",
+    url: `/api/couples/invites/${inviteId}/respond`,
+    headers: {
+      authorization: `Bearer ${recipientToken}`,
+    },
+    body: {
+      action: "accept",
+    },
+  });
+
+  return {
+    inviteResponse,
+    notificationsResponse,
+    acceptResponse,
+  };
+}
+
 function createInMemoryBudgetRepository() {
   let userId = 1;
   let coupleId = 1;
   let transactionId = 1;
   let savingsEntryId = 1;
   let passwordResetTokenId = 1;
+  let coupleInviteId = 1;
   const users = [];
   const couples = [];
   const transactions = [];
   const savingsEntries = [];
   const passwordResetTokens = [];
+  const coupleInvites = [];
 
   function sanitizeUser(user) {
     if (!user) {
@@ -185,12 +232,18 @@ function createInMemoryBudgetRepository() {
     },
 
     async createCouple({ userOneId, userTwoId }) {
+      const userOne = users.find((user) => user.id === userOneId);
+      const userTwo = users.find((user) => user.id === userTwoId);
       const couple = {
         id: coupleId++,
         userOneId,
         userTwoId,
         createdAt: new Date().toISOString(),
       };
+      if (userOne && userTwo) {
+        userOne.partnerId = userTwo.id;
+        userTwo.partnerId = userOne.id;
+      }
       couples.push(couple);
       return withCoupleUsers(couple);
     },
@@ -203,17 +256,93 @@ function createInMemoryBudgetRepository() {
         throw new Error("Partner not found.");
       }
 
-      currentUser.partnerId = Number(partner.id);
-      partner.partnerId = Number(currentUser.id);
-
-      const couple = {
-        id: coupleId++,
-        userOneId: Number(currentUser.id),
-        userTwoId: Number(partner.id),
+      const invite = {
+        id: coupleInviteId++,
+        senderId: currentUser.id,
+        recipientId: partner.id,
+        status: "pending",
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        respondedAt: null,
       };
-      couples.push(couple);
-      return withCoupleUsers(couple);
+      coupleInvites.push(invite);
+
+      return {
+        ...invite,
+        sender: sanitizeUser(currentUser),
+        recipient: sanitizeUser(partner),
+      };
+    },
+
+    async listPendingCoupleInvitesForUser(userId) {
+      return {
+        incoming: coupleInvites
+          .filter((invite) => invite.recipientId === userId && invite.status === "pending")
+          .map((invite) => ({
+            ...invite,
+            sender: sanitizeUser(users.find((user) => user.id === invite.senderId)),
+            recipient: sanitizeUser(users.find((user) => user.id === invite.recipientId)),
+          })),
+        outgoing: coupleInvites
+          .filter((invite) => invite.senderId === userId && invite.status === "pending")
+          .map((invite) => ({
+            ...invite,
+            sender: sanitizeUser(users.find((user) => user.id === invite.senderId)),
+            recipient: sanitizeUser(users.find((user) => user.id === invite.recipientId)),
+          })),
+      };
+    },
+
+    async respondToCoupleInvite({ inviteId, userId, action }) {
+      const invite = coupleInvites.find((entry) => entry.id === inviteId);
+      if (!invite || invite.recipientId !== userId) {
+        throw new Error("Invite not found.");
+      }
+
+      invite.updatedAt = new Date().toISOString();
+      invite.respondedAt = invite.updatedAt;
+
+      if (action === "decline") {
+        invite.status = "declined";
+        return {
+          invite: {
+            ...invite,
+            sender: sanitizeUser(users.find((user) => user.id === invite.senderId)),
+            recipient: sanitizeUser(users.find((user) => user.id === invite.recipientId)),
+          },
+          couple: null,
+        };
+      }
+
+      invite.status = "accepted";
+      const couple = await this.createCouple({
+        userOneId: invite.senderId,
+        userTwoId: invite.recipientId,
+      });
+
+      for (const entry of coupleInvites) {
+        if (
+          entry.id !== inviteId &&
+          entry.status === "pending" &&
+          (
+            [invite.senderId, invite.recipientId].includes(entry.senderId) ||
+            [invite.senderId, invite.recipientId].includes(entry.recipientId)
+          )
+        ) {
+          entry.status = "cancelled";
+          entry.respondedAt = invite.updatedAt;
+          entry.updatedAt = invite.updatedAt;
+        }
+      }
+
+      return {
+        invite: {
+          ...invite,
+          sender: sanitizeUser(users.find((user) => user.id === invite.senderId)),
+          recipient: sanitizeUser(users.find((user) => user.id === invite.recipientId)),
+        },
+        couple,
+      };
     },
 
     async addTransaction({ userId, amount, category, type, paymentMethod, date }) {
@@ -474,17 +603,16 @@ describe("Couples Budgeting API", () => {
     const token = alex.body.data.accessToken;
     const partnerUserId = sam.body.data.user.id;
 
-    const coupleResponse = await inject(app, {
-      method: "POST",
-      url: "/api/couples",
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-      body: { partnerUserId },
+    const connection = await connectUsersByInvite({
+      app,
+      inviterToken: token,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId,
     });
 
-    expect(coupleResponse.status).toBe(201);
-    expect(coupleResponse.body.data.couple.userTwo.email).toBe("sam@example.com");
+    expect(connection.inviteResponse.status).toBe(201);
+    expect(connection.acceptResponse.status).toBe(200);
+    expect(connection.acceptResponse.body.data.couple.userTwo.email).toBe("sam@example.com");
 
     const transactionResponse = await inject(app, {
       method: "POST",
@@ -521,7 +649,7 @@ describe("Couples Budgeting API", () => {
     expect(dashboardResponse.body.data.partner.email).toBe("sam@example.com");
   });
 
-  it("accepts partnerUserId when it arrives as a numeric string", async () => {
+  it("accepts partnerUserId when it arrives as a numeric string and sends an invite", async () => {
     const alex = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
@@ -546,7 +674,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    const coupleResponse = await inject(app, {
+    const inviteResponse = await inject(app, {
       method: "POST",
       url: "/api/couples",
       headers: {
@@ -557,11 +685,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    expect(coupleResponse.status).toBe(201);
-    expect(coupleResponse.body.data.couple.userTwo.id).toBe(sam.body.data.user.id);
+    expect(inviteResponse.status).toBe(201);
+    expect(inviteResponse.body.data.invite.recipient.id).toBe(sam.body.data.user.id);
   });
 
-  it("links a couple by partner email and sets the mutual relationship", async () => {
+  it("creates an invite by partner email and links only after acceptance", async () => {
     const alex = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
@@ -574,7 +702,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -598,8 +726,34 @@ describe("Couples Budgeting API", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(response.body.data.couple.userOne.email).toBe("alex@example.com");
-    expect(response.body.data.couple.userTwo.email).toBe("sam@example.com");
+    expect(response.body.data.invite.sender.email).toBe("alex@example.com");
+    expect(response.body.data.invite.recipient.email).toBe("sam@example.com");
+
+    const notificationsResponse = await inject(app, {
+      method: "GET",
+      url: "/api/notifications",
+      headers: {
+        authorization: `Bearer ${sam.body.data.accessToken}`,
+      },
+    });
+
+    expect(notificationsResponse.status).toBe(200);
+    expect(notificationsResponse.body.data.incoming).toHaveLength(1);
+
+    const acceptResponse = await inject(app, {
+      method: "POST",
+      url: `/api/couples/invites/${notificationsResponse.body.data.incoming[0].id}/respond`,
+      headers: {
+        authorization: `Bearer ${sam.body.data.accessToken}`,
+      },
+      body: {
+        action: "accept",
+      },
+    });
+
+    expect(acceptResponse.status).toBe(200);
+    expect(acceptResponse.body.data.couple.userOne.email).toBe("alex@example.com");
+    expect(acceptResponse.body.data.couple.userTwo.email).toBe("sam@example.com");
   });
 
   it("returns a current-month summary with total expenses and remaining budget", async () => {
@@ -615,7 +769,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -627,15 +781,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     await inject(app, {
@@ -687,7 +837,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -699,15 +849,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     const updateResponse = await inject(app, {
@@ -756,7 +902,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -768,15 +914,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     const insightsResponse = await inject(app, {
@@ -821,13 +963,11 @@ describe("Couples Budgeting API", () => {
 
     const token = alex.body.data.accessToken;
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples",
-      headers: {
-        authorization: `Bearer ${token}`,
-      },
-      body: { partnerUserId: sam.body.data.user.id },
+    await connectUsersByInvite({
+      app,
+      inviterToken: token,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     await inject(app, {
@@ -890,15 +1030,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     const transactionResponse = await inject(app, {
@@ -988,7 +1124,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -1001,15 +1137,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     await inject(app, {
@@ -1058,7 +1190,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -1071,15 +1203,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     const saveResponse = await inject(app, {
@@ -1125,7 +1253,7 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
+    const sam = await inject(app, {
       method: "POST",
       url: "/api/auth/register",
       body: {
@@ -1137,15 +1265,11 @@ describe("Couples Budgeting API", () => {
       },
     });
 
-    await inject(app, {
-      method: "POST",
-      url: "/api/couples/link",
-      headers: {
-        authorization: `Bearer ${alex.body.data.accessToken}`,
-      },
-      body: {
-        partnerEmail: "sam@example.com",
-      },
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
     });
 
     const previousMonthDate = isoDateForMonthOffset(-1, 12);

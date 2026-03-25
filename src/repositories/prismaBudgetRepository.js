@@ -111,6 +111,22 @@ function mapSavingsEntry(entry) {
   };
 }
 
+function mapCoupleInvite(invite) {
+  if (!invite) {
+    return null;
+  }
+
+  return {
+    id: invite.id,
+    status: invite.status,
+    createdAt: invite.createdAt?.toISOString?.() ?? invite.createdAt,
+    updatedAt: invite.updatedAt?.toISOString?.() ?? invite.updatedAt,
+    respondedAt: invite.respondedAt?.toISOString?.() ?? invite.respondedAt,
+    sender: mapUser(invite.sender),
+    recipient: mapUser(invite.recipient),
+  };
+}
+
 function sortTransactions(rows) {
   return rows
     .map(mapTransaction)
@@ -349,21 +365,147 @@ function createPrismaBudgetRepository({ prisma }) {
         );
       }
 
+      const invite = await prisma.$transaction(async (tx) => {
+        await tx.coupleInvite.updateMany({
+          where: {
+            senderId: Number(currentUser.id),
+            recipientId: Number(partner.id),
+            status: "pending",
+          },
+          data: {
+            status: "cancelled",
+            respondedAt: new Date(),
+          },
+        });
+
+        return tx.coupleInvite.create({
+          data: {
+            senderId: Number(currentUser.id),
+            recipientId: Number(partner.id),
+          },
+          include: {
+            sender: true,
+            recipient: true,
+          },
+        });
+      });
+
+      return mapCoupleInvite(invite);
+    },
+
+    async listPendingCoupleInvitesForUser(userId) {
+      const [incoming, outgoing] = await Promise.all([
+        prisma.coupleInvite.findMany({
+          where: {
+            recipientId: userId,
+            status: "pending",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            sender: true,
+            recipient: true,
+          },
+        }),
+        prisma.coupleInvite.findMany({
+          where: {
+            senderId: userId,
+            status: "pending",
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+          include: {
+            sender: true,
+            recipient: true,
+          },
+        }),
+      ]);
+
+      return {
+        incoming: incoming.map(mapCoupleInvite),
+        outgoing: outgoing.map(mapCoupleInvite),
+      };
+    },
+
+    async respondToCoupleInvite({ inviteId, userId, action }) {
+      const invite = await prisma.coupleInvite.findUnique({
+        where: { id: inviteId },
+        include: {
+          sender: true,
+          recipient: true,
+        },
+      });
+
+      if (!invite || invite.recipientId !== userId) {
+        throw new HttpError(404, "INVITE_NOT_FOUND", "Invite not found.");
+      }
+
+      if (invite.status !== "pending") {
+        throw new HttpError(409, "INVITE_RESOLVED", "This invite has already been handled.");
+      }
+
+      if (action === "decline") {
+        const declined = await prisma.coupleInvite.update({
+          where: { id: inviteId },
+          data: {
+            status: "declined",
+            respondedAt: new Date(),
+          },
+          include: {
+            sender: true,
+            recipient: true,
+          },
+        });
+
+        return {
+          invite: mapCoupleInvite(declined),
+          couple: null,
+        };
+      }
+
+      const currentCouple = await prisma.couple.findFirst({
+        where: {
+          OR: [{ userOneId: userId }, { userTwoId: userId }],
+        },
+      });
+      if (currentCouple || invite.recipient.partnerId) {
+        throw new HttpError(
+          409,
+          "COUPLE_EXISTS",
+          "Current user is already linked to a partner.",
+        );
+      }
+
+      const senderCouple = await prisma.couple.findFirst({
+        where: {
+          OR: [{ userOneId: invite.senderId }, { userTwoId: invite.senderId }],
+        },
+      });
+      if (senderCouple || invite.sender.partnerId) {
+        throw new HttpError(
+          409,
+          "COUPLE_EXISTS",
+          "Sender is already linked to a partner.",
+        );
+      }
+
       const result = await prisma.$transaction(async (tx) => {
         await tx.user.update({
-          where: { id: userId },
-          data: { partnerId: Number(partner.id) },
+          where: { id: invite.senderId },
+          data: { partnerId: Number(invite.recipientId) },
         });
 
         await tx.user.update({
-          where: { id: Number(partner.id) },
-          data: { partnerId: Number(currentUser.id) },
+          where: { id: invite.recipientId },
+          data: { partnerId: Number(invite.senderId) },
         });
 
         const couple = await tx.couple.create({
           data: {
-            userOneId: Number(currentUser.id),
-            userTwoId: Number(partner.id),
+            userOneId: Number(invite.senderId),
+            userTwoId: Number(invite.recipientId),
           },
           include: {
             userOne: true,
@@ -371,10 +513,47 @@ function createPrismaBudgetRepository({ prisma }) {
           },
         });
 
-        return couple;
+        const acceptedInvite = await tx.coupleInvite.update({
+          where: { id: inviteId },
+          data: {
+            status: "accepted",
+            respondedAt: new Date(),
+          },
+          include: {
+            sender: true,
+            recipient: true,
+          },
+        });
+
+        await tx.coupleInvite.updateMany({
+          where: {
+            status: "pending",
+            OR: [
+              { senderId: invite.senderId },
+              { recipientId: invite.senderId },
+              { senderId: invite.recipientId },
+              { recipientId: invite.recipientId },
+            ],
+            id: {
+              not: inviteId,
+            },
+          },
+          data: {
+            status: "cancelled",
+            respondedAt: new Date(),
+          },
+        });
+
+        return {
+          invite: acceptedInvite,
+          couple,
+        };
       });
 
-      return mapCouple(result);
+      return {
+        invite: mapCoupleInvite(result.invite),
+        couple: mapCouple(result.couple),
+      };
     },
 
     async addTransaction({

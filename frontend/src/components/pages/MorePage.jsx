@@ -1,7 +1,8 @@
-import { Brain, CalendarDays, ChevronRight, ClipboardList, Settings2 } from "lucide-react";
+import { Bell, Brain, CalendarDays, ChevronRight, ClipboardList, Settings2 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 
 const MORE_ITEMS = [
+  { key: "notifications", icon: Bell },
   { key: "calendar", icon: CalendarDays },
   { key: "insights", icon: Brain },
   { key: "history", icon: ClipboardList },
