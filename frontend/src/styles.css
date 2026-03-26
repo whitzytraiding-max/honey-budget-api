@@ -164,3 +164,68 @@ html[data-theme="dark"] .shadow-sm,
 html[data-theme="dark"] .shadow-\[0_20px_60px_-24px_rgba\(21\,50\,65\,0\.35\)\] {
   box-shadow: 0 20px 60px -28px rgba(2, 6, 23, 0.8) !important;
 }
+
+html[data-theme="dark"] .auth-hero-panel {
+  border-color: rgba(71, 85, 105, 0.72) !important;
+  background: linear-gradient(180deg, rgba(15, 23, 36, 0.96), rgba(17, 24, 39, 0.92)) !important;
+}
+
+html[data-theme="dark"] .auth-form-panel {
+  border-color: rgba(71, 85, 105, 0.72) !important;
+  background-color: rgba(15, 23, 36, 0.88) !important;
+}
+
+html[data-theme="dark"] .auth-hero-glow-left {
+  background-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+html[data-theme="dark"] .auth-hero-glow-right {
+  background-color: rgba(244, 114, 182, 0.16) !important;
+}
+
+html[data-theme="dark"] .auth-brand-pill,
+html[data-theme="dark"] .auth-brand-mark,
+html[data-theme="dark"] .auth-feature-card,
+html[data-theme="dark"] .auth-tab-bar {
+  background-color: rgba(30, 41, 59, 0.88) !important;
+}
+
+html[data-theme="dark"] .auth-hero-title,
+html[data-theme="dark"] .auth-feature-title,
+html[data-theme="dark"] .auth-form-panel h2 {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .auth-hero-copy,
+html[data-theme="dark"] .auth-feature-copy,
+html[data-theme="dark"] .auth-helper-copy,
+html[data-theme="dark"] .auth-back-link,
+html[data-theme="dark"] .auth-legal,
+html[data-theme="dark"] .auth-form-panel p {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .auth-tab {
+  color: #cbd5e1 !important;
+}
+
+html[data-theme="dark"] .auth-tab.bg-white {
+  background-color: rgba(248, 250, 252, 0.92) !important;
+  color: #0f172a !important;
+}
+
+html[data-theme="dark"] .auth-error {
+  background-color: rgba(69, 10, 10, 0.45) !important;
+  border-color: rgba(248, 113, 113, 0.35) !important;
+  color: #fecaca !important;
+}
+
+html[data-theme="dark"] .auth-info {
+  background-color: rgba(6, 78, 59, 0.35) !important;
+  border-color: rgba(52, 211, 153, 0.3) !important;
+  color: #bbf7d0 !important;
+}
+
+html[data-theme="dark"] .auth-info-link {
+  color: #dcfce7 !important;
+}
