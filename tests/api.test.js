@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import httpMocks from "node-mocks-http";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
+import { HttpError } from "../src/lib/http.js";
 import { createInsightsService } from "../src/services/insightsService.js";
 
 function recentIsoDate(daysAgo = 0) {
@@ -365,6 +366,47 @@ function createInMemoryBudgetRepository() {
       return transaction;
     },
 
+    async updateUserTransaction({
+      transactionId: nextTransactionId,
+      userId,
+      amount,
+      description,
+      category,
+      type,
+      paymentMethod,
+      date,
+    }) {
+      const transaction = transactions.find(
+        (entry) => entry.id === nextTransactionId && entry.userId === userId,
+      );
+
+      if (!transaction) {
+        throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
+      }
+
+      transaction.amount = amount;
+      transaction.description = description;
+      transaction.category = category;
+      transaction.type = type;
+      transaction.paymentMethod = paymentMethod;
+      transaction.date = date;
+
+      return { ...transaction };
+    },
+
+    async deleteUserTransaction({ transactionId: nextTransactionId, userId }) {
+      const index = transactions.findIndex(
+        (entry) => entry.id === nextTransactionId && entry.userId === userId,
+      );
+
+      if (index < 0) {
+        throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
+      }
+
+      const [transaction] = transactions.splice(index, 1);
+      return { ...transaction };
+    },
+
     async updateUserIncomeProfile({
       userId,
       monthlySalary,
@@ -711,6 +753,100 @@ describe("Couples Budgeting API", () => {
     expect(dashboardResponse.status).toBe(200);
     expect(dashboardResponse.body.data.dashboard.summary.totalSpent).toBe(1200);
     expect(dashboardResponse.body.data.partner.email).toBe("sam@example.com");
+  });
+
+  it("updates and deletes a logged expense for the owning user", async () => {
+    const alex = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    const sam = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam@example.com",
+        password: "supersecret",
+        monthlySalary: 2800,
+        salaryPaymentMethod: "cash",
+      },
+    });
+
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
+    });
+
+    const createResponse = await inject(app, {
+      method: "POST",
+      url: "/api/transactions",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 48.75,
+        description: "Lunch",
+        category: "Dining",
+        type: "one-time",
+        paymentMethod: "card",
+        date: recentIsoDate(),
+      },
+    });
+
+    const transactionId = createResponse.body.data.transaction.id;
+
+    const updateResponse = await inject(app, {
+      method: "PATCH",
+      url: `/api/transactions/${transactionId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 62.5,
+        description: "Groceries top-up",
+        category: "Groceries",
+        type: "one-time",
+        paymentMethod: "cash",
+        date: recentIsoDate(),
+      },
+    });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.data.transaction.amount).toBe(62.5);
+    expect(updateResponse.body.data.transaction.category).toBe("Groceries");
+    expect(updateResponse.body.data.transaction.paymentMethod).toBe("cash");
+
+    const deleteResponse = await inject(app, {
+      method: "DELETE",
+      url: `/api/transactions/${transactionId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body.data.transaction.id).toBe(transactionId);
+
+    const transactionsResponse = await inject(app, {
+      method: "GET",
+      url: "/api/transactions",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(transactionsResponse.status).toBe(200);
+    expect(transactionsResponse.body.data.transactions).toHaveLength(0);
   });
 
   it("accepts partnerUserId when it arrives as a numeric string and sends an invite", async () => {

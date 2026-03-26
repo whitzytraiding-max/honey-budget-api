@@ -1,4 +1,4 @@
-import { Wallet } from "lucide-react";
+import { Pencil, Trash2, Wallet, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
 import { ActionButton, Input, Select, ToggleGroup } from "../ui.jsx";
@@ -36,6 +36,11 @@ function ExpensesPage({
   transactions,
   baseCurrencyCode,
   currencyCode,
+  editingTransactionId,
+  currentUserId,
+  onEditTransaction,
+  onDeleteTransaction,
+  onCancelEdit,
 }) {
   const { t } = useLanguage();
   const recentTransactions = transactions.slice(0, 10);
@@ -61,6 +66,20 @@ function ExpensesPage({
             {currencyCode} {t("expenses.displayCurrencyHelp")}
           </p>
         </div>
+
+        {editingTransactionId ? (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p>{t("expenses.editingHelp")}</p>
+            <button
+              className="inline-flex items-center gap-1 font-semibold"
+              onClick={onCancelEdit}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+              {t("expenses.cancelEdit")}
+            </button>
+          </div>
+        ) : null}
 
         <form className="mt-4 grid gap-3 sm:mt-6 sm:gap-4" onSubmit={onExpenseSubmit}>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -126,7 +145,7 @@ function ExpensesPage({
           </div>
 
           <ActionButton busy={expenseBusy} className="sm:w-auto">
-            {t("expenses.save")}
+            {editingTransactionId ? t("expenses.saveChanges") : t("expenses.save")}
           </ActionButton>
         </form>
       </section>
@@ -149,6 +168,7 @@ function ExpensesPage({
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.category")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.method")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.amount")}</th>
+                  <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -168,11 +188,33 @@ function ExpensesPage({
                       <td className="px-4 py-4 font-semibold text-slate-900">
                         {currency(transaction.amount)}
                       </td>
+                      <td className="px-4 py-4 text-right">
+                        {transaction.userId === currentUserId ? (
+                          <div className="inline-flex gap-2">
+                            <button
+                              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                              onClick={() => onEditTransaction(transaction)}
+                              type="button"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("expenses.edit")}
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700"
+                              onClick={() => onDeleteTransaction(transaction)}
+                              type="button"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t("expenses.delete")}
+                            </button>
+                          </div>
+                        ) : null}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="px-4 py-8 text-slate-500" colSpan="4">
+                    <td className="px-4 py-8 text-slate-500" colSpan="5">
                       {t("expenses.empty")}
                     </td>
                   </tr>
@@ -206,6 +248,26 @@ function ExpensesPage({
                     {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
                   </span>
                 </div>
+                {transaction.userId === currentUserId ? (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                      onClick={() => onEditTransaction(transaction)}
+                      type="button"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {t("expenses.edit")}
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700"
+                      onClick={() => onDeleteTransaction(transaction)}
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {t("expenses.delete")}
+                    </button>
+                  </div>
+                ) : null}
               </div>
             ))
           ) : (

@@ -1,9 +1,18 @@
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, Pencil, Trash2 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
 import { Input } from "../ui.jsx";
 
-function HistoryPage({ transactions, selectedMonth, onMonthChange, monthSummary }) {
+function HistoryPage({
+  transactions,
+  selectedMonth,
+  onMonthChange,
+  monthSummary,
+  currentUserId,
+  onEditTransaction,
+  onDeleteTransaction,
+  actionBusy,
+}) {
   const { t } = useLanguage();
 
   return (
@@ -64,6 +73,7 @@ function HistoryPage({ transactions, selectedMonth, onMonthChange, monthSummary 
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.type")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.method")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.amount")}</th>
+                  <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
@@ -87,11 +97,35 @@ function HistoryPage({ transactions, selectedMonth, onMonthChange, monthSummary 
                       <td className="px-4 py-4 font-semibold text-slate-900">
                         {currency(transaction.amount)}
                       </td>
+                      <td className="px-4 py-4 text-right">
+                        {transaction.userId === currentUserId ? (
+                          <div className="inline-flex gap-2">
+                            <button
+                              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-70"
+                              disabled={actionBusy}
+                              onClick={() => onEditTransaction(transaction)}
+                              type="button"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("expenses.edit")}
+                            </button>
+                            <button
+                              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-70"
+                              disabled={actionBusy}
+                              onClick={() => onDeleteTransaction(transaction)}
+                              type="button"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              {t("expenses.delete")}
+                            </button>
+                          </div>
+                        ) : null}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td className="px-4 py-8 text-slate-500" colSpan="6">
+                    <td className="px-4 py-8 text-slate-500" colSpan="7">
                       {t("history.empty")}
                     </td>
                   </tr>

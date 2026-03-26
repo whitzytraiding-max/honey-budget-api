@@ -174,6 +174,63 @@ function validateCurrencyCode(value) {
   return /^[A-Z]{3}$/.test(String(value ?? "").trim().toUpperCase());
 }
 
+function normalizeTransactionPayload(payload) {
+  const {
+    amount,
+    description,
+    category,
+    type,
+    paymentMethod,
+    payment_method,
+    date,
+  } = payload;
+
+  const numericAmount =
+    typeof amount === "string" ? Number.parseFloat(amount.trim()) : Number(amount);
+
+  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
+  }
+
+  if (!category?.trim()) {
+    throw new HttpError(400, "VALIDATION_ERROR", "category is required.");
+  }
+
+  const normalizedCategory = category.trim();
+  const normalizedDescription = description?.trim() || `${normalizedCategory} expense`;
+
+  const normalizedType = parseExpenseType(type);
+  if (!normalizedType) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "type must be 'recurring' or 'one-time'.",
+    );
+  }
+
+  const normalizedPaymentMethod = parsePaymentMethod(paymentMethod || payment_method);
+  if (!normalizedPaymentMethod) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "paymentMethod must be 'cash' or 'card'.",
+    );
+  }
+
+  if (!validateIsoDate(date)) {
+    throw new HttpError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD.");
+  }
+
+  return {
+    amount: Number(numericAmount.toFixed(2)),
+    description: normalizedDescription,
+    category: normalizedCategory,
+    type: normalizedType,
+    paymentMethod: normalizedPaymentMethod,
+    date,
+  };
+}
+
 function sanitizeUser(user) {
   return user
     ? {
@@ -1205,16 +1262,6 @@ function createApp({
     "/api/transactions",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const {
-        amount,
-        description,
-        category,
-        type,
-        paymentMethod,
-        payment_method,
-        date,
-      } = request.body;
-
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       if (!couple) {
         throw new HttpError(
@@ -1224,56 +1271,57 @@ function createApp({
         );
       }
 
-      request.body.amount = Number(request.body.amount);
-      const numericAmount = request.body.amount;
-
-      if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-        throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
-      }
-
-      if (!category?.trim()) {
-        throw new HttpError(400, "VALIDATION_ERROR", "category is required.");
-      }
-
-      const normalizedCategory = category.trim();
-      const normalizedDescription = description?.trim() || `${normalizedCategory} expense`;
-
-      const normalizedType = parseExpenseType(type);
-      if (!normalizedType) {
-        throw new HttpError(
-          400,
-          "VALIDATION_ERROR",
-          "type must be 'recurring' or 'one-time'.",
-        );
-      }
-
-      const normalizedPaymentMethod = parsePaymentMethod(paymentMethod || payment_method);
-      if (!normalizedPaymentMethod) {
-        throw new HttpError(
-          400,
-          "VALIDATION_ERROR",
-          "paymentMethod must be 'cash' or 'card'.",
-        );
-      }
-
-      if (!validateIsoDate(date)) {
-        throw new HttpError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD.");
-      }
+      const normalizedTransaction = normalizeTransactionPayload(request.body);
 
       const transaction = await budgetRepository.addTransaction({
         userId: request.user.id,
-        amount: numericAmount,
-        description: normalizedDescription,
-        category: normalizedCategory,
-        type: normalizedType,
-        paymentMethod: normalizedPaymentMethod,
-        date,
+        ...normalizedTransaction,
       });
 
       sendData(response, 201, {
         transaction,
         coupleId: couple.id,
       });
+    }),
+  );
+
+  app.patch(
+    "/api/transactions/:transactionId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const transactionId = Number.parseInt(request.params.transactionId, 10);
+
+      if (!Number.isInteger(transactionId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "transactionId must be an integer.");
+      }
+
+      const normalizedTransaction = normalizeTransactionPayload(request.body);
+      const transaction = await budgetRepository.updateUserTransaction({
+        transactionId,
+        userId: request.user.id,
+        ...normalizedTransaction,
+      });
+
+      sendData(response, 200, { transaction });
+    }),
+  );
+
+  app.delete(
+    "/api/transactions/:transactionId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const transactionId = Number.parseInt(request.params.transactionId, 10);
+
+      if (!Number.isInteger(transactionId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "transactionId must be an integer.");
+      }
+
+      const transaction = await budgetRepository.deleteUserTransaction({
+        transactionId,
+        userId: request.user.id,
+      });
+
+      sendData(response, 200, { transaction });
     }),
   );
 

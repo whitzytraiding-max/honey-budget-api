@@ -238,6 +238,7 @@ export default function App() {
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+  const [editingTransactionId, setEditingTransactionId] = useState(null);
   const [householdIncome, setHouseholdIncome] = useState(0);
   const [remainingBudget, setRemainingBudget] = useState(0);
   const [savingsData, setSavingsData] = useState(null);
@@ -690,6 +691,28 @@ export default function App() {
     }));
   }
 
+  function resetExpenseEditor() {
+    setEditingTransactionId(null);
+    setExpenseForm({
+      ...TRANSACTION_FIELDS,
+      date: new Date().toISOString().slice(0, 10),
+    });
+  }
+
+  function handleEditTransaction(transaction) {
+    setPageError("");
+    setEditingTransactionId(transaction.id);
+    setExpenseForm({
+      amount: String(transaction.amount ?? ""),
+      description: transaction.description ?? "",
+      category: transaction.category ?? TRANSACTION_FIELDS.category,
+      type: transaction.type ?? TRANSACTION_FIELDS.type,
+      paymentMethod: transaction.paymentMethod ?? TRANSACTION_FIELDS.paymentMethod,
+      date: transaction.date ?? new Date().toISOString().slice(0, 10),
+    });
+    navigate("expenses");
+  }
+
   function updateIncomeProfileForm(event) {
     setPageError("");
     setIncomeProfileForm((current) => ({
@@ -918,6 +941,46 @@ export default function App() {
     }
   }
 
+  async function handleDeleteTransaction(transaction) {
+    const confirmed = window.confirm(
+      `Delete "${transaction.description}" from ${transaction.date}?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setExpenseBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch(`/api/transactions/${transaction.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+
+      if (editingTransactionId === transaction.id) {
+        resetExpenseEditor();
+      }
+
+      const refreshTasks = [loadDashboard(), loadSummary(), loadMonthView(selectedMonth)];
+
+      if (insightData) {
+        refreshTasks.push(loadInsights());
+      }
+
+      if (savingsData) {
+        refreshTasks.push(loadSavings());
+      }
+
+      await Promise.all(refreshTasks);
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setExpenseBusy(false);
+    }
+  }
+
   async function handleIncomeProfileSubmit(event) {
     event.preventDefault();
     setIncomeProfileBusy(true);
@@ -1000,27 +1063,29 @@ export default function App() {
     }
 
     try {
-      await apiFetch("/api/transactions", {
-        method: "POST",
-        headers: {
-          ...authHeaders,
-          "Content-Type": "application/json",
+      await apiFetch(
+        editingTransactionId
+          ? `/api/transactions/${editingTransactionId}`
+          : "/api/transactions",
+        {
+          method: editingTransactionId ? "PATCH" : "POST",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: finalAmount,
+            description:
+              nextExpenseDraft.description || `${nextExpenseDraft.category} expense`,
+            category: nextExpenseDraft.category,
+            type: nextExpenseDraft.type,
+            paymentMethod: nextExpenseDraft.paymentMethod,
+            date: normalizedDate,
+          }),
         },
-        body: JSON.stringify({
-          amount: finalAmount,
-          description:
-            nextExpenseDraft.description || `${nextExpenseDraft.category} expense`,
-          category: nextExpenseDraft.category,
-          type: nextExpenseDraft.type,
-          paymentMethod: nextExpenseDraft.paymentMethod,
-          date: normalizedDate,
-        }),
-      });
+      );
 
-      setExpenseForm({
-        ...TRANSACTION_FIELDS,
-        date: new Date().toISOString().slice(0, 10),
-      });
+      resetExpenseEditor();
       setSelectedMonth(expenseMonthKey);
       const refreshTasks = [loadDashboard(), loadSummary()];
 
@@ -1289,6 +1354,11 @@ export default function App() {
             transactions={transactions}
             baseCurrencyCode={baseCurrencyCode}
             currencyCode={currencyCode}
+            editingTransactionId={editingTransactionId}
+            currentUserId={session?.user?.id}
+            onEditTransaction={handleEditTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+            onCancelEdit={resetExpenseEditor}
           />
         );
       case "insights":
@@ -1343,6 +1413,10 @@ export default function App() {
             selectedMonth={selectedMonth}
             onMonthChange={setSelectedMonth}
             monthSummary={monthSummary}
+            currentUserId={session?.user?.id}
+            onEditTransaction={handleEditTransaction}
+            onDeleteTransaction={handleDeleteTransaction}
+            actionBusy={expenseBusy}
           />
         );
       case "settings":

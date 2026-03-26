@@ -605,6 +605,79 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapTransaction(transaction);
     },
 
+    async updateUserTransaction({
+      transactionId,
+      userId,
+      amount,
+      description,
+      category,
+      type,
+      paymentMethod,
+      date,
+    }) {
+      const existing = await prisma.transaction.findFirst({
+        where: {
+          id: transactionId,
+          userId,
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
+      }
+
+      const transaction = await prisma.transaction.update({
+        where: {
+          id: transactionId,
+        },
+        data: {
+          amount,
+          description,
+          category,
+          type,
+          paymentMethod,
+          date: new Date(`${date}T00:00:00.000Z`),
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return mapTransaction(transaction);
+    },
+
+    async deleteUserTransaction({ transactionId, userId }) {
+      const existing = await prisma.transaction.findFirst({
+        where: {
+          id: transactionId,
+          userId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
+      }
+
+      await prisma.transaction.delete({
+        where: {
+          id: transactionId,
+        },
+      });
+
+      return mapTransaction(existing);
+    },
+
     async updateUserIncomeProfile({
       userId,
       monthlySalary,
