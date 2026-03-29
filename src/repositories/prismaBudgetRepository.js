@@ -72,6 +72,22 @@ function mapTransaction(transaction) {
     userName: transaction.user?.name,
     amount: toNumber(transaction.amount),
     currencyCode: transaction.currencyCode ?? "USD",
+    convertedAmount:
+      transaction.convertedAmount !== undefined && transaction.convertedAmount !== null
+        ? toNumber(transaction.convertedAmount)
+        : null,
+    convertedCurrencyCode: transaction.convertedCurrencyCode ?? null,
+    conversionAnchorAmount:
+      transaction.conversionAnchorAmount !== undefined &&
+      transaction.conversionAnchorAmount !== null
+        ? toNumber(transaction.conversionAnchorAmount)
+        : null,
+    conversionAnchorCurrencyCode: transaction.conversionAnchorCurrencyCode ?? null,
+    exchangeRateUsed:
+      transaction.exchangeRateUsed !== undefined && transaction.exchangeRateUsed !== null
+        ? toNumber(transaction.exchangeRateUsed)
+        : null,
+    exchangeRateSource: transaction.exchangeRateSource ?? null,
     description: transaction.description,
     category: transaction.category,
     type: transaction.type,
@@ -194,6 +210,23 @@ function mapCoupleCoachProfile(profile) {
     ),
     createdAt: profile.createdAt?.toISOString?.() ?? profile.createdAt,
     updatedAt: profile.updatedAt?.toISOString?.() ?? profile.updatedAt,
+  };
+}
+
+function mapCoupleMmkMonthlyRate(rate) {
+  if (!rate) {
+    return null;
+  }
+
+  return {
+    id: rate.id,
+    coupleId: rate.coupleId,
+    year: Number(rate.year),
+    month: Number(rate.month),
+    rateSource: rate.rateSource,
+    rate: toNumber(rate.rate),
+    createdAt: rate.createdAt?.toISOString?.() ?? rate.createdAt,
+    updatedAt: rate.updatedAt?.toISOString?.() ?? rate.updatedAt,
   };
 }
 
@@ -398,6 +431,45 @@ function createPrismaBudgetRepository({ prisma }) {
       });
 
       return mapCoupleCoachProfile(profile);
+    },
+
+    async getCoupleMmkMonthlyRate({ coupleId, year, month }) {
+      const rate = await prisma.coupleMmkMonthlyRate.findUnique({
+        where: {
+          coupleId_year_month: {
+            coupleId,
+            year,
+            month,
+          },
+        },
+      });
+
+      return mapCoupleMmkMonthlyRate(rate);
+    },
+
+    async upsertCoupleMmkMonthlyRate({ coupleId, year, month, rateSource, rate }) {
+      const record = await prisma.coupleMmkMonthlyRate.upsert({
+        where: {
+          coupleId_year_month: {
+            coupleId,
+            year,
+            month,
+          },
+        },
+        update: {
+          rateSource,
+          rate,
+        },
+        create: {
+          coupleId,
+          year,
+          month,
+          rateSource,
+          rate,
+        },
+      });
+
+      return mapCoupleMmkMonthlyRate(record);
     },
 
     async createCouple({ userOneId, userTwoId }) {
@@ -712,6 +784,12 @@ function createPrismaBudgetRepository({ prisma }) {
       userId,
       amount,
       currencyCode = "USD",
+      convertedAmount = null,
+      convertedCurrencyCode = null,
+      conversionAnchorAmount = null,
+      conversionAnchorCurrencyCode = null,
+      exchangeRateUsed = null,
+      exchangeRateSource = null,
       description,
       category,
       type,
@@ -723,6 +801,12 @@ function createPrismaBudgetRepository({ prisma }) {
           userId,
           amount,
           currencyCode,
+          convertedAmount,
+          convertedCurrencyCode,
+          conversionAnchorAmount,
+          conversionAnchorCurrencyCode,
+          exchangeRateUsed,
+          exchangeRateSource,
           description,
           category,
           type,
@@ -746,6 +830,12 @@ function createPrismaBudgetRepository({ prisma }) {
       userId,
       amount,
       currencyCode = "USD",
+      convertedAmount = null,
+      convertedCurrencyCode = null,
+      conversionAnchorAmount = null,
+      conversionAnchorCurrencyCode = null,
+      exchangeRateUsed = null,
+      exchangeRateSource = null,
       description,
       category,
       type,
@@ -777,6 +867,12 @@ function createPrismaBudgetRepository({ prisma }) {
         data: {
           amount,
           currencyCode,
+          convertedAmount,
+          convertedCurrencyCode,
+          conversionAnchorAmount,
+          conversionAnchorCurrencyCode,
+          exchangeRateUsed,
+          exchangeRateSource,
           description,
           category,
           type,
@@ -854,6 +950,24 @@ function createPrismaBudgetRepository({ prisma }) {
       });
 
       return mapUser(user);
+    },
+
+    async getUserOwnedTransaction({ transactionId, userId }) {
+      const transaction = await prisma.transaction.findFirst({
+        where: {
+          id: transactionId,
+          userId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return transaction ? mapTransaction(transaction) : null;
     },
 
     async listCoupleTransactions({ coupleId, days = 30, fromDate, toDate }) {

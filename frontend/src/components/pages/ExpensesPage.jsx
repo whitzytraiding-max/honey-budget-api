@@ -36,6 +36,7 @@ function ExpensesPage({
   transactions,
   baseCurrencyCode,
   currencyCode,
+  mmkRateData,
   editingTransactionId,
   currentUserId,
   onEditTransaction,
@@ -45,6 +46,13 @@ function ExpensesPage({
   const { t, locale } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
   const recentTransactions = transactions.slice(0, 10);
+  const mmkRateText = mmkRateData?.rate
+    ? `1 USD = ${Number(mmkRateData.rate.rate).toFixed(2)} MMK · ${String(
+        mmkRateData.rate.rateSource ?? "custom",
+      ).toUpperCase()} · ${String(mmkRateData.month).padStart(2, "0")}/${mmkRateData.year}`
+    : "";
+  const showMmkRateHelper =
+    expenseForm.currencyCode === "MMK" || currencyCode === "MMK" || baseCurrencyCode === "MMK";
 
   return (
     <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr] xl:gap-6">
@@ -60,7 +68,7 @@ function ExpensesPage({
         <div className="mt-4 rounded-[1.2rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
           <p>
             <span className="font-semibold text-slate-900">{t("expenses.entryCurrencyLabel")}:</span>{" "}
-            {baseCurrencyCode} {t("expenses.entryCurrencyHelp")}
+            {expenseForm.currencyCode || baseCurrencyCode} {t("expenses.entryCurrencyHelp")}
           </p>
           <p className="mt-2">
             <span className="font-semibold text-slate-900">{t("expenses.displayCurrencyLabel")}:</span>{" "}
@@ -69,6 +77,11 @@ function ExpensesPage({
           <p className="mt-2 rounded-2xl bg-white px-3 py-3 text-slate-700">
             {t("expenses.dummyProofCurrency")}
           </p>
+          {showMmkRateHelper ? (
+            <p className="mt-2 rounded-2xl bg-white px-3 py-3 text-slate-700">
+              {mmkRateText || t("expenses.mmkRateMissing")}
+            </p>
+          ) : null}
         </div>
 
         {editingTransactionId ? (

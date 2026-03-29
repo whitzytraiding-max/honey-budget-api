@@ -9,10 +9,12 @@ import { HttpError, asyncHandler, sendData } from "./lib/http.js";
 import { buildBudgetSnapshot } from "./services/dashboardService.js";
 import { createExchangeRateService } from "./services/exchangeRateService.js";
 import {
+  convertTransactionWithSnapshot,
   createCurrencyConverter,
   resolveCurrencyCode,
   roundCurrency,
 } from "./services/currencyConversionService.js";
+import { MMK_CURRENCY_CODE } from "./services/exchangeRateService.js";
 
 function parsePaymentMethod(value) {
   return value === "cash" || value === "card" ? value : null;
@@ -177,6 +179,110 @@ function validateYearMonth(value) {
 
 function validateCurrencyCode(value) {
   return /^[A-Z]{3}$/.test(String(value ?? "").trim().toUpperCase());
+}
+
+function roundRate(value) {
+  return Number(Number(value ?? 0).toFixed(6));
+}
+
+function isMmkInvolved(...codes) {
+  return codes.some((code) => resolveCurrencyCode(code) === MMK_CURRENCY_CODE);
+}
+
+function parseYearMonthInput(yearValue, monthValue) {
+  const year = Number.parseInt(String(yearValue ?? "").trim(), 10);
+  const month = Number.parseInt(String(monthValue ?? "").trim(), 10);
+
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    throw new HttpError(400, "VALIDATION_ERROR", "year must be a valid 4-digit year.");
+  }
+
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new HttpError(400, "VALIDATION_ERROR", "month must be between 1 and 12.");
+  }
+
+  return { year, month };
+}
+
+function resolveMonthPartsFromIsoDate(isoDate) {
+  return {
+    year: Number(isoDate.slice(0, 4)),
+    month: Number(isoDate.slice(5, 7)),
+  };
+}
+
+async function buildMmkTransactionSnapshot({
+  exchangeRateService,
+  coupleId,
+  amount,
+  sourceCurrencyCode,
+  targetCurrencyCode,
+  transactionDate,
+}) {
+  const normalizedSourceCurrency = resolveCurrencyCode(sourceCurrencyCode);
+  const normalizedTargetCurrency = resolveCurrencyCode(targetCurrencyCode);
+
+  if (!isMmkInvolved(normalizedSourceCurrency, normalizedTargetCurrency)) {
+    return {
+      convertedAmount: null,
+      convertedCurrencyCode: null,
+      conversionAnchorAmount: null,
+      conversionAnchorCurrencyCode: null,
+      exchangeRateUsed: null,
+      exchangeRateSource: null,
+    };
+  }
+
+  try {
+    const usdToMmkRate = await exchangeRateService.getRate({
+      from: "USD",
+      to: MMK_CURRENCY_CODE,
+      coupleId,
+      date: transactionDate,
+      requireMmkMonthly: true,
+    });
+    const sourceToUsdRate =
+      normalizedSourceCurrency === "USD"
+        ? { rate: 1 }
+        : await exchangeRateService.getRate({
+            from: normalizedSourceCurrency,
+            to: "USD",
+            coupleId,
+            date: transactionDate,
+            requireMmkMonthly: true,
+          });
+    const anchorAmount = roundCurrency(Number(amount) * Number(sourceToUsdRate.rate ?? 1));
+    const usdToTargetRate =
+      normalizedTargetCurrency === "USD"
+        ? { rate: 1 }
+        : await exchangeRateService.getRate({
+            from: "USD",
+            to: normalizedTargetCurrency,
+            coupleId,
+            date: transactionDate,
+            requireMmkMonthly: true,
+          });
+    const convertedAmount = roundCurrency(anchorAmount * Number(usdToTargetRate.rate ?? 1));
+
+    return {
+      convertedAmount,
+      convertedCurrencyCode: normalizedTargetCurrency,
+      conversionAnchorAmount: anchorAmount,
+      conversionAnchorCurrencyCode: "USD",
+      exchangeRateUsed: roundRate(Number(usdToMmkRate.rate ?? 0)),
+      exchangeRateSource: String(usdToMmkRate.source ?? "custom"),
+    };
+  } catch (error) {
+    if (error?.code === "MMK_MONTHLY_RATE_REQUIRED") {
+      throw new HttpError(
+        409,
+        "MMK_MONTHLY_RATE_REQUIRED",
+        "Set a monthly MMK exchange rate before saving MMK-related transactions.",
+      );
+    }
+
+    throw error;
+  }
 }
 
 function normalizeCoachProfilePayload(payload) {
@@ -609,9 +715,15 @@ async function buildMonthlySummary({
     currentUser,
     partnerUser,
   });
+  const couple =
+    currentUser && partnerUser
+      ? await budgetRepository.getCoupleForUser(currentUser.id)
+      : null;
   const converter = await createCurrencyConverter({
     exchangeRateService,
     displayCurrency: resolvedDisplayCurrency,
+    coupleId: couple?.id ?? null,
+    date: from,
     sourceCurrencies: [
       currentUser.incomeCurrencyCode,
       partnerUser.incomeCurrencyCode,
@@ -631,14 +743,14 @@ async function buildMonthlySummary({
     return sum + converter.convert(user.salaryCardAmount ?? 0, user.incomeCurrencyCode);
   }, 0);
   const totalExpenses = monthlyTransactions.reduce(
-    (sum, transaction) => sum + converter.convert(transaction.amount ?? 0, transaction.currencyCode),
+    (sum, transaction) => sum + convertTransactionWithSnapshot(transaction, converter),
     0,
   );
   const cashSpent = monthlyTransactions.reduce((sum, transaction) => {
     return (
       sum +
       (transaction.paymentMethod === "cash"
-        ? converter.convert(transaction.amount ?? 0, transaction.currencyCode)
+        ? convertTransactionWithSnapshot(transaction, converter)
         : 0)
     );
   }, 0);
@@ -646,7 +758,7 @@ async function buildMonthlySummary({
     return (
       sum +
       (transaction.paymentMethod === "card"
-        ? converter.convert(transaction.amount ?? 0, transaction.currencyCode)
+        ? convertTransactionWithSnapshot(transaction, converter)
         : 0)
     );
   }, 0);
@@ -736,6 +848,8 @@ async function buildSavingsSummary({
   const converter = await createCurrencyConverter({
     exchangeRateService,
     displayCurrency: resolvedDisplayCurrency,
+    coupleId: couple?.id ?? null,
+    date: budgetWindow.from,
     sourceCurrencies: [
       ...users.map((user) => user.incomeCurrencyCode),
       ...entries.map((entry) => entry.currencyCode),
@@ -931,7 +1045,7 @@ function createApp({
   app = express(),
   budgetRepository,
   insightsService,
-  exchangeRateService = createExchangeRateService(),
+  exchangeRateService = null,
   emailService = null,
   resetPasswordUrlBase = process.env.RESET_PASSWORD_URL_BASE || process.env.APP_BASE_URL || "",
   jwtSecret = process.env.JWT_SECRET || "",
@@ -953,6 +1067,8 @@ function createApp({
     throw new Error("JWT_SECRET is required in production.");
   }
 
+  const resolvedExchangeRateService =
+    exchangeRateService ?? createExchangeRateService({ budgetRepository });
   const authService = createAuthService({ jwtSecret: effectiveJwtSecret });
   const requireAuth = createRequireAuth({ authService, budgetRepository });
 
@@ -982,8 +1098,100 @@ function createApp({
         );
       }
 
-      const rate = await exchangeRateService.getRate({ from, to });
+      const rate = await resolvedExchangeRateService.getRate({ from, to });
       sendData(response, 200, rate);
+    }),
+  );
+
+  app.get(
+    "/api/mmk-rate",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before setting a shared MMK rate.",
+        );
+      }
+
+      const now = new Date();
+      const { year, month } = parseYearMonthInput(
+        request.query.year ?? now.getUTCFullYear(),
+        request.query.month ?? now.getUTCMonth() + 1,
+      );
+      const rate = await budgetRepository.getCoupleMmkMonthlyRate({
+        coupleId: couple.id,
+        year,
+        month,
+      });
+
+      sendData(response, 200, {
+        year,
+        month,
+        rate,
+      });
+    }),
+  );
+
+  app.put(
+    "/api/mmk-rate",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before setting a shared MMK rate.",
+        );
+      }
+
+      const { year, month } = parseYearMonthInput(
+        request.body?.year,
+        request.body?.month,
+      );
+      const rateSource = String(request.body?.rateSource ?? "")
+        .trim()
+        .toLowerCase();
+
+      if (rateSource !== "kbz" && rateSource !== "custom") {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "rateSource must be 'kbz' or 'custom'.",
+        );
+      }
+
+      let resolvedRate = null;
+
+      if (rateSource === "kbz") {
+        const kbzRate = await resolvedExchangeRateService.getKbzMmkRate();
+        resolvedRate = roundRate(kbzRate.rate);
+      } else {
+        resolvedRate = parseMoney(request.body?.rate);
+      }
+
+      if (!Number.isFinite(resolvedRate) || resolvedRate <= 0) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "rate must be a positive number.",
+        );
+      }
+
+      const savedRate = await budgetRepository.upsertCoupleMmkMonthlyRate({
+        coupleId: couple.id,
+        year,
+        month,
+        rateSource,
+        rate: resolvedRate,
+      });
+
+      sendData(response, 200, { rate: savedRate });
     }),
   );
 
@@ -1505,7 +1713,7 @@ function createApp({
 
       const snapshot = await buildBudgetSnapshot({
         budgetRepository,
-        exchangeRateService,
+        exchangeRateService: resolvedExchangeRateService,
         coupleId: couple.id,
         days: Number.isFinite(days) && days > 0 ? days : 30,
         displayCurrency,
@@ -1533,7 +1741,7 @@ function createApp({
 
       const summary = await buildMonthlySummary({
         budgetRepository,
-        exchangeRateService,
+        exchangeRateService: resolvedExchangeRateService,
         currentUser: request.user,
         partnerUser,
         month: month || null,
@@ -1558,13 +1766,27 @@ function createApp({
       }
 
       const normalizedTransaction = normalizeTransactionPayload(request.body);
+      const sourceCurrencyCode =
+        normalizedTransaction.currencyCode ??
+        resolveCurrencyCode(request.user.incomeCurrencyCode || "USD");
+      const displayCurrencyCode = resolveDisplayCurrencyCode({
+        requestedDisplayCurrency: request.body?.displayCurrencyCode,
+        currentUser: request.user,
+      });
+      const exchangeSnapshot = await buildMmkTransactionSnapshot({
+        exchangeRateService: resolvedExchangeRateService,
+        coupleId: couple.id,
+        amount: normalizedTransaction.amount,
+        sourceCurrencyCode,
+        targetCurrencyCode: displayCurrencyCode,
+        transactionDate: normalizedTransaction.date,
+      });
 
       const transaction = await budgetRepository.addTransaction({
         userId: request.user.id,
         ...normalizedTransaction,
-        currencyCode:
-          normalizedTransaction.currencyCode ??
-          resolveCurrencyCode(request.user.incomeCurrencyCode || "USD"),
+        currencyCode: sourceCurrencyCode,
+        ...exchangeSnapshot,
       });
       const notification = await createPartnerExpenseNotification({
         budgetRepository,
@@ -1591,13 +1813,89 @@ function createApp({
       }
 
       const normalizedTransaction = normalizeTransactionPayload(request.body);
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          409,
+          "COUPLE_REQUIRED",
+          "Link a couple before editing shared expenses.",
+        );
+      }
+
+      const sourceCurrencyCode =
+        normalizedTransaction.currencyCode ??
+        resolveCurrencyCode(request.user.incomeCurrencyCode || "USD");
+      const displayCurrencyCode = resolveDisplayCurrencyCode({
+        requestedDisplayCurrency: request.body?.displayCurrencyCode,
+        currentUser: request.user,
+      });
+      const existingTransaction = await budgetRepository.getUserOwnedTransaction({
+        transactionId,
+        userId: request.user.id,
+      });
+
+      if (!existingTransaction) {
+        throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
+      }
+
+      let exchangeSnapshot = null;
+      const canReuseExistingMmkSnapshot =
+        existingTransaction.currencyCode === sourceCurrencyCode &&
+        existingTransaction.conversionAnchorCurrencyCode === "USD" &&
+        Number.isFinite(Number(existingTransaction.conversionAnchorAmount)) &&
+        Number.isFinite(Number(existingTransaction.exchangeRateUsed)) &&
+        Number(existingTransaction.amount) > 0;
+
+      if (canReuseExistingMmkSnapshot && isMmkInvolved(sourceCurrencyCode, displayCurrencyCode)) {
+        const anchorPerUnit =
+          Number(existingTransaction.conversionAnchorAmount) /
+          Number(existingTransaction.amount);
+        const anchorAmount = roundCurrency(normalizedTransaction.amount * anchorPerUnit);
+        const convertedAmount =
+          displayCurrencyCode === "USD"
+            ? anchorAmount
+            : displayCurrencyCode === MMK_CURRENCY_CODE
+              ? roundCurrency(anchorAmount * Number(existingTransaction.exchangeRateUsed))
+              : roundCurrency(
+                  anchorAmount *
+                    Number(
+                      (
+                        await resolvedExchangeRateService.getRate({
+                          from: "USD",
+                          to: displayCurrencyCode,
+                          coupleId: couple.id,
+                          date: normalizedTransaction.date,
+                        })
+                      ).rate ?? 1,
+                    ),
+                );
+
+        exchangeSnapshot = {
+          convertedAmount,
+          convertedCurrencyCode: displayCurrencyCode,
+          conversionAnchorAmount: anchorAmount,
+          conversionAnchorCurrencyCode: "USD",
+          exchangeRateUsed: roundRate(existingTransaction.exchangeRateUsed),
+          exchangeRateSource: existingTransaction.exchangeRateSource ?? "custom",
+        };
+      } else {
+        exchangeSnapshot = await buildMmkTransactionSnapshot({
+          exchangeRateService: resolvedExchangeRateService,
+          coupleId: couple.id,
+          amount: normalizedTransaction.amount,
+          sourceCurrencyCode,
+          targetCurrencyCode: displayCurrencyCode,
+          transactionDate: normalizedTransaction.date,
+        });
+      }
+
       const result = await budgetRepository.updateUserTransaction({
         transactionId,
         userId: request.user.id,
         ...normalizedTransaction,
-        currencyCode:
-          normalizedTransaction.currencyCode ??
-          resolveCurrencyCode(request.user.incomeCurrencyCode || "USD"),
+        currencyCode: sourceCurrencyCode,
+        ...exchangeSnapshot,
       });
       const notification = await createPartnerExpenseNotification({
         budgetRepository,
@@ -1671,8 +1969,10 @@ function createApp({
         toDate: monthWindow?.to,
       });
       const converter = await createCurrencyConverter({
-        exchangeRateService,
+        exchangeRateService: resolvedExchangeRateService,
         displayCurrency,
+        coupleId: couple.id,
+        date: monthWindow?.from ?? new Date().toISOString().slice(0, 10),
         sourceCurrencies: transactions.map((transaction) => transaction.currencyCode),
       });
 
@@ -1683,7 +1983,7 @@ function createApp({
           displayCurrencyCode: displayCurrency,
           transactions: transactions.map((transaction) => ({
             ...transaction,
-            displayAmount: converter.convert(transaction.amount ?? 0, transaction.currencyCode),
+            displayAmount: convertTransactionWithSnapshot(transaction, converter),
             displayCurrencyCode: displayCurrency,
           })),
         },
@@ -1755,7 +2055,7 @@ function createApp({
 
       const savings = await buildSavingsSummary({
         budgetRepository,
-        exchangeRateService,
+        exchangeRateService: resolvedExchangeRateService,
         currentUser: request.user,
         partnerUser,
         displayCurrency: request.query.displayCurrency?.trim(),

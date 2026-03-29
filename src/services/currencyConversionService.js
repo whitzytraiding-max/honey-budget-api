@@ -1,5 +1,6 @@
 import {
   DEFAULT_CURRENCY_CODE,
+  MMK_CURRENCY_CODE,
   isCurrencyCode,
   normalizeCurrencyCode,
 } from "./exchangeRateService.js";
@@ -22,6 +23,8 @@ async function createCurrencyConverter({
   exchangeRateService,
   displayCurrency,
   sourceCurrencies = [],
+  coupleId = null,
+  date = null,
 }) {
   const targetCurrency = resolveCurrencyCode(displayCurrency);
   const uniqueSources = [...new Set(sourceCurrencies.map((entry) => resolveCurrencyCode(entry)))];
@@ -34,6 +37,8 @@ async function createCurrencyConverter({
         const rate = await exchangeRateService.getRate({
           from: sourceCurrency,
           to: targetCurrency,
+          coupleId,
+          date,
         });
         rates.set(sourceCurrency, Number(rate.rate ?? 1));
       }),
@@ -57,4 +62,34 @@ async function createCurrencyConverter({
   };
 }
 
-export { createCurrencyConverter, resolveCurrencyCode, roundCurrency };
+function convertTransactionWithSnapshot(transaction, converter) {
+  if (
+    transaction?.conversionAnchorCurrencyCode === "USD" &&
+    Number.isFinite(Number(transaction?.conversionAnchorAmount)) &&
+    Number.isFinite(Number(transaction?.exchangeRateUsed))
+  ) {
+    const anchorAmount = Number(transaction.conversionAnchorAmount);
+
+    if (
+      transaction.convertedCurrencyCode &&
+      transaction.convertedCurrencyCode === converter.displayCurrencyCode &&
+      Number.isFinite(Number(transaction.convertedAmount))
+    ) {
+      return roundCurrency(transaction.convertedAmount);
+    }
+
+    if (converter.displayCurrencyCode === "USD") {
+      return roundCurrency(anchorAmount);
+    }
+
+    if (converter.displayCurrencyCode === MMK_CURRENCY_CODE) {
+      return roundCurrency(anchorAmount * Number(transaction.exchangeRateUsed));
+    }
+
+    return roundCurrency(anchorAmount * converter.rateFor("USD"));
+  }
+
+  return converter.convert(transaction?.amount ?? 0, transaction?.currencyCode);
+}
+
+export { convertTransactionWithSnapshot, createCurrencyConverter, resolveCurrencyCode, roundCurrency };

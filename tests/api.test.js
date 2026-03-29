@@ -87,6 +87,93 @@ async function connectUsersByInvite({
   };
 }
 
+function createMmkAwareExchangeRateService(repository) {
+  function getMonthParts(value) {
+    const date = value ? new Date(value) : new Date();
+    return {
+      year: date.getUTCFullYear(),
+      month: date.getUTCMonth() + 1,
+    };
+  }
+
+  return {
+    async getKbzMmkRate() {
+      return {
+        from: "USD",
+        to: "MMK",
+        rate: 4800,
+        cached: true,
+        date: recentIsoDate(0),
+        source: "kbz",
+      };
+    },
+    async getRate({ from, to, coupleId = null, date = null, requireMmkMonthly = false }) {
+      const normalizedFrom = String(from ?? "").trim().toUpperCase();
+      const normalizedTo = String(to ?? "").trim().toUpperCase();
+
+      if (normalizedFrom === normalizedTo) {
+        return {
+          from: normalizedFrom,
+          to: normalizedTo,
+          rate: 1,
+          cached: true,
+          date: recentIsoDate(0),
+          source: "identity",
+        };
+      }
+
+      const mmkInvolved = normalizedFrom === "MMK" || normalizedTo === "MMK";
+      if (mmkInvolved && coupleId) {
+        const { year, month } = getMonthParts(date);
+        const monthlyRate = await repository.getCoupleMmkMonthlyRate({
+          coupleId,
+          year,
+          month,
+        });
+
+        if (monthlyRate) {
+          if (normalizedFrom === "USD" && normalizedTo === "MMK") {
+            return {
+              from: normalizedFrom,
+              to: normalizedTo,
+              rate: Number(monthlyRate.rate),
+              cached: true,
+              date: `${year}-${String(month).padStart(2, "0")}-01`,
+              source: monthlyRate.rateSource,
+            };
+          }
+
+          if (normalizedFrom === "MMK" && normalizedTo === "USD") {
+            return {
+              from: normalizedFrom,
+              to: normalizedTo,
+              rate: 1 / Number(monthlyRate.rate),
+              cached: true,
+              date: `${year}-${String(month).padStart(2, "0")}-01`,
+              source: monthlyRate.rateSource,
+            };
+          }
+        }
+
+        if (requireMmkMonthly) {
+          const error = new Error("Monthly MMK rate is required.");
+          error.code = "MMK_MONTHLY_RATE_REQUIRED";
+          throw error;
+        }
+      }
+
+      return {
+        from: normalizedFrom,
+        to: normalizedTo,
+        rate: 2,
+        cached: true,
+        date: recentIsoDate(0),
+        source: "live",
+      };
+    },
+  };
+}
+
 function createInMemoryBudgetRepository() {
   let userId = 1;
   let coupleId = 1;
@@ -97,6 +184,7 @@ function createInMemoryBudgetRepository() {
   let savingsGoalId = 1;
   let activityNotificationId = 1;
   let coupleCoachProfileId = 1;
+  let coupleMmkMonthlyRateId = 1;
   const users = [];
   const couples = [];
   const transactions = [];
@@ -106,6 +194,7 @@ function createInMemoryBudgetRepository() {
   const savingsGoals = [];
   const activityNotifications = [];
   const coupleCoachProfiles = [];
+  const coupleMmkMonthlyRates = [];
 
   function sanitizeUser(user) {
     if (!user) {
@@ -299,6 +388,46 @@ function createInMemoryBudgetRepository() {
       };
     },
 
+    async getCoupleMmkMonthlyRate({ coupleId, year, month }) {
+      return (
+        coupleMmkMonthlyRates.find(
+          (entry) =>
+            entry.coupleId === coupleId &&
+            entry.year === year &&
+            entry.month === month,
+        ) ?? null
+      );
+    },
+
+    async upsertCoupleMmkMonthlyRate({ coupleId, year, month, rateSource, rate }) {
+      const existing = coupleMmkMonthlyRates.find(
+        (entry) =>
+          entry.coupleId === coupleId &&
+          entry.year === year &&
+          entry.month === month,
+      );
+
+      if (existing) {
+        existing.rateSource = rateSource;
+        existing.rate = rate;
+        existing.updatedAt = new Date().toISOString();
+        return { ...existing };
+      }
+
+      const record = {
+        id: coupleMmkMonthlyRateId++,
+        coupleId,
+        year,
+        month,
+        rateSource,
+        rate,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      coupleMmkMonthlyRates.push(record);
+      return { ...record };
+    },
+
     async createCouple({ userOneId, userTwoId }) {
       const userOne = users.find((user) => user.id === userOneId);
       const userTwo = users.find((user) => user.id === userTwoId);
@@ -439,7 +568,21 @@ function createInMemoryBudgetRepository() {
       };
     },
 
-    async addTransaction({ userId, amount, currencyCode = "USD", category, type, paymentMethod, date }) {
+    async addTransaction({
+      userId,
+      amount,
+      currencyCode = "USD",
+      convertedAmount = null,
+      convertedCurrencyCode = null,
+      conversionAnchorAmount = null,
+      conversionAnchorCurrencyCode = null,
+      exchangeRateUsed = null,
+      exchangeRateSource = null,
+      category,
+      type,
+      paymentMethod,
+      date,
+    }) {
       const owner = users.find((user) => user.id === userId);
       const transaction = {
         id: transactionId++,
@@ -447,6 +590,12 @@ function createInMemoryBudgetRepository() {
         userName: owner?.name,
         amount,
         currencyCode,
+        convertedAmount,
+        convertedCurrencyCode,
+        conversionAnchorAmount,
+        conversionAnchorCurrencyCode,
+        exchangeRateUsed,
+        exchangeRateSource,
         description: arguments[0].description,
         category,
         type,
@@ -463,6 +612,12 @@ function createInMemoryBudgetRepository() {
       userId,
       amount,
       currencyCode = "USD",
+      convertedAmount = null,
+      convertedCurrencyCode = null,
+      conversionAnchorAmount = null,
+      conversionAnchorCurrencyCode = null,
+      exchangeRateUsed = null,
+      exchangeRateSource = null,
       description,
       category,
       type,
@@ -480,6 +635,12 @@ function createInMemoryBudgetRepository() {
       const previousTransaction = { ...transaction };
       transaction.amount = amount;
       transaction.currencyCode = currencyCode;
+      transaction.convertedAmount = convertedAmount;
+      transaction.convertedCurrencyCode = convertedCurrencyCode;
+      transaction.conversionAnchorAmount = conversionAnchorAmount;
+      transaction.conversionAnchorCurrencyCode = conversionAnchorCurrencyCode;
+      transaction.exchangeRateUsed = exchangeRateUsed;
+      transaction.exchangeRateSource = exchangeRateSource;
       transaction.description = description;
       transaction.category = category;
       transaction.type = type;
@@ -490,6 +651,13 @@ function createInMemoryBudgetRepository() {
         transaction: { ...transaction },
         previousTransaction,
       };
+    },
+
+    async getUserOwnedTransaction({ transactionId: nextTransactionId, userId }) {
+      const transaction = transactions.find(
+        (entry) => entry.id === nextTransactionId && entry.userId === userId,
+      );
+      return transaction ? { ...transaction } : null;
     },
 
     async deleteUserTransaction({ transactionId: nextTransactionId, userId }) {
@@ -862,6 +1030,194 @@ describe("Couples Budgeting API", () => {
     expect(response.body.data.to).toBe("EUR");
     expect(response.body.data.rate).toBe(0.92);
     expect(response.body.data.date).toBe("2026-03-25");
+  });
+
+  it("stores and reuses the monthly MMK rate for new MMK transactions", async () => {
+    const mmkRepository = createInMemoryBudgetRepository();
+    const mmkExchangeRateService = createMmkAwareExchangeRateService(mmkRepository);
+    const mmkApp = createApp({
+      budgetRepository: mmkRepository,
+      insightsService: createInsightsService({
+        budgetRepository: mmkRepository,
+        exchangeRateService: mmkExchangeRateService,
+      }),
+      exchangeRateService: mmkExchangeRateService,
+      jwtSecret: "test-secret",
+      jsonParser: (_request, _response, next) => next(),
+    });
+
+    const registerAlex = await inject(mmkApp, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        incomeCurrencyCode: "USD",
+        salaryPaymentMethod: "card",
+      },
+    });
+    const registerSam = await inject(mmkApp, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam@example.com",
+        password: "supersecret",
+        monthlySalary: 3900,
+        incomeCurrencyCode: "USD",
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    const alexToken = registerAlex.body.data.accessToken;
+    const samToken = registerSam.body.data.accessToken;
+    await connectUsersByInvite({
+      app: mmkApp,
+      inviterToken: alexToken,
+      recipientToken: samToken,
+      partnerUserId: registerSam.body.data.user.id,
+    });
+
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth() + 1;
+
+    const setRateResponse = await inject(mmkApp, {
+      method: "PUT",
+      url: "/api/mmk-rate",
+      headers: {
+        authorization: `Bearer ${alexToken}`,
+      },
+      body: {
+        year,
+        month,
+        rateSource: "custom",
+        rate: 4500,
+      },
+    });
+
+    expect(setRateResponse.status).toBe(200);
+    expect(setRateResponse.body.data.rate.rate).toBe(4500);
+
+    const createTransactionResponse = await inject(mmkApp, {
+      method: "POST",
+      url: "/api/transactions",
+      headers: {
+        authorization: `Bearer ${alexToken}`,
+      },
+      body: {
+        amount: 450000,
+        currencyCode: "MMK",
+        displayCurrencyCode: "USD",
+        description: "Rent",
+        category: "Housing",
+        type: "recurring",
+        paymentMethod: "card",
+        date: recentIsoDate(0),
+      },
+    });
+
+    expect(createTransactionResponse.status).toBe(201);
+    expect(createTransactionResponse.body.data.transaction.exchangeRateUsed).toBe(4500);
+    expect(createTransactionResponse.body.data.transaction.exchangeRateSource).toBe("custom");
+    expect(createTransactionResponse.body.data.transaction.conversionAnchorCurrencyCode).toBe(
+      "USD",
+    );
+    expect(createTransactionResponse.body.data.transaction.conversionAnchorAmount).toBe(100);
+
+    await inject(mmkApp, {
+      method: "PUT",
+      url: "/api/mmk-rate",
+      headers: {
+        authorization: `Bearer ${alexToken}`,
+      },
+      body: {
+        year,
+        month,
+        rateSource: "kbz",
+        rate: 5000,
+      },
+    });
+
+    const transactionsResponse = await inject(mmkApp, {
+      method: "GET",
+      url: "/api/transactions?displayCurrency=USD",
+      headers: {
+        authorization: `Bearer ${alexToken}`,
+      },
+    });
+
+    expect(transactionsResponse.status).toBe(200);
+    expect(transactionsResponse.body.data.transactions[0].displayAmount).toBe(100);
+    expect(transactionsResponse.body.data.transactions[0].exchangeRateUsed).toBe(4500);
+    expect(transactionsResponse.body.data.transactions[0].exchangeRateSource).toBe("custom");
+  });
+
+  it("fetches and saves the KBZ monthly MMK rate automatically", async () => {
+    const mmkRepository = createInMemoryBudgetRepository();
+    const mmkExchangeRateService = createMmkAwareExchangeRateService(mmkRepository);
+    const mmkApp = createApp({
+      budgetRepository: mmkRepository,
+      insightsService: createInsightsService({
+        budgetRepository: mmkRepository,
+        exchangeRateService: mmkExchangeRateService,
+      }),
+      exchangeRateService: mmkExchangeRateService,
+      jwtSecret: "test-secret",
+      jsonParser: (_request, _response, next) => next(),
+    });
+
+    const registerAlex = await inject(mmkApp, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex2@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        incomeCurrencyCode: "USD",
+        salaryPaymentMethod: "card",
+      },
+    });
+    const registerSam = await inject(mmkApp, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam2@example.com",
+        password: "supersecret",
+        monthlySalary: 3900,
+        incomeCurrencyCode: "USD",
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    await connectUsersByInvite({
+      app: mmkApp,
+      inviterToken: registerAlex.body.data.accessToken,
+      recipientToken: registerSam.body.data.accessToken,
+      partnerUserId: registerSam.body.data.user.id,
+    });
+
+    const now = new Date();
+    const response = await inject(mmkApp, {
+      method: "PUT",
+      url: "/api/mmk-rate",
+      headers: {
+        authorization: `Bearer ${registerAlex.body.data.accessToken}`,
+      },
+      body: {
+        year: now.getUTCFullYear(),
+        month: now.getUTCMonth() + 1,
+        rateSource: "kbz",
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.rate.rateSource).toBe("kbz");
+    expect(response.body.data.rate.rate).toBe(4800);
   });
 
   it("builds personalized fallback coach insights from real couple spending data", () => {

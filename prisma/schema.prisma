@@ -60,9 +60,25 @@ model Couple {
   userOne   User     @relation("CoupleUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
   userTwo   User     @relation("CoupleUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
   coachProfile CoupleCoachProfile?
+  mmkMonthlyRates CoupleMmkMonthlyRate[]
   savingsGoals SavingsGoal[]
 
   @@map("couples")
+}
+
+model CoupleMmkMonthlyRate {
+  id         Int      @id @default(autoincrement())
+  coupleId    Int      @map("couple_id")
+  year        Int
+  month       Int
+  rateSource  String   @map("rate_source")
+  rate        Decimal  @db.Decimal(14, 6)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  couple      Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+
+  @@unique([coupleId, year, month])
+  @@map("couple_mmk_monthly_rates")
 }
 
 model CoupleCoachProfile {
@@ -119,6 +135,12 @@ model Transaction {
   userId        Int      @map("user_id")
   amount        Decimal  @db.Decimal(12, 2)
   currencyCode  String   @default("USD") @map("currency_code")
+  convertedAmount Decimal? @db.Decimal(14, 4) @map("converted_amount")
+  convertedCurrencyCode String? @map("converted_currency_code")
+  conversionAnchorAmount Decimal? @db.Decimal(14, 4) @map("conversion_anchor_amount")
+  conversionAnchorCurrencyCode String? @map("conversion_anchor_currency_code")
+  exchangeRateUsed Decimal? @db.Decimal(14, 6) @map("exchange_rate_used")
+  exchangeRateSource String? @map("exchange_rate_source")
   description   String
   category      String
   type          String

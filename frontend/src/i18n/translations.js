@@ -77,6 +77,8 @@ const translations = {
       displayCurrencyHelp: "is only for display. The app converts the saved amount for viewing.",
       dummyProofCurrency:
         "Simple rule: type the amount in the real currency from the receipt or bank charge. Honey Budget will convert the totals for viewing.",
+      mmkRateMissing:
+        "MMK needs a monthly rate first. Go to Settings and save this month’s MMK rate before logging MMK-related amounts.",
       actions: "Actions",
       edit: "Edit",
       delete: "Delete",
@@ -144,6 +146,24 @@ const translations = {
       noConversionNeeded: "No conversion needed. Home and display currency match.",
       loadingRate: "Loading latest exchange rate...",
       currencyHint: "Amounts are stored in your home currency and converted for display when needed.",
+      mmkMonthlyRate: "Monthly MMK rate",
+      mmkMonthlyRateHelp:
+        "MMK uses one shared rate for the whole month so your totals stay stable instead of changing every day.",
+      mmkActiveRatePrefix: "Active this month:",
+      mmkMissingRate:
+        "No MMK rate is saved for this month yet. MMK transactions will be blocked until one is saved.",
+      mmkRateSource: "MMK rate source",
+      mmkKbzOption: "KBZ monthly rate",
+      mmkCustomOption: "Custom monthly rate",
+      mmkKbzRateInput: "This month’s KBZ MMK rate",
+      mmkKbzAutoFetch:
+        "Honey Budget will fetch KBZ’s official Worker Remittance Rate and save it as this month’s MMK rate.",
+      mmkCustomRateInput: "Your custom MMK rate for this month",
+      saveMmkRate: "Save monthly MMK rate",
+      mmkPlainEnglish:
+        "Plain English: if MMK is involved, save one rate for this month as 1 USD = X MMK. New MMK transactions will use that monthly rate, and old transactions keep the rate they were created with.",
+      mmkCoupleRequired:
+        "Link your partner first. The monthly MMK rate is shared at the couple level.",
       howItWorks: "How currency works",
       homeCurrencyLabel: "Home currency",
       displayCurrencyLabel: "Display currency",
@@ -356,6 +376,8 @@ const translations = {
       displayCurrencyHelp: "es solo para mostrar. La app convierte el monto guardado para verlo.",
       dummyProofCurrency:
         "Regla simple: escribe el monto en la moneda real del recibo o del cargo bancario. Honey Budget convierte los totales para mostrarlos.",
+      mmkRateMissing:
+        "MMK necesita una tasa mensual primero. Ve a Configuración y guarda la tasa MMK de este mes antes de registrar montos relacionados con MMK.",
       actions: "Acciones",
       edit: "Editar",
       delete: "Eliminar",
@@ -423,6 +445,24 @@ const translations = {
       noConversionNeeded: "No hace falta conversión. La moneda base y la visible coinciden.",
       loadingRate: "Cargando el tipo de cambio más reciente...",
       currencyHint: "Los montos se guardan en tu moneda base y se convierten para mostrarse cuando haga falta.",
+      mmkMonthlyRate: "Tasa mensual MMK",
+      mmkMonthlyRateHelp:
+        "MMK usa una sola tasa compartida durante todo el mes para que los totales no cambien cada día.",
+      mmkActiveRatePrefix: "Activa este mes:",
+      mmkMissingRate:
+        "Todavía no hay una tasa MMK guardada para este mes. Las transacciones con MMK se bloquearán hasta guardarla.",
+      mmkRateSource: "Fuente de la tasa MMK",
+      mmkKbzOption: "Tasa mensual KBZ",
+      mmkCustomOption: "Tasa mensual personalizada",
+      mmkKbzRateInput: "Tasa MMK de KBZ para este mes",
+      mmkKbzAutoFetch:
+        "Honey Budget obtendrá la tasa oficial Worker Remittance Rate de KBZ y la guardará como la tasa MMK de este mes.",
+      mmkCustomRateInput: "Tu tasa MMK personalizada para este mes",
+      saveMmkRate: "Guardar tasa mensual MMK",
+      mmkPlainEnglish:
+        "Versión simple: si MMK está involucrado, guarda una sola tasa para este mes como 1 USD = X MMK. Las nuevas transacciones con MMK usarán esa tasa mensual y las antiguas conservarán la tasa con la que fueron creadas.",
+      mmkCoupleRequired:
+        "Primero vincula a tu pareja. La tasa mensual MMK se comparte a nivel de pareja.",
       howItWorks: "Cómo funciona la moneda",
       homeCurrencyLabel: "Moneda base",
       displayCurrencyLabel: "Moneda visible",

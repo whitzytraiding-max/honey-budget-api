@@ -1,5 +1,9 @@
 import { HttpError } from "../lib/http.js";
-import { createCurrencyConverter, roundCurrency } from "./currencyConversionService.js";
+import {
+  convertTransactionWithSnapshot,
+  createCurrencyConverter,
+  roundCurrency,
+} from "./currencyConversionService.js";
 
 function roundPercent(value) {
   return Number(Number(value).toFixed(1));
@@ -47,6 +51,8 @@ async function buildBudgetSnapshot({
   const converter = await createCurrencyConverter({
     exchangeRateService,
     displayCurrency: resolvedDisplayCurrency,
+    coupleId,
+    date: new Date().toISOString().slice(0, 10),
     sourceCurrencies: [
       ...users.map((user) => user.incomeCurrencyCode),
       ...transactions.map((transaction) => transaction.currencyCode),
@@ -57,7 +63,7 @@ async function buildBudgetSnapshot({
     0,
   );
   const totalSpent = transactions.reduce(
-    (sum, tx) => sum + converter.convert(tx.amount, tx.currencyCode),
+    (sum, tx) => sum + convertTransactionWithSnapshot(tx, converter),
     0,
   );
   const methodTotals = { cash: 0, card: 0 };
@@ -67,7 +73,7 @@ async function buildBudgetSnapshot({
   const userCategoryTotals = {};
 
   for (const transaction of transactions) {
-    const convertedAmount = converter.convert(transaction.amount, transaction.currencyCode);
+    const convertedAmount = convertTransactionWithSnapshot(transaction, converter);
     methodTotals[transaction.paymentMethod] += convertedAmount;
     typeTotals[transaction.type] += convertedAmount;
     incrementBucket(categoryTotals, transaction.category, convertedAmount);
@@ -154,12 +160,12 @@ async function buildBudgetSnapshot({
       })),
     recentTransactions: transactions.slice(0, 20).map((transaction) => ({
       ...transaction,
-      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayAmount: convertTransactionWithSnapshot(transaction, converter),
       displayCurrencyCode: converter.displayCurrencyCode,
     })),
     transactions: transactions.map((transaction) => ({
       ...transaction,
-      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayAmount: convertTransactionWithSnapshot(transaction, converter),
       displayCurrencyCode: converter.displayCurrencyCode,
     })),
   };
@@ -181,11 +187,14 @@ async function buildBudgetSnapshotForUsers({
     userIds: [currentUser.id, partnerUser.id],
     days,
   });
+  const couple = await budgetRepository.getCoupleForUser(currentUser.id);
   const users = [currentUser, partnerUser];
   const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
   const converter = await createCurrencyConverter({
     exchangeRateService,
     displayCurrency: resolvedDisplayCurrency,
+    coupleId: couple?.id ?? null,
+    date: new Date().toISOString().slice(0, 10),
     sourceCurrencies: [
       ...users.map((user) => user.incomeCurrencyCode),
       ...transactions.map((transaction) => transaction.currencyCode),
@@ -196,7 +205,7 @@ async function buildBudgetSnapshotForUsers({
     0,
   );
   const totalSpent = transactions.reduce(
-    (sum, tx) => sum + converter.convert(tx.amount, tx.currencyCode),
+    (sum, tx) => sum + convertTransactionWithSnapshot(tx, converter),
     0,
   );
   const methodTotals = { cash: 0, card: 0 };
@@ -206,7 +215,7 @@ async function buildBudgetSnapshotForUsers({
   const userCategoryTotals = {};
 
   for (const transaction of transactions) {
-    const convertedAmount = converter.convert(transaction.amount, transaction.currencyCode);
+    const convertedAmount = convertTransactionWithSnapshot(transaction, converter);
     methodTotals[transaction.paymentMethod] += convertedAmount;
     typeTotals[transaction.type] += convertedAmount;
     incrementBucket(categoryTotals, transaction.category, convertedAmount);
@@ -248,7 +257,7 @@ async function buildBudgetSnapshotForUsers({
   }));
 
   return {
-    coupleId: null,
+    coupleId: couple?.id ?? null,
     period: {
       days,
       from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
@@ -293,12 +302,12 @@ async function buildBudgetSnapshotForUsers({
       })),
     recentTransactions: transactions.slice(0, 20).map((transaction) => ({
       ...transaction,
-      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayAmount: convertTransactionWithSnapshot(transaction, converter),
       displayCurrencyCode: converter.displayCurrencyCode,
     })),
     transactions: transactions.map((transaction) => ({
       ...transaction,
-      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayAmount: convertTransactionWithSnapshot(transaction, converter),
       displayCurrencyCode: converter.displayCurrencyCode,
     })),
   };

@@ -74,6 +74,12 @@ const SAVINGS_FIELDS = {
   savingsGoalId: "",
   date: new Date().toISOString().slice(0, 10),
 };
+const MMK_SETTINGS_FIELDS = {
+  year: new Date().getUTCFullYear(),
+  month: new Date().getUTCMonth() + 1,
+  rateSource: "kbz",
+  rate: "",
+};
 const COACH_PROFILE_FIELDS = {
   primaryGoal: "",
   goalHorizon: "",
@@ -99,6 +105,14 @@ if (IS_PRODUCTION_BUILD && !API_BASE_URL) {
 function getCurrentMonthKey() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function getCurrentUtcMonthParts() {
+  const now = new Date();
+  return {
+    year: now.getUTCFullYear(),
+    month: now.getUTCMonth() + 1,
+  };
 }
 
 function getHashLocation() {
@@ -292,6 +306,9 @@ export default function App() {
   const [baseCurrencyCode, setBaseCurrencyCode] = useState(getInitialBaseCurrency);
   const [exchangeRate, setExchangeRate] = useState(1);
   const [exchangeRateLabel, setExchangeRateLabel] = useState("");
+  const [mmkRateData, setMmkRateData] = useState(null);
+  const [mmkRateForm, setMmkRateForm] = useState(MMK_SETTINGS_FIELDS);
+  const [mmkRateBusy, setMmkRateBusy] = useState(false);
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
     return new URLSearchParams(hashLocation.query).get("token")?.trim() || "";
@@ -360,6 +377,48 @@ export default function App() {
     }
   }, [baseCurrencyCode]);
 
+  async function loadMmkRate(year = null, month = null) {
+    if (!token || !session?.couple) {
+      setMmkRateData(null);
+      setMmkRateForm((current) => ({
+        ...current,
+        ...getCurrentUtcMonthParts(),
+        rateSource: "kbz",
+        rate: "",
+      }));
+      return;
+    }
+
+    const monthParts =
+      year && month ? { year, month } : getCurrentUtcMonthParts();
+    const data = await apiFetch(
+      `/api/mmk-rate?year=${monthParts.year}&month=${monthParts.month}`,
+      {
+        headers: authHeaders,
+      },
+    );
+
+    setMmkRateData(data);
+    setMmkRateForm({
+      year: data.year,
+      month: data.month,
+      rateSource: data.rate?.rateSource ?? "kbz",
+      rate: data.rate?.rate ? String(data.rate.rate) : "",
+    });
+  }
+
+  useEffect(() => {
+    if (!token || !session?.couple) {
+      setMmkRateData(null);
+      return;
+    }
+
+    loadMmkRate().catch((error) => {
+      console.error("MMK monthly rate lookup failed:", error);
+      setMmkRateData(null);
+    });
+  }, [token, session?.couple?.id]);
+
   useEffect(() => {
     let active = true;
 
@@ -371,6 +430,31 @@ export default function App() {
 
     async function loadExchangeRate() {
       try {
+        if (baseCurrencyCode === "MMK" || currencyCode === "MMK") {
+          const activeMmkRate = Number(mmkRateData?.rate?.rate ?? 0);
+
+          if (!active || !Number.isFinite(activeMmkRate) || activeMmkRate <= 0) {
+            setExchangeRate(1);
+            setExchangeRateLabel("Set this month’s MMK rate to use MMK conversions.");
+            return;
+          }
+
+          const monthLabel = `${String(mmkRateData.month).padStart(2, "0")}/${mmkRateData.year}`;
+          const sourceLabel = String(mmkRateData.rate?.rateSource ?? "custom").toUpperCase();
+          const nextRate =
+            baseCurrencyCode === "MMK" && currencyCode === "USD"
+              ? 1 / activeMmkRate
+              : baseCurrencyCode === "USD" && currencyCode === "MMK"
+                ? activeMmkRate
+                : 1;
+
+          setExchangeRate(nextRate);
+          setExchangeRateLabel(
+            `This month’s MMK rate: 1 USD = ${activeMmkRate.toFixed(2)} MMK · ${sourceLabel} · ${monthLabel}`,
+          );
+          return;
+        }
+
         const data = await apiFetch(
           `/api/exchange-rate?from=${baseCurrencyCode}&to=${currencyCode}`,
         );
@@ -400,7 +484,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [baseCurrencyCode, currencyCode]);
+  }, [baseCurrencyCode, currencyCode, mmkRateData]);
 
   useEffect(() => {
     if (token) {
@@ -453,6 +537,13 @@ export default function App() {
       },
     );
     setNotificationsLoaded(true);
+    if (!data.couple) {
+      setMmkRateData(null);
+      setMmkRateForm({
+        ...MMK_SETTINGS_FIELDS,
+        ...getCurrentUtcMonthParts(),
+      });
+    }
 
     return data;
   }
@@ -759,6 +850,14 @@ export default function App() {
     setBaseCurrencyCode(event.target.value);
   }
 
+  function handleMmkRateChange(event) {
+    setPageError("");
+    setMmkRateForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
   function updateRegisterForm(event) {
     setRegisterForm((current) => ({
       ...current,
@@ -867,6 +966,54 @@ export default function App() {
   function resetSavingsGoalEditor() {
     setEditingSavingsGoalId(null);
     setSavingsGoalForm(createSavingsGoalDraft(null));
+  }
+
+  async function handleMmkRateSubmit(event) {
+    event.preventDefault();
+    setMmkRateBusy(true);
+    setPageError("");
+
+    const numericRate = Number.parseFloat(String(mmkRateForm.rate ?? "").trim());
+
+    if (
+      mmkRateForm.rateSource === "custom" &&
+      (!Number.isFinite(numericRate) || numericRate <= 0)
+    ) {
+      setPageError("Enter a valid monthly MMK rate greater than zero.");
+      setMmkRateBusy(false);
+      return;
+    }
+
+    try {
+      await apiFetch("/api/mmk-rate", {
+        method: "PUT",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          year: mmkRateForm.year,
+          month: mmkRateForm.month,
+          rateSource: mmkRateForm.rateSource,
+          ...(mmkRateForm.rateSource === "custom" ? { rate: numericRate } : {}),
+        }),
+      });
+
+      await Promise.all([
+        loadMmkRate(Number(mmkRateForm.year), Number(mmkRateForm.month)),
+        loadDashboard(),
+        loadSummary(),
+        route === "calendar" || route === "history" || monthSummary
+          ? loadMonthView(selectedMonth)
+          : Promise.resolve(),
+        route === "insights" || insightData ? loadInsights() : Promise.resolve(),
+        route === "savings" || savingsData ? loadSavings() : Promise.resolve(),
+      ]);
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setMmkRateBusy(false);
+    }
   }
 
   async function handleRegister(event) {
@@ -1218,6 +1365,7 @@ export default function App() {
               nextExpenseDraft.description || `${nextExpenseDraft.category} expense`,
             category: nextExpenseDraft.category,
             currencyCode: nextExpenseDraft.currencyCode || baseCurrencyCode,
+            displayCurrencyCode: currencyCode,
             type: nextExpenseDraft.type,
             paymentMethod: nextExpenseDraft.paymentMethod,
             date: normalizedDate,
@@ -1478,6 +1626,11 @@ export default function App() {
       activity: [],
     });
     setNotificationsLoaded(false);
+    setMmkRateData(null);
+    setMmkRateForm({
+      ...MMK_SETTINGS_FIELDS,
+      ...getCurrentUtcMonthParts(),
+    });
     setRemainingBudget(0);
     setPageError("");
     setAuthError("");
@@ -1573,6 +1726,7 @@ export default function App() {
             transactions={transactions}
             baseCurrencyCode={baseCurrencyCode}
             currencyCode={currencyCode}
+            mmkRateData={mmkRateData}
             editingTransactionId={editingTransactionId}
             currentUserId={session?.user?.id}
             onEditTransaction={handleEditTransaction}
@@ -1675,9 +1829,14 @@ export default function App() {
             currencyCode={currencyCode}
             baseCurrencyCode={baseCurrencyCode}
             exchangeRateLabel={exchangeRateLabel}
+            mmkRateData={mmkRateData}
+            mmkRateForm={mmkRateForm}
+            mmkRateBusy={mmkRateBusy}
             onThemeChange={handleThemeChange}
             onCurrencyChange={handleCurrencyChange}
             onBaseCurrencyChange={handleBaseCurrencyChange}
+            onMmkRateChange={handleMmkRateChange}
+            onMmkRateSubmit={handleMmkRateSubmit}
           />
         );
       case "home":

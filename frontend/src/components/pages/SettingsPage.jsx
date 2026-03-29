@@ -13,9 +13,14 @@ function SettingsPage({
   currencyCode,
   baseCurrencyCode,
   exchangeRateLabel,
+  mmkRateData,
+  mmkRateForm,
+  mmkRateBusy,
   onThemeChange,
   onCurrencyChange,
   onBaseCurrencyChange,
+  onMmkRateChange,
+  onMmkRateSubmit,
 }) {
   const { locale, setLocale, supportedLocales, t } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
@@ -164,6 +169,65 @@ function SettingsPage({
               {t("settings.howItWorksPlainEnglish")}
             </p>
           </div>
+        </div>
+
+        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            {t("settings.mmkMonthlyRate")}
+          </p>
+          {session?.couple ? (
+            <>
+              <p className="mt-2 text-sm text-slate-600">
+                {t("settings.mmkMonthlyRateHelp")}
+              </p>
+              <p className="mt-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                {mmkRateData?.rate
+                  ? `${t("settings.mmkActiveRatePrefix")} 1 USD = ${Number(
+                      mmkRateData.rate.rate,
+                    ).toFixed(2)} MMK · ${String(
+                      mmkRateData.rate.rateSource ?? "custom",
+                    ).toUpperCase()} · ${String(mmkRateData.month).padStart(2, "0")}/${mmkRateData.year}`
+                  : t("settings.mmkMissingRate")}
+              </p>
+
+              <form className="mt-4 grid gap-4" onSubmit={onMmkRateSubmit}>
+                <Select
+                  label={t("settings.mmkRateSource")}
+                  name="rateSource"
+                  value={mmkRateForm.rateSource}
+                  onChange={onMmkRateChange}
+                  options={[
+                    { value: "kbz", label: t("settings.mmkKbzOption") },
+                    { value: "custom", label: t("settings.mmkCustomOption") },
+                  ]}
+                />
+                {mmkRateForm.rateSource === "custom" ? (
+                  <Input
+                    label={t("settings.mmkCustomRateInput")}
+                    name="rate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={mmkRateForm.rate}
+                    onChange={onMmkRateChange}
+                    placeholder="4500.00"
+                  />
+                ) : (
+                  <div className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                    {t("settings.mmkKbzAutoFetch")}
+                  </div>
+                )}
+                <div className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                  {t("settings.mmkPlainEnglish")}
+                </div>
+                <ActionButton busy={mmkRateBusy} className="sm:w-auto">
+                  {t("settings.saveMmkRate")}
+                </ActionButton>
+              </form>
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-slate-600">{t("settings.mmkCoupleRequired")}</p>
+          )}
         </div>
       </section>
 
