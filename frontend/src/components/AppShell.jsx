@@ -53,7 +53,7 @@ function AppShell({
     { key: "more", label: t("nav.more"), icon: Ellipsis },
   ];
   const isMoreRoute =
-    route === "more" || ["notifications", "calendar", "insights", "history", "settings"].includes(route);
+    route === "more" || ["coach", "notifications", "calendar", "insights", "history", "settings"].includes(route);
 
   return (
     <div className="min-h-screen bg-transparent px-3 py-4 text-slate-900 sm:px-6 lg:px-8">

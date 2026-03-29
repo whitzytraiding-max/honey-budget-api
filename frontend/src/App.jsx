@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "./components/AppShell.jsx";
 import AuthPanel from "./components/AuthPanel.jsx";
+import CoachSetupPage from "./components/pages/CoachSetupPage.jsx";
 import ExpensesPage from "./components/pages/ExpensesPage.jsx";
 import CalendarPage from "./components/pages/CalendarPage.jsx";
 import HistoryPage from "./components/pages/HistoryPage.jsx";
@@ -24,6 +25,7 @@ const REGISTER_FIELDS = {
   email: "",
   password: "",
   monthlySalary: "",
+  incomeCurrencyCode: "USD",
   salaryPaymentMethod: "card",
 };
 
@@ -45,6 +47,7 @@ const TRANSACTION_FIELDS = {
   amount: "",
   description: "",
   category: "Dining",
+  currencyCode: "USD",
   type: "one-time",
   paymentMethod: "card",
   date: new Date().toISOString().slice(0, 10),
@@ -55,6 +58,7 @@ const APP_ROUTES = new Set([
   "expenses",
   "savings",
   "more",
+  "coach",
   "notifications",
   "calendar",
   "insights",
@@ -66,7 +70,18 @@ const APP_ROUTES = new Set([
 const SAVINGS_FIELDS = {
   amount: "",
   note: "",
+  currencyCode: "USD",
+  savingsGoalId: "",
   date: new Date().toISOString().slice(0, 10),
+};
+const COACH_PROFILE_FIELDS = {
+  primaryGoal: "",
+  goalHorizon: "",
+  biggestMoneyStress: "",
+  hardestCategory: "",
+  conflictTrigger: "",
+  coachingFocus: "",
+  notes: "",
 };
 const REGISTER_BOOTSTRAP_ERROR =
   "Your account was created, but we couldn't finish signing you in. Please log in once more.";
@@ -122,6 +137,7 @@ function readExpenseDraft(formElement) {
     amount: String(formData.get("amount") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
     category: String(formData.get("category") ?? "Dining"),
+    currencyCode: String(formData.get("currencyCode") ?? "USD"),
     type: String(formData.get("type") ?? "one-time"),
     paymentMethod: String(formData.get("paymentMethod") ?? "card"),
     date: String(formData.get("date") ?? "").trim(),
@@ -132,6 +148,7 @@ function createIncomeProfileDraft(user) {
   return {
     salaryCashAmount: String(user?.salaryCashAmount ?? 0),
     salaryCardAmount: String(user?.salaryCardAmount ?? user?.monthlySalary ?? 0),
+    incomeCurrencyCode: String(user?.incomeCurrencyCode ?? "USD"),
     incomeDayOfMonth: String(user?.incomeDayOfMonth ?? 1),
     monthlySavingsTarget: String(user?.monthlySavingsTarget ?? 0),
   };
@@ -142,6 +159,18 @@ function createSavingsGoalDraft(goal) {
     title: String(goal?.title ?? ""),
     targetAmount: String(goal?.targetAmount ?? ""),
     targetDate: String(goal?.targetDate ?? ""),
+  };
+}
+
+function createCoachProfileDraft(profile) {
+  return {
+    primaryGoal: String(profile?.primaryGoal ?? ""),
+    goalHorizon: String(profile?.goalHorizon ?? ""),
+    biggestMoneyStress: String(profile?.biggestMoneyStress ?? ""),
+    hardestCategory: String(profile?.hardestCategory ?? ""),
+    conflictTrigger: String(profile?.conflictTrigger ?? ""),
+    coachingFocus: String(profile?.coachingFocus ?? ""),
+    notes: String(profile?.notes ?? ""),
   };
 }
 
@@ -223,6 +252,10 @@ export default function App() {
   const [incomeProfileForm, setIncomeProfileForm] = useState(() =>
     createIncomeProfileDraft(null),
   );
+  const [coachProfile, setCoachProfile] = useState(null);
+  const [coachProfileForm, setCoachProfileForm] = useState(() =>
+    createCoachProfileDraft(null),
+  );
   const [pageError, setPageError] = useState("");
   const [authError, setAuthError] = useState("");
   const [authInfo, setAuthInfo] = useState("");
@@ -234,6 +267,7 @@ export default function App() {
   const [expenseBusy, setExpenseBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [incomeProfileBusy, setIncomeProfileBusy] = useState(false);
+  const [coachProfileBusy, setCoachProfileBusy] = useState(false);
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
@@ -245,9 +279,11 @@ export default function App() {
   const [notificationsData, setNotificationsData] = useState({
     incoming: [],
     outgoing: [],
+    activity: [],
   });
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
   const [savingsGoalForm, setSavingsGoalForm] = useState(() => createSavingsGoalDraft(null));
+  const [editingSavingsGoalId, setEditingSavingsGoalId] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
   const [monthSummary, setMonthSummary] = useState(null);
   const [monthTransactions, setMonthTransactions] = useState([]);
@@ -379,12 +415,6 @@ export default function App() {
     setAuthMode((current) => (current === "reset" ? "login" : current));
   }, [route, token]);
 
-  useEffect(() => {
-    if (route === "notifications" && session?.couple) {
-      navigate("more");
-    }
-  }, [route, session?.couple]);
-
   async function fetchHouseholdData() {
     const data = await apiFetch("/api/auth/me", {
       headers: authHeaders,
@@ -401,10 +431,25 @@ export default function App() {
       Number(data.user?.monthlySalary || 0) + Number(partner?.monthlySalary || 0),
     );
     setIncomeProfileForm(createIncomeProfileDraft(data.user));
+    setCoachProfile(data.coachProfile ?? null);
+    setCoachProfileForm(createCoachProfileDraft(data.coachProfile));
+    setBaseCurrencyCode(data.user?.incomeCurrencyCode || "USD");
+    setExpenseForm((current) => ({
+      ...current,
+      currencyCode:
+        editingTransactionId !== null
+          ? current.currencyCode
+          : data.user?.incomeCurrencyCode || "USD",
+    }));
+    setSavingsForm((current) => ({
+      ...current,
+      currencyCode: data.user?.incomeCurrencyCode || "USD",
+    }));
     setNotificationsData(
       data.notifications ?? {
         incoming: [],
         outgoing: [],
+        activity: [],
       },
     );
     setNotificationsLoaded(true);
@@ -422,9 +467,12 @@ export default function App() {
     setPageError("");
 
     try {
-      const data = await apiFetch("/api/dashboard", {
+      const data = await apiFetch(
+        `/api/dashboard?displayCurrency=${encodeURIComponent(currencyCode)}`,
+        {
         headers: authHeaders,
-      });
+        },
+      );
       setDashboardData(data);
     } catch (error) {
       setDashboardData(null);
@@ -438,9 +486,12 @@ export default function App() {
     setInsightsBusy(true);
 
     try {
-      const data = await apiFetch("/api/insights", {
+      const data = await apiFetch(
+        `/api/insights?displayCurrency=${encodeURIComponent(currencyCode)}`,
+        {
         headers: authHeaders,
-      });
+        },
+      );
       setInsightData(data);
     } catch (error) {
       setInsightData(null);
@@ -452,9 +503,12 @@ export default function App() {
 
   async function loadSummary() {
     try {
-      const data = await apiFetch("/api/summary", {
+      const data = await apiFetch(
+        `/api/summary?displayCurrency=${encodeURIComponent(currencyCode)}`,
+        {
         headers: authHeaders,
-      });
+        },
+      );
       setSummaryData(data);
       setHouseholdIncome(Number(data.householdIncome || 0));
       calculateRemaining(data.householdIncome, data.totalExpenses);
@@ -468,12 +522,18 @@ export default function App() {
   async function loadMonthView(monthKey) {
     try {
       const [summary, transactionsResponse] = await Promise.all([
-        apiFetch(`/api/summary?month=${encodeURIComponent(monthKey)}`, {
+        apiFetch(
+          `/api/summary?month=${encodeURIComponent(monthKey)}&displayCurrency=${encodeURIComponent(currencyCode)}`,
+          {
           headers: authHeaders,
-        }),
-        apiFetch(`/api/transactions?month=${encodeURIComponent(monthKey)}`, {
+          },
+        ),
+        apiFetch(
+          `/api/transactions?month=${encodeURIComponent(monthKey)}&displayCurrency=${encodeURIComponent(currencyCode)}`,
+          {
           headers: authHeaders,
-        }),
+          },
+        ),
       ]);
       setMonthSummary(summary);
       setMonthTransactions(transactionsResponse.transactions ?? []);
@@ -486,11 +546,27 @@ export default function App() {
 
   async function loadSavings() {
     try {
-      const data = await apiFetch("/api/savings", {
+      const data = await apiFetch(
+        `/api/savings?displayCurrency=${encodeURIComponent(currencyCode)}`,
+        {
         headers: authHeaders,
-      });
+        },
+      );
       setSavingsData(data);
-      setSavingsGoalForm(createSavingsGoalDraft(data.longTermGoal));
+      setSavingsForm((current) => {
+        const goalStillExists = data.goals?.some(
+          (goal) => String(goal.id) === String(current.savingsGoalId),
+        );
+        const defaultGoalId =
+          !goalStillExists && !current.savingsGoalId && data.goals?.length === 1
+            ? String(data.goals[0].id)
+            : "";
+
+        return {
+          ...current,
+          savingsGoalId: goalStillExists ? current.savingsGoalId : defaultGoalId,
+        };
+      });
     } catch (error) {
       setSavingsData(null);
       setPageError(error.message);
@@ -510,6 +586,7 @@ export default function App() {
       setNotificationsData({
         incoming: [],
         outgoing: [],
+        activity: [],
       });
       setNotificationsLoaded(false);
       setPageError(error.message);
@@ -531,6 +608,8 @@ export default function App() {
       setInsightData(null);
       setSummaryData(null);
       setSavingsData(null);
+      setCoachProfile(null);
+      setCoachProfileForm(createCoachProfileDraft(null));
       setMonthSummary(null);
       setMonthTransactions([]);
       setRemainingBudget(0);
@@ -559,9 +638,12 @@ export default function App() {
       setMonthSummary(null);
       setMonthTransactions([]);
       setSavingsData(null);
+      setCoachProfile(null);
+      setCoachProfileForm(createCoachProfileDraft(null));
       setNotificationsData({
         incoming: [],
         outgoing: [],
+        activity: [],
       });
       setNotificationsLoaded(false);
     });
@@ -579,6 +661,10 @@ export default function App() {
     }
 
     if (!session?.couple) {
+      return;
+    }
+
+    if (!coachProfile?.completed && route === "insights") {
       return;
     }
 
@@ -601,6 +687,7 @@ export default function App() {
     insightData,
     insightsBusy,
     savingsData,
+    coachProfile?.completed,
     notificationsBusy,
     notificationsLoaded,
   ]);
@@ -617,7 +704,31 @@ export default function App() {
     loadMonthView(selectedMonth).catch((error) => {
       setPageError(error.message);
     });
-  }, [token, route, selectedMonth, session?.couple?.id]);
+  }, [token, route, selectedMonth, session?.couple?.id, currencyCode]);
+
+  useEffect(() => {
+    if (!token || !session?.couple) {
+      return;
+    }
+
+    const refreshTasks = [loadDashboard(), loadSummary()];
+
+    if (route === "calendar" || route === "history" || monthSummary) {
+      refreshTasks.push(loadMonthView(selectedMonth));
+    }
+
+    if ((route === "insights" || insightData) && coachProfile?.completed) {
+      refreshTasks.push(loadInsights());
+    }
+
+    if (route === "savings" || savingsData) {
+      refreshTasks.push(loadSavings());
+    }
+
+    Promise.all(refreshTasks).catch((error) => {
+      setPageError(error.message);
+    });
+  }, [currencyCode, coachProfile?.completed]);
 
   function navigate(routeKey) {
     setHashLocation({ route: routeKey, query: "" });
@@ -695,6 +806,7 @@ export default function App() {
     setEditingTransactionId(null);
     setExpenseForm({
       ...TRANSACTION_FIELDS,
+      currencyCode: baseCurrencyCode,
       date: new Date().toISOString().slice(0, 10),
     });
   }
@@ -706,6 +818,7 @@ export default function App() {
       amount: String(transaction.amount ?? ""),
       description: transaction.description ?? "",
       category: transaction.category ?? TRANSACTION_FIELDS.category,
+      currencyCode: transaction.currencyCode ?? baseCurrencyCode,
       type: transaction.type ?? TRANSACTION_FIELDS.type,
       paymentMethod: transaction.paymentMethod ?? TRANSACTION_FIELDS.paymentMethod,
       date: transaction.date ?? new Date().toISOString().slice(0, 10),
@@ -737,6 +850,25 @@ export default function App() {
     }));
   }
 
+  function updateCoachProfileForm(event) {
+    setPageError("");
+    setCoachProfileForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
+  function handleEditSavingsGoal(goal) {
+    setPageError("");
+    setEditingSavingsGoalId(goal.id);
+    setSavingsGoalForm(createSavingsGoalDraft(goal));
+  }
+
+  function resetSavingsGoalEditor() {
+    setEditingSavingsGoalId(null);
+    setSavingsGoalForm(createSavingsGoalDraft(null));
+  }
+
   async function handleRegister(event) {
     event.preventDefault();
     setAuthBusy(true);
@@ -754,6 +886,7 @@ export default function App() {
           ...registerForm,
           email: normalizedEmail,
           monthlySalary: Number(registerForm.monthlySalary),
+          incomeCurrencyCode: registerForm.incomeCurrencyCode,
         }),
       });
 
@@ -965,6 +1098,10 @@ export default function App() {
 
       const refreshTasks = [loadDashboard(), loadSummary(), loadMonthView(selectedMonth)];
 
+      if (notificationsLoaded) {
+        refreshTasks.push(loadNotifications());
+      }
+
       if (insightData) {
         refreshTasks.push(loadInsights());
       }
@@ -1018,6 +1155,7 @@ export default function App() {
         body: JSON.stringify({
           salaryCashAmount: nextCashAmount,
           salaryCardAmount: nextCardAmount,
+          incomeCurrencyCode: incomeProfileForm.incomeCurrencyCode,
           incomeDayOfMonth: nextIncomeDay,
           monthlySavingsTarget: Number.parseFloat(incomeProfileForm.monthlySavingsTarget || 0),
         }),
@@ -1045,6 +1183,7 @@ export default function App() {
       amount: nextExpenseDraft.amount,
       description: nextExpenseDraft.description,
       category: nextExpenseDraft.category,
+      currencyCode: nextExpenseDraft.currencyCode,
       type: nextExpenseDraft.type,
       paymentMethod: nextExpenseDraft.paymentMethod,
       date: nextExpenseDraft.date,
@@ -1078,6 +1217,7 @@ export default function App() {
             description:
               nextExpenseDraft.description || `${nextExpenseDraft.category} expense`,
             category: nextExpenseDraft.category,
+            currencyCode: nextExpenseDraft.currencyCode || baseCurrencyCode,
             type: nextExpenseDraft.type,
             paymentMethod: nextExpenseDraft.paymentMethod,
             date: normalizedDate,
@@ -1098,9 +1238,12 @@ export default function App() {
       }
 
       refreshTasks.push(loadMonthView(expenseMonthKey));
+      if (notificationsLoaded) {
+        refreshTasks.push(loadNotifications());
+      }
 
       await Promise.all(refreshTasks);
-      navigate("history");
+      navigate("notifications");
     } catch (error) {
       setPageError(error.message);
     } finally {
@@ -1132,7 +1275,8 @@ export default function App() {
           salaryCashAmount: Number.parseFloat(incomeProfileForm.salaryCashAmount || 0),
           salaryCardAmount: Number.parseFloat(incomeProfileForm.salaryCardAmount || 0),
           incomeDayOfMonth: Number.parseInt(incomeProfileForm.incomeDayOfMonth || "1", 10),
-          monthlySavingsTarget: nextTarget,
+         monthlySavingsTarget: nextTarget,
+          incomeCurrencyCode: incomeProfileForm.incomeCurrencyCode,
         }),
       });
 
@@ -1175,8 +1319,8 @@ export default function App() {
     }
 
     try {
-      await apiFetch("/api/savings/goal", {
-        method: "POST",
+      await apiFetch(editingSavingsGoalId ? `/api/savings/goal/${editingSavingsGoalId}` : "/api/savings/goal", {
+        method: editingSavingsGoalId ? "PATCH" : "POST",
         headers: {
           ...authHeaders,
           "Content-Type": "application/json",
@@ -1184,9 +1328,38 @@ export default function App() {
         body: JSON.stringify({
           title,
           targetAmount,
+          currencyCode: incomeProfileForm.incomeCurrencyCode || baseCurrencyCode,
           targetDate: savingsGoalForm.targetDate || null,
         }),
       });
+
+      await loadSavings();
+      resetSavingsGoalEditor();
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setSavingsTargetBusy(false);
+    }
+  }
+
+  async function handleDeleteSavingsGoal(goal) {
+    const confirmed = window.confirm(`Delete the savings goal "${goal.title}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setSavingsTargetBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch(`/api/savings/goal/${goal.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+
+      if (editingSavingsGoalId === goal.id) {
+        resetSavingsGoalEditor();
+      }
 
       await loadSavings();
     } catch (error) {
@@ -1230,12 +1403,18 @@ export default function App() {
         },
         body: JSON.stringify({
           amount,
+          currencyCode: savingsForm.currencyCode || baseCurrencyCode,
+          savingsGoalId: savingsForm.savingsGoalId || null,
           note: savingsForm.note.trim(),
           date: savingsForm.date,
         }),
       });
 
-      setSavingsForm(SAVINGS_FIELDS);
+      setSavingsForm({
+        ...SAVINGS_FIELDS,
+        currencyCode: incomeProfileForm.incomeCurrencyCode || baseCurrencyCode,
+        savingsGoalId: "",
+      });
       const refreshTasks = [loadSavings(), loadSummary()];
 
       if (route === "calendar" || route === "history" || monthSummary) {
@@ -1250,20 +1429,53 @@ export default function App() {
     }
   }
 
+  async function handleCoachProfileSubmit(event) {
+    event.preventDefault();
+    setCoachProfileBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch("/api/coach-profile", {
+        method: "PUT",
+        headers: {
+          ...authHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...coachProfileForm,
+          notes: coachProfileForm.notes.trim(),
+        }),
+      });
+
+      await Promise.all([
+        fetchHouseholdData(),
+        route === "insights" || insightData ? loadInsights() : Promise.resolve(),
+      ]);
+      navigate("insights");
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setCoachProfileBusy(false);
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem("budget_token");
     setToken("");
     setSession(null);
     setDashboardData(null);
     setInsightData(null);
-      setSummaryData(null);
-      setSavingsData(null);
-      setMonthSummary(null);
+    setSummaryData(null);
+    setSavingsData(null);
+    setCoachProfile(null);
+    setCoachProfileForm(createCoachProfileDraft(null));
+    setMonthSummary(null);
       setMonthTransactions([]);
       setHouseholdIncome(0);
     setNotificationsData({
       incoming: [],
       outgoing: [],
+      activity: [],
     });
     setNotificationsLoaded(false);
     setRemainingBudget(0);
@@ -1302,10 +1514,17 @@ export default function App() {
   const dashboard = dashboardData?.dashboard;
   const insights = insightData?.insights;
   const transactions = dashboard?.transactions ?? [];
-  const householdUsers = couple ? [couple.userOne, couple.userTwo] : session?.user ? [session.user] : [];
+  const householdUsers = dashboard?.users?.length
+    ? dashboard.users
+    : couple
+      ? [couple.userOne, couple.userTwo]
+      : session?.user
+        ? [session.user]
+        : [];
   const coupleNames = couple
     ? `${couple.userOne.name} + ${couple.userTwo.name}`
     : session?.user?.name;
+  const coachRequired = Boolean(couple) && !coachProfile?.completed;
 
   setCurrencyConversionPreferences({
     displayCurrency: currencyCode,
@@ -1362,11 +1581,32 @@ export default function App() {
           />
         );
       case "insights":
+        if (coachRequired) {
+          return (
+            <CoachSetupPage
+              coachProfileForm={coachProfileForm}
+              onChange={updateCoachProfileForm}
+              onSubmit={handleCoachProfileSubmit}
+              busy={coachProfileBusy}
+              completed={Boolean(coachProfile?.completed)}
+            />
+          );
+        }
         return (
           <InsightsPage
             insightsBusy={insightsBusy}
             insights={insights}
             dashboard={dashboard}
+          />
+        );
+      case "coach":
+        return (
+          <CoachSetupPage
+            coachProfileForm={coachProfileForm}
+            onChange={updateCoachProfileForm}
+            onSubmit={handleCoachProfileSubmit}
+            busy={coachProfileBusy}
+            completed={Boolean(coachProfile?.completed)}
           />
         );
       case "calendar":
@@ -1380,7 +1620,7 @@ export default function App() {
           />
         );
       case "more":
-        return <MorePage onNavigate={navigate} showNotifications={!couple} />;
+        return <MorePage onNavigate={navigate} showNotifications showCoach={Boolean(couple)} />;
       case "notifications":
         return (
           <NotificationsPage
@@ -1396,12 +1636,16 @@ export default function App() {
             savingsForm={savingsForm}
             savingsTargetForm={incomeProfileForm}
             savingsGoalForm={savingsGoalForm}
+            editingSavingsGoalId={editingSavingsGoalId}
             onSavingsChange={updateSavingsForm}
             onSavingsTargetChange={updateIncomeProfileForm}
             onSavingsGoalChange={updateSavingsGoalForm}
             onSavingsSubmit={handleSavingsSubmit}
             onSavingsTargetSubmit={handleSavingsTargetSubmit}
             onSavingsGoalSubmit={handleSavingsGoalSubmit}
+            onEditSavingsGoal={handleEditSavingsGoal}
+            onDeleteSavingsGoal={handleDeleteSavingsGoal}
+            onCancelSavingsGoalEdit={resetSavingsGoalEditor}
             savingsBusy={savingsBusy}
             savingsTargetBusy={savingsTargetBusy}
           />
@@ -1443,6 +1687,8 @@ export default function App() {
             summaryData={summaryData}
             dashboard={dashboard}
             dashboardBusy={dashboardBusy}
+            coachProfile={coachProfile}
+            onNavigateToCoach={() => navigate("coach")}
           />
         );
     }
@@ -1454,7 +1700,7 @@ export default function App() {
       onNavigate={navigate}
       coupleNames={coupleNames}
       remainingBudget={remainingBudget}
-      showNotifications={!couple}
+      showNotifications
       onLogout={handleLogout}
       pageError={pageError}
     >

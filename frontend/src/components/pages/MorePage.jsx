@@ -1,7 +1,8 @@
-import { Bell, Brain, CalendarDays, ChevronRight, ClipboardList, Settings2 } from "lucide-react";
+import { Bell, Brain, CalendarDays, ChevronRight, ClipboardList, Settings2, Sparkles } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 
 const MORE_ITEMS = [
+  { key: "coach", icon: Sparkles },
   { key: "notifications", icon: Bell },
   { key: "calendar", icon: CalendarDays },
   { key: "insights", icon: Brain },
@@ -9,9 +10,19 @@ const MORE_ITEMS = [
   { key: "settings", icon: Settings2 },
 ];
 
-function MorePage({ onNavigate, showNotifications }) {
+function MorePage({ onNavigate, showNotifications, showCoach }) {
   const { t } = useLanguage();
-  const items = showNotifications ? MORE_ITEMS : MORE_ITEMS.filter((item) => item.key !== "notifications");
+  const items = MORE_ITEMS.filter((item) => {
+    if (item.key === "notifications" && !showNotifications) {
+      return false;
+    }
+
+    if (item.key === "coach" && !showCoach) {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <section className="rounded-[1.75rem] border border-white/70 bg-white/82 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">

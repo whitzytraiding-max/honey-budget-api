@@ -37,6 +37,7 @@ function mapUser(user) {
     name: user.name,
     email: user.email,
     monthlySalary: toNumber(user.monthlySalary),
+    incomeCurrencyCode: user.incomeCurrencyCode ?? "USD",
     salaryPaymentMethod: user.salaryPaymentMethod,
     salaryCashAmount,
     salaryCardAmount,
@@ -70,6 +71,7 @@ function mapTransaction(transaction) {
     userId: transaction.userId,
     userName: transaction.user?.name,
     amount: toNumber(transaction.amount),
+    currencyCode: transaction.currencyCode ?? "USD",
     description: transaction.description,
     category: transaction.category,
     type: transaction.type,
@@ -103,8 +105,11 @@ function mapSavingsEntry(entry) {
   return {
     id: entry.id,
     userId: entry.userId,
+    savingsGoalId: entry.savingsGoalId ?? null,
+    savingsGoalTitle: entry.savingsGoal?.title ?? null,
     userName: entry.user?.name,
     amount: toNumber(entry.amount),
+    currencyCode: entry.currencyCode ?? "USD",
     note: entry.note,
     date: entry.date.toISOString().slice(0, 10),
     createdAt: entry.createdAt?.toISOString?.() ?? entry.createdAt,
@@ -121,6 +126,7 @@ function mapSavingsGoal(goal) {
     coupleId: goal.coupleId,
     title: goal.title,
     targetAmount: toNumber(goal.targetAmount),
+    currencyCode: goal.currencyCode ?? "USD",
     targetDate: goal.targetDate
       ? goal.targetDate.toISOString?.().slice(0, 10) ?? goal.targetDate
       : null,
@@ -145,6 +151,52 @@ function mapCoupleInvite(invite) {
   };
 }
 
+function mapActivityNotification(notification) {
+  if (!notification) {
+    return null;
+  }
+
+  return {
+    id: notification.id,
+    recipientId: notification.recipientId,
+    actorId: notification.actorId,
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    createdAt: notification.createdAt?.toISOString?.() ?? notification.createdAt,
+    readAt: notification.readAt?.toISOString?.() ?? notification.readAt,
+    actor: mapUser(notification.actor),
+  };
+}
+
+function mapCoupleCoachProfile(profile) {
+  if (!profile) {
+    return null;
+  }
+
+  return {
+    id: profile.id,
+    coupleId: profile.coupleId,
+    primaryGoal: profile.primaryGoal,
+    goalHorizon: profile.goalHorizon,
+    biggestMoneyStress: profile.biggestMoneyStress,
+    hardestCategory: profile.hardestCategory,
+    conflictTrigger: profile.conflictTrigger,
+    coachingFocus: profile.coachingFocus,
+    notes: profile.notes ?? "",
+    completed: Boolean(
+      profile.primaryGoal &&
+        profile.goalHorizon &&
+        profile.biggestMoneyStress &&
+        profile.hardestCategory &&
+        profile.conflictTrigger &&
+        profile.coachingFocus,
+    ),
+    createdAt: profile.createdAt?.toISOString?.() ?? profile.createdAt,
+    updatedAt: profile.updatedAt?.toISOString?.() ?? profile.updatedAt,
+  };
+}
+
 function sortTransactions(rows) {
   return rows
     .map(mapTransaction)
@@ -158,6 +210,7 @@ function createPrismaBudgetRepository({ prisma }) {
       email,
       passwordHash,
       monthlySalary,
+      incomeCurrencyCode = "USD",
       salaryPaymentMethod,
       salaryCashAmount,
       salaryCardAmount,
@@ -172,6 +225,7 @@ function createPrismaBudgetRepository({ prisma }) {
           email,
           passwordHash,
           monthlySalary,
+          incomeCurrencyCode,
           salaryPaymentMethod,
           salaryCashAmount,
           salaryCardAmount,
@@ -296,6 +350,54 @@ function createPrismaBudgetRepository({ prisma }) {
       });
 
       return mapCouple(couple);
+    },
+
+    async getCoupleCoachProfile(coupleId) {
+      const profile = await prisma.coupleCoachProfile.findUnique({
+        where: {
+          coupleId,
+        },
+      });
+
+      return mapCoupleCoachProfile(profile);
+    },
+
+    async upsertCoupleCoachProfile({
+      coupleId,
+      primaryGoal,
+      goalHorizon,
+      biggestMoneyStress,
+      hardestCategory,
+      conflictTrigger,
+      coachingFocus,
+      notes = "",
+    }) {
+      const profile = await prisma.coupleCoachProfile.upsert({
+        where: {
+          coupleId,
+        },
+        update: {
+          primaryGoal,
+          goalHorizon,
+          biggestMoneyStress,
+          hardestCategory,
+          conflictTrigger,
+          coachingFocus,
+          notes,
+        },
+        create: {
+          coupleId,
+          primaryGoal,
+          goalHorizon,
+          biggestMoneyStress,
+          hardestCategory,
+          conflictTrigger,
+          coachingFocus,
+          notes,
+        },
+      });
+
+      return mapCoupleCoachProfile(profile);
     },
 
     async createCouple({ userOneId, userTwoId }) {
@@ -447,6 +549,38 @@ function createPrismaBudgetRepository({ prisma }) {
       };
     },
 
+    async createActivityNotification({ recipientId, actorId, type, title, body }) {
+      const notification = await prisma.activityNotification.create({
+        data: {
+          recipientId,
+          actorId,
+          type,
+          title,
+          body,
+        },
+        include: {
+          actor: true,
+        },
+      });
+
+      return mapActivityNotification(notification);
+    },
+
+    async listActivityNotificationsForUser(userId, limit = 30) {
+      const notifications = await prisma.activityNotification.findMany({
+        where: {
+          recipientId: userId,
+        },
+        include: {
+          actor: true,
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: limit,
+      });
+
+      return notifications.map(mapActivityNotification);
+    },
+
     async respondToCoupleInvite({ inviteId, userId, action }) {
       const invite = await prisma.coupleInvite.findUnique({
         where: { id: inviteId },
@@ -577,6 +711,7 @@ function createPrismaBudgetRepository({ prisma }) {
     async addTransaction({
       userId,
       amount,
+      currencyCode = "USD",
       description,
       category,
       type,
@@ -587,6 +722,7 @@ function createPrismaBudgetRepository({ prisma }) {
         data: {
           userId,
           amount,
+          currencyCode,
           description,
           category,
           type,
@@ -609,6 +745,7 @@ function createPrismaBudgetRepository({ prisma }) {
       transactionId,
       userId,
       amount,
+      currencyCode = "USD",
       description,
       category,
       type,
@@ -626,12 +763,20 @@ function createPrismaBudgetRepository({ prisma }) {
         throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
       }
 
+      const previousTransaction = mapTransaction({
+        ...existing,
+        user: {
+          name: existing.user?.name,
+        },
+      });
+
       const transaction = await prisma.transaction.update({
         where: {
           id: transactionId,
         },
         data: {
           amount,
+          currencyCode,
           description,
           category,
           type,
@@ -647,7 +792,10 @@ function createPrismaBudgetRepository({ prisma }) {
         },
       });
 
-      return mapTransaction(transaction);
+      return {
+        transaction: mapTransaction(transaction),
+        previousTransaction,
+      };
     },
 
     async deleteUserTransaction({ transactionId, userId }) {
@@ -681,6 +829,7 @@ function createPrismaBudgetRepository({ prisma }) {
     async updateUserIncomeProfile({
       userId,
       monthlySalary,
+      incomeCurrencyCode,
       salaryPaymentMethod,
       salaryCashAmount,
       salaryCardAmount,
@@ -693,6 +842,7 @@ function createPrismaBudgetRepository({ prisma }) {
         where: { id: userId },
         data: {
           monthlySalary,
+          ...(incomeCurrencyCode !== undefined ? { incomeCurrencyCode } : {}),
           salaryPaymentMethod,
           salaryCashAmount,
           salaryCardAmount,
@@ -780,11 +930,20 @@ function createPrismaBudgetRepository({ prisma }) {
       return sortTransactions(transactions);
     },
 
-    async addSavingsEntry({ userId, amount, note, date }) {
+    async addSavingsEntry({
+      userId,
+      savingsGoalId = null,
+      amount,
+      currencyCode = "USD",
+      note,
+      date,
+    }) {
       const entry = await prisma.savingsEntry.create({
         data: {
           userId,
+          savingsGoalId,
           amount,
+          currencyCode,
           note,
           date: new Date(`${date}T00:00:00.000Z`),
         },
@@ -792,6 +951,11 @@ function createPrismaBudgetRepository({ prisma }) {
           user: {
             select: {
               name: true,
+            },
+          },
+          savingsGoal: {
+            select: {
+              title: true,
             },
           },
         },
@@ -825,6 +989,11 @@ function createPrismaBudgetRepository({ prisma }) {
               name: true,
             },
           },
+          savingsGoal: {
+            select: {
+              title: true,
+            },
+          },
         },
         orderBy: [{ date: "desc" }, { id: "desc" }],
       });
@@ -835,30 +1004,96 @@ function createPrismaBudgetRepository({ prisma }) {
     },
 
     async getSavingsGoalForCouple(coupleId) {
-      const goal = await prisma.savingsGoal.findUnique({
+      const goal = await prisma.savingsGoal.findFirst({
         where: {
           coupleId,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return mapSavingsGoal(goal);
+    },
+
+    async listSavingsGoalsForCouple(coupleId) {
+      const goals = await prisma.savingsGoal.findMany({
+        where: {
+          coupleId,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return goals.map(mapSavingsGoal);
+    },
+
+    async createSavingsGoalForCouple({
+      coupleId,
+      title,
+      targetAmount,
+      currencyCode = "USD",
+      targetDate,
+    }) {
+      const goal = await prisma.savingsGoal.create({
+        data: {
+          coupleId,
+          title,
+          targetAmount,
+          currencyCode,
+          targetDate,
         },
       });
 
       return mapSavingsGoal(goal);
     },
 
-    async upsertSavingsGoalForCouple({ coupleId, title, targetAmount, targetDate }) {
-      const goal = await prisma.savingsGoal.upsert({
+    async updateSavingsGoalForCouple({
+      goalId,
+      coupleId,
+      title,
+      targetAmount,
+      currencyCode = "USD",
+      targetDate,
+    }) {
+      const existing = await prisma.savingsGoal.findFirst({
         where: {
+          id: goalId,
           coupleId,
         },
-        update: {
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      const goal = await prisma.savingsGoal.update({
+        where: {
+          id: goalId,
+        },
+        data: {
           title,
           targetAmount,
+          currencyCode,
           targetDate,
         },
-        create: {
+      });
+
+      return mapSavingsGoal(goal);
+    },
+
+    async deleteSavingsGoalForCouple({ goalId, coupleId }) {
+      const existing = await prisma.savingsGoal.findFirst({
+        where: {
+          id: goalId,
           coupleId,
-          title,
-          targetAmount,
-          targetDate,
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      const goal = await prisma.savingsGoal.delete({
+        where: {
+          id: goalId,
         },
       });
 

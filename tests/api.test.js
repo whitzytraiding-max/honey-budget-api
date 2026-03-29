@@ -3,7 +3,7 @@ import httpMocks from "node-mocks-http";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
 import { HttpError } from "../src/lib/http.js";
-import { createInsightsService } from "../src/services/insightsService.js";
+import { createFallbackInsights, createInsightsService } from "../src/services/insightsService.js";
 
 function recentIsoDate(daysAgo = 0) {
   return new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000)
@@ -95,6 +95,8 @@ function createInMemoryBudgetRepository() {
   let passwordResetTokenId = 1;
   let coupleInviteId = 1;
   let savingsGoalId = 1;
+  let activityNotificationId = 1;
+  let coupleCoachProfileId = 1;
   const users = [];
   const couples = [];
   const transactions = [];
@@ -102,6 +104,8 @@ function createInMemoryBudgetRepository() {
   const passwordResetTokens = [];
   const coupleInvites = [];
   const savingsGoals = [];
+  const activityNotifications = [];
+  const coupleCoachProfiles = [];
 
   function sanitizeUser(user) {
     if (!user) {
@@ -113,6 +117,7 @@ function createInMemoryBudgetRepository() {
       name: user.name,
       email: user.email,
       monthlySalary: user.monthlySalary,
+      incomeCurrencyCode: user.incomeCurrencyCode ?? "USD",
       salaryPaymentMethod: user.salaryPaymentMethod,
       salaryCashAmount: user.salaryCashAmount ?? 0,
       salaryCardAmount: user.salaryCardAmount ?? user.monthlySalary ?? 0,
@@ -149,6 +154,7 @@ function createInMemoryBudgetRepository() {
       salaryCardAmount = salaryPaymentMethod === "cash" ? 0 : monthlySalary,
       salaryCashAllocationPct = salaryPaymentMethod === "cash" ? 100 : 0,
       salaryCardAllocationPct = salaryPaymentMethod === "cash" ? 0 : 100,
+      incomeCurrencyCode = "USD",
       incomeDayOfMonth = 1,
       monthlySavingsTarget = 0,
     }) {
@@ -158,6 +164,7 @@ function createInMemoryBudgetRepository() {
         email,
         passwordHash,
         monthlySalary,
+        incomeCurrencyCode,
         salaryPaymentMethod,
         salaryCashAmount,
         salaryCardAmount,
@@ -234,6 +241,64 @@ function createInMemoryBudgetRepository() {
       );
     },
 
+    async getCoupleCoachProfile(coupleId) {
+      const profile = coupleCoachProfiles.find((entry) => entry.coupleId === coupleId) ?? null;
+      return profile
+        ? {
+            ...profile,
+            completed: true,
+          }
+        : null;
+    },
+
+    async upsertCoupleCoachProfile({
+      coupleId,
+      primaryGoal,
+      goalHorizon,
+      biggestMoneyStress,
+      hardestCategory,
+      conflictTrigger,
+      coachingFocus,
+      notes = "",
+    }) {
+      const existing = coupleCoachProfiles.find((entry) => entry.coupleId === coupleId);
+
+      if (existing) {
+        existing.primaryGoal = primaryGoal;
+        existing.goalHorizon = goalHorizon;
+        existing.biggestMoneyStress = biggestMoneyStress;
+        existing.hardestCategory = hardestCategory;
+        existing.conflictTrigger = conflictTrigger;
+        existing.coachingFocus = coachingFocus;
+        existing.notes = notes;
+        existing.updatedAt = new Date().toISOString();
+        return {
+          ...existing,
+          completed: true,
+        };
+      }
+
+      const profile = {
+        id: coupleCoachProfileId++,
+        coupleId,
+        primaryGoal,
+        goalHorizon,
+        biggestMoneyStress,
+        hardestCategory,
+        conflictTrigger,
+        coachingFocus,
+        notes,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      coupleCoachProfiles.push(profile);
+      return {
+        ...profile,
+        completed: true,
+      };
+    },
+
     async createCouple({ userOneId, userTwoId }) {
       const userOne = users.find((user) => user.id === userOneId);
       const userTwo = users.find((user) => user.id === userTwoId);
@@ -296,6 +361,32 @@ function createInMemoryBudgetRepository() {
       };
     },
 
+    async createActivityNotification({ recipientId, actorId, type, title, body }) {
+      const notification = {
+        id: activityNotificationId++,
+        recipientId,
+        actorId,
+        type,
+        title,
+        body,
+        createdAt: new Date().toISOString(),
+        readAt: null,
+        actor: sanitizeUser(users.find((user) => user.id === actorId)),
+      };
+      activityNotifications.push(notification);
+      return notification;
+    },
+
+    async listActivityNotificationsForUser(userId, limit = 30) {
+      return activityNotifications
+        .filter((notification) => notification.recipientId === userId)
+        .sort(
+          (left, right) =>
+            right.createdAt.localeCompare(left.createdAt) || right.id - left.id,
+        )
+        .slice(0, limit);
+    },
+
     async respondToCoupleInvite({ inviteId, userId, action }) {
       const invite = coupleInvites.find((entry) => entry.id === inviteId);
       if (!invite || invite.recipientId !== userId) {
@@ -348,13 +439,14 @@ function createInMemoryBudgetRepository() {
       };
     },
 
-    async addTransaction({ userId, amount, category, type, paymentMethod, date }) {
+    async addTransaction({ userId, amount, currencyCode = "USD", category, type, paymentMethod, date }) {
       const owner = users.find((user) => user.id === userId);
       const transaction = {
         id: transactionId++,
         userId,
         userName: owner?.name,
         amount,
+        currencyCode,
         description: arguments[0].description,
         category,
         type,
@@ -370,6 +462,7 @@ function createInMemoryBudgetRepository() {
       transactionId: nextTransactionId,
       userId,
       amount,
+      currencyCode = "USD",
       description,
       category,
       type,
@@ -384,14 +477,19 @@ function createInMemoryBudgetRepository() {
         throw new HttpError(404, "TRANSACTION_NOT_FOUND", "Transaction not found.");
       }
 
+      const previousTransaction = { ...transaction };
       transaction.amount = amount;
+      transaction.currencyCode = currencyCode;
       transaction.description = description;
       transaction.category = category;
       transaction.type = type;
       transaction.paymentMethod = paymentMethod;
       transaction.date = date;
 
-      return { ...transaction };
+      return {
+        transaction: { ...transaction },
+        previousTransaction,
+      };
     },
 
     async deleteUserTransaction({ transactionId: nextTransactionId, userId }) {
@@ -410,6 +508,7 @@ function createInMemoryBudgetRepository() {
     async updateUserIncomeProfile({
       userId,
       monthlySalary,
+      incomeCurrencyCode,
       salaryPaymentMethod,
       salaryCashAmount,
       salaryCardAmount,
@@ -420,6 +519,7 @@ function createInMemoryBudgetRepository() {
     }) {
       const user = users.find((entry) => entry.id === userId);
       user.monthlySalary = monthlySalary;
+      user.incomeCurrencyCode = incomeCurrencyCode ?? user.incomeCurrencyCode ?? "USD";
       user.salaryPaymentMethod = salaryPaymentMethod;
       user.salaryCashAmount = salaryCashAmount;
       user.salaryCardAmount = salaryCardAmount;
@@ -434,17 +534,31 @@ function createInMemoryBudgetRepository() {
       return sanitizeUser(user);
     },
 
-    async addSavingsEntry({ userId, amount, note, date }) {
+    async addSavingsEntry({
+      userId,
+      savingsGoalId = null,
+      amount,
+      currencyCode = "USD",
+      note,
+      date,
+    }) {
       const owner = users.find((user) => user.id === userId);
       const entry = {
         id: savingsEntryId++,
         userId,
+        savingsGoalId,
+        savingsGoalTitle: null,
         userName: owner?.name,
         amount,
+        currencyCode,
         note,
         date,
         createdAt: new Date().toISOString(),
       };
+      if (entry.savingsGoalId) {
+        const goal = savingsGoals.find((item) => item.id === entry.savingsGoalId);
+        entry.savingsGoalTitle = goal?.title ?? null;
+      }
       savingsEntries.push(entry);
       return entry;
     },
@@ -456,6 +570,12 @@ function createInMemoryBudgetRepository() {
 
       return savingsEntries
         .filter((entry) => userIds.includes(entry.userId) && entry.date >= cutoff)
+        .map((entry) => ({
+          ...entry,
+          savingsGoalTitle: entry.savingsGoalId
+            ? savingsGoals.find((goal) => goal.id === entry.savingsGoalId)?.title ?? null
+            : null,
+        }))
         .sort((left, right) => right.date.localeCompare(left.date) || right.id - left.id);
     },
 
@@ -463,26 +583,71 @@ function createInMemoryBudgetRepository() {
       return savingsGoals.find((goal) => goal.coupleId === coupleId) ?? null;
     },
 
-    async upsertSavingsGoalForCouple({ coupleId, title, targetAmount, targetDate }) {
-      const existing = savingsGoals.find((goal) => goal.coupleId === coupleId);
-      if (existing) {
-        existing.title = title;
-        existing.targetAmount = targetAmount;
-        existing.targetDate = targetDate ? targetDate.toISOString().slice(0, 10) : null;
-        existing.updatedAt = new Date().toISOString();
-        return existing;
-      }
+    async listSavingsGoalsForCouple(coupleId) {
+      return savingsGoals
+        .filter((goal) => goal.coupleId === coupleId)
+        .sort((left, right) => left.id - right.id);
+    },
 
+    async createSavingsGoalForCouple({
+      coupleId,
+      title,
+      targetAmount,
+      currencyCode = "USD",
+      targetDate,
+    }) {
       const goal = {
         id: savingsGoalId++,
         coupleId,
         title,
         targetAmount,
+        currencyCode,
         targetDate: targetDate ? targetDate.toISOString().slice(0, 10) : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       savingsGoals.push(goal);
+      return goal;
+    },
+
+    async updateSavingsGoalForCouple({
+      goalId,
+      coupleId,
+      title,
+      targetAmount,
+      currencyCode = "USD",
+      targetDate,
+    }) {
+      const existing = savingsGoals.find(
+        (goal) => goal.id === goalId && goal.coupleId === coupleId,
+      );
+      if (!existing) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      existing.title = title;
+      existing.targetAmount = targetAmount;
+      existing.currencyCode = currencyCode;
+      existing.targetDate = targetDate ? targetDate.toISOString().slice(0, 10) : null;
+      existing.updatedAt = new Date().toISOString();
+      return existing;
+    },
+
+    async deleteSavingsGoalForCouple({ goalId, coupleId }) {
+      const index = savingsGoals.findIndex(
+        (goal) => goal.id === goalId && goal.coupleId === coupleId,
+      );
+      if (index < 0) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      const [goal] = savingsGoals.splice(index, 1);
+      for (const entry of savingsEntries) {
+        if (entry.savingsGoalId === goalId) {
+          entry.savingsGoalId = null;
+          entry.savingsGoalTitle = null;
+        }
+      }
       return goal;
     },
 
@@ -537,14 +702,27 @@ describe("Couples Budgeting API", () => {
   beforeEach(() => {
     repository = createInMemoryBudgetRepository();
     sentResetEmails = [];
+    const exchangeRateService = {
+      async getRate({ from, to }) {
+        return {
+          from,
+          to,
+          rate: from === to ? 1 : 2,
+          cached: true,
+          date: recentIsoDate(0),
+        };
+      },
+    };
     const insightsService = createInsightsService({
       budgetRepository: repository,
+      exchangeRateService,
       openaiClient: null,
     });
 
     app = createApp({
       budgetRepository: repository,
       insightsService,
+      exchangeRateService,
       jwtSecret: "test-secret",
       emailService: {
         async sendPasswordResetEmail(payload) {
@@ -625,6 +803,11 @@ describe("Couples Budgeting API", () => {
       },
       insightsService: createInsightsService({
         budgetRepository: repository,
+        exchangeRateService: {
+          async getRate() {
+            return { rate: 1 };
+          },
+        },
       }),
       jwtSecret: "test-secret",
     });
@@ -679,6 +862,289 @@ describe("Couples Budgeting API", () => {
     expect(response.body.data.to).toBe("EUR");
     expect(response.body.data.rate).toBe(0.92);
     expect(response.body.data.date).toBe("2026-03-25");
+  });
+
+  it("builds personalized fallback coach insights from real couple spending data", () => {
+    const insights = createFallbackInsights({
+      displayCurrencyCode: "USD",
+      period: { days: 30 },
+      fairSplit: [
+        { userId: 1, name: "Alex", sharePct: 60 },
+        { userId: 2, name: "Sam", sharePct: 40 },
+      ],
+      summary: {
+        totalSpent: 900,
+        cashSharePct: 22,
+        cardSharePct: 78,
+        oneTimeSpent: 420,
+        recurringSpent: 300,
+      },
+      topCategories: [
+        { category: "Dining", amount: 260, sharePct: 28.9 },
+        { category: "Shopping", amount: 200, sharePct: 22.2 },
+      ],
+      users: [
+        {
+          id: 1,
+          name: "Alex",
+          spending: {
+            totalSpent: 620,
+            cashSpent: 70,
+            cardSpent: 550,
+            categories: [{ category: "Dining", amount: 220, sharePct: 24.4 }],
+          },
+        },
+        {
+          id: 2,
+          name: "Sam",
+          spending: {
+            totalSpent: 280,
+            cashSpent: 130,
+            cardSpent: 150,
+            categories: [{ category: "Shopping", amount: 120, sharePct: 13.3 }],
+          },
+        },
+      ],
+      transactions: [
+        {
+          id: 1,
+          type: "one-time",
+          description: "Weekend shopping spree",
+          category: "Shopping",
+          amount: 240,
+          displayAmount: 240,
+        },
+        {
+          id: 2,
+          type: "one-time",
+          description: "Dinner out",
+          category: "Dining",
+          amount: 120,
+          displayAmount: 120,
+        },
+        {
+          id: 3,
+          type: "recurring",
+          description: "Netflix",
+          category: "Streaming",
+          amount: 40,
+          displayAmount: 40,
+        },
+      ],
+    });
+
+    expect(insights.overview).toContain("Dining");
+    expect(insights.tips).toHaveLength(3);
+    expect(insights.tips.some((tip) => tip.title.includes("Alex"))).toBe(true);
+    expect(
+      insights.tips.some((tip) =>
+        ["dining", "shopping"].some((term) => tip.action.toLowerCase().includes(term)),
+      ),
+    ).toBe(true);
+    expect(
+      insights.tips.some((tip) => tip.reason.toLowerCase().includes("stress")),
+    ).toBe(true);
+  });
+
+  it("prioritizes the couple questionnaire in fallback coach insights", () => {
+    const insights = createFallbackInsights(
+      {
+        displayCurrencyCode: "USD",
+        period: { days: 30 },
+        fairSplit: [
+          { userId: 1, name: "Alex", sharePct: 60 },
+          { userId: 2, name: "Sam", sharePct: 40 },
+        ],
+        summary: {
+          totalSpent: 500,
+          cashSharePct: 30,
+          cardSharePct: 70,
+          oneTimeSpent: 180,
+          recurringSpent: 220,
+        },
+        topCategories: [{ category: "Dining", amount: 160, sharePct: 32 }],
+        users: [],
+        transactions: [
+          {
+            id: 1,
+            type: "one-time",
+            description: "Dinner out",
+            category: "Dining",
+            amount: 80,
+            displayAmount: 80,
+          },
+        ],
+      },
+      {
+        completed: true,
+        primaryGoal: "Build an emergency fund",
+        goalHorizon: "In the next 6 months",
+        biggestMoneyStress: "Unexpected expenses",
+        hardestCategory: "Dining",
+        conflictTrigger: "Surprise purchases",
+        coachingFocus: "Help us save consistently",
+      },
+    );
+
+    expect(insights.tips[0].title).toContain("Coach priority");
+    expect(insights.tips[0].action).toContain("emergency fund");
+    expect(insights.tips[0].reason.toLowerCase()).toContain("unexpected expenses");
+  });
+
+  it("converts mixed-currency income and expenses into the requested display currency", async () => {
+    const alex = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 1000,
+        incomeCurrencyCode: "USD",
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    const sam = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam@example.com",
+        password: "supersecret",
+        monthlySalary: 1000,
+        incomeCurrencyCode: "EUR",
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
+    });
+
+    const transactionResponse = await inject(app, {
+      method: "POST",
+      url: "/api/transactions",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 100,
+        currencyCode: "EUR",
+        description: "Trip snacks",
+        category: "Dining",
+        type: "one-time",
+        paymentMethod: "card",
+        date: recentIsoDate(1),
+      },
+    });
+
+    expect(transactionResponse.status).toBe(201);
+
+    const summaryResponse = await inject(app, {
+      method: "GET",
+      url: "/api/summary?displayCurrency=USD",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(summaryResponse.status).toBe(200);
+    expect(summaryResponse.body.data.displayCurrencyCode).toBe("USD");
+    expect(summaryResponse.body.data.householdIncome).toBe(3000);
+    expect(summaryResponse.body.data.totalExpenses).toBe(200);
+
+    const transactionsResponse = await inject(app, {
+      method: "GET",
+      url: "/api/transactions?displayCurrency=USD",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(transactionsResponse.status).toBe(200);
+    expect(transactionsResponse.body.data.transactions[0].amount).toBe(100);
+    expect(transactionsResponse.body.data.transactions[0].currencyCode).toBe("EUR");
+    expect(transactionsResponse.body.data.transactions[0].displayAmount).toBe(200);
+  });
+
+  it("stores a couple coach profile and exposes it in auth responses", async () => {
+    const alex = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    const sam = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam@example.com",
+        password: "supersecret",
+        monthlySalary: 2800,
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
+    });
+
+    const saveProfileResponse = await inject(app, {
+      method: "PUT",
+      url: "/api/coach-profile",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        primaryGoal: "Build an emergency fund",
+        goalHorizon: "In the next 6 months",
+        biggestMoneyStress: "Unexpected expenses",
+        hardestCategory: "Dining",
+        conflictTrigger: "Surprise purchases",
+        coachingFocus: "Help us save consistently",
+        notes: "We spend more when work is stressful.",
+      },
+    });
+
+    expect(saveProfileResponse.status).toBe(200);
+    expect(saveProfileResponse.body.data.profile.completed).toBe(true);
+
+    const meResponse = await inject(app, {
+      method: "GET",
+      url: "/api/auth/me",
+      headers: {
+        authorization: `Bearer ${sam.body.data.accessToken}`,
+      },
+    });
+
+    expect(meResponse.status).toBe(200);
+    expect(meResponse.body.data.coachProfile.primaryGoal).toBe("Build an emergency fund");
+    expect(meResponse.body.data.coachProfile.completed).toBe(true);
+
+    const coachProfileResponse = await inject(app, {
+      method: "GET",
+      url: "/api/coach-profile",
+      headers: {
+        authorization: `Bearer ${sam.body.data.accessToken}`,
+      },
+    });
+
+    expect(coachProfileResponse.status).toBe(200);
+    expect(coachProfileResponse.body.data.profile.hardestCategory).toBe("Dining");
   });
 
   it("creates a couple, adds an expense, and returns a dashboard", async () => {
@@ -847,6 +1313,104 @@ describe("Couples Budgeting API", () => {
 
     expect(transactionsResponse.status).toBe(200);
     expect(transactionsResponse.body.data.transactions).toHaveLength(0);
+  });
+
+  it("adds partner activity notifications for expense changes", async () => {
+    const alex = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        salaryPaymentMethod: "card",
+      },
+    });
+
+    const jamie = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Jamie",
+        email: "jamie@example.com",
+        password: "supersecret",
+        monthlySalary: 2800,
+        salaryPaymentMethod: "cash",
+      },
+    });
+
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: jamie.body.data.accessToken,
+      partnerUserId: jamie.body.data.user.id,
+    });
+
+    const createResponse = await inject(app, {
+      method: "POST",
+      url: "/api/transactions",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 45,
+        description: "Weekly groceries",
+        category: "Groceries",
+        type: "one-time",
+        paymentMethod: "card",
+        date: recentIsoDate(),
+      },
+    });
+
+    const transactionId = createResponse.body.data.transaction.id;
+
+    const updateResponse = await inject(app, {
+      method: "PATCH",
+      url: `/api/transactions/${transactionId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 55,
+        description: "Weekly groceries",
+        category: "Groceries",
+        type: "one-time",
+        paymentMethod: "card",
+        date: recentIsoDate(),
+      },
+    });
+
+    expect(updateResponse.status).toBe(200);
+    expect(updateResponse.body.data.previousTransaction.amount).toBe(45);
+
+    const deleteResponse = await inject(app, {
+      method: "DELETE",
+      url: `/api/transactions/${transactionId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(deleteResponse.status).toBe(200);
+
+    const notificationsResponse = await inject(app, {
+      method: "GET",
+      url: "/api/notifications",
+      headers: {
+        authorization: `Bearer ${jamie.body.data.accessToken}`,
+      },
+    });
+
+    expect(notificationsResponse.status).toBe(200);
+    expect(notificationsResponse.body.data.activity).toHaveLength(3);
+    expect(notificationsResponse.body.data.activity[0].type).toBe("expense_deleted");
+    expect(notificationsResponse.body.data.activity[1].type).toBe("expense_edited");
+    expect(notificationsResponse.body.data.activity[2].type).toBe("expense_added");
+    expect(notificationsResponse.body.data.activity[2].body).toContain("Alex added");
+    expect(notificationsResponse.body.data.activity[1].body).toContain("$45.00");
+    expect(notificationsResponse.body.data.activity[1].body).toContain("$55.00");
+    expect(notificationsResponse.body.data.activity[0].body).toContain("deleted");
   });
 
   it("accepts partnerUserId when it arrives as a numeric string and sends an invite", async () => {
@@ -1198,9 +1762,7 @@ describe("Couples Budgeting API", () => {
     expect(insightsResponse.body.data.insights.provider).toBe("heuristic-fallback");
     expect(insightsResponse.body.data.insights.tips).toHaveLength(3);
     expect(insightsResponse.body.data.tips).toHaveLength(3);
-    expect(insightsResponse.body.data.insights.overview).toContain(
-      "AI tips temporarily unavailable",
-    );
+    expect(insightsResponse.body.data.insights.overview).toContain("Dining");
     expect(insightsResponse.body.data.snapshot.fairSplit[0].sharePct).toBe(60);
     expect(insightsResponse.body.data.snapshot.fairSplit[1].sharePct).toBe(40);
   });
@@ -1525,6 +2087,142 @@ describe("Couples Budgeting API", () => {
     expect(summaryResponse.body.data.longTermGoal.totalSaved).toBe(125);
     expect(summaryResponse.body.data.longTermGoal.remainingAmount).toBe(4875);
     expect(summaryResponse.body.data.entries[0].note).toBe("Emergency fund transfer");
+  });
+
+  it("supports multiple savings goals with per-goal progress and edits", async () => {
+    const alex = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Alex",
+        email: "alex@example.com",
+        password: "supersecret",
+        monthlySalary: 4200,
+        salaryPaymentMethod: "card",
+        monthlySavingsTarget: 300,
+      },
+    });
+
+    const sam = await inject(app, {
+      method: "POST",
+      url: "/api/auth/register",
+      body: {
+        name: "Sam",
+        email: "sam@example.com",
+        password: "supersecret",
+        monthlySalary: 2800,
+        salaryPaymentMethod: "cash",
+        monthlySavingsTarget: 200,
+      },
+    });
+
+    await connectUsersByInvite({
+      app,
+      inviterToken: alex.body.data.accessToken,
+      recipientToken: sam.body.data.accessToken,
+      partnerUserId: sam.body.data.user.id,
+    });
+
+    const emergencyGoalResponse = await inject(app, {
+      method: "POST",
+      url: "/api/savings/goal",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        title: "Emergency fund",
+        targetAmount: 5000,
+        targetDate: "2026-12-31",
+      },
+    });
+
+    const travelGoalResponse = await inject(app, {
+      method: "POST",
+      url: "/api/savings/goal",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        title: "Travel",
+        targetAmount: 2000,
+        targetDate: "2026-08-15",
+      },
+    });
+
+    const emergencyGoalId = emergencyGoalResponse.body.data.goal.id;
+    const travelGoalId = travelGoalResponse.body.data.goal.id;
+
+    const saveResponse = await inject(app, {
+      method: "POST",
+      url: "/api/savings",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        amount: 300,
+        savingsGoalId: travelGoalId,
+        note: "Trip fund transfer",
+        date: recentIsoDate(0),
+      },
+    });
+
+    expect(saveResponse.status).toBe(201);
+
+    const updateGoalResponse = await inject(app, {
+      method: "PATCH",
+      url: `/api/savings/goal/${travelGoalId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+      body: {
+        title: "Italy trip",
+        targetAmount: 2500,
+        targetDate: "2026-09-01",
+      },
+    });
+
+    expect(updateGoalResponse.status).toBe(200);
+    expect(updateGoalResponse.body.data.goal.title).toBe("Italy trip");
+
+    const summaryResponse = await inject(app, {
+      method: "GET",
+      url: "/api/savings",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(summaryResponse.status).toBe(200);
+    expect(summaryResponse.body.data.goals).toHaveLength(2);
+    const emergencyGoal = summaryResponse.body.data.goals.find((goal) => goal.id === emergencyGoalId);
+    const italyGoal = summaryResponse.body.data.goals.find((goal) => goal.id === travelGoalId);
+    expect(emergencyGoal.totalSaved).toBe(0);
+    expect(italyGoal.totalSaved).toBe(300);
+    expect(italyGoal.remainingAmount).toBe(2200);
+    expect(summaryResponse.body.data.entries[0].savingsGoalId).toBe(travelGoalId);
+    expect(summaryResponse.body.data.entries[0].savingsGoalTitle).toBe("Italy trip");
+
+    const deleteGoalResponse = await inject(app, {
+      method: "DELETE",
+      url: `/api/savings/goal/${emergencyGoalId}`,
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(deleteGoalResponse.status).toBe(200);
+
+    const afterDeleteResponse = await inject(app, {
+      method: "GET",
+      url: "/api/savings",
+      headers: {
+        authorization: `Bearer ${alex.body.data.accessToken}`,
+      },
+    });
+
+    expect(afterDeleteResponse.status).toBe(200);
+    expect(afterDeleteResponse.body.data.goals).toHaveLength(1);
+    expect(afterDeleteResponse.body.data.goals[0].title).toBe("Italy trip");
   });
 
   it("filters transactions and summary by calendar month", async () => {

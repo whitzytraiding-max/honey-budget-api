@@ -11,6 +11,7 @@ import { createApp } from "./app.js";
 import { prisma } from "./lib/prisma.js";
 import { createPrismaBudgetRepository } from "./repositories/prismaBudgetRepository.js";
 import { createEmailService } from "./services/emailService.js";
+import { createExchangeRateService } from "./services/exchangeRateService.js";
 import { createInsightsService, createOpenAIClient } from "./services/insightsService.js";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -53,8 +54,10 @@ if (isProduction && !resetPasswordUrlBase) {
 
 const budgetRepository = createPrismaBudgetRepository({ prisma });
 const emailService = createEmailService();
+const exchangeRateService = createExchangeRateService();
 const insightsService = createInsightsService({
   budgetRepository,
+  exchangeRateService,
   openaiClient: createOpenAIClient(),
 });
 
@@ -150,6 +153,7 @@ const app = createApp({
   app: serverApp,
   budgetRepository,
   insightsService,
+  exchangeRateService,
   emailService,
   resetPasswordUrlBase: resetPasswordUrlBase || "http://localhost:5173",
   jwtSecret: jwtSecret || "development-secret-change-me",

@@ -1,9 +1,9 @@
-import { Clock3, ReceiptText, TrendingUp, Wallet } from "lucide-react";
+import { Clock3, ReceiptText, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getRemainingTone } from "../../lib/format.js";
-import { ProgressBar } from "../ui.jsx";
+import { ActionButton, ProgressBar } from "../ui.jsx";
 
-function HomePage({ summaryData, dashboard, dashboardBusy }) {
+function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavigateToCoach }) {
   const { t } = useLanguage();
   const householdIncome = Number(summaryData?.householdIncome ?? 0);
   const remainingBudget = Number(summaryData?.remainingBudget ?? 0);
@@ -48,6 +48,25 @@ function HomePage({ summaryData, dashboard, dashboardBusy }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {!coachProfile?.completed ? (
+        <section className="rounded-[1.5rem] border border-amber-200/80 bg-amber-50/95 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex rounded-full bg-white p-2 text-amber-700 shadow-sm">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">{t("coach.homeTitle")}</h2>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-700">{t("coach.homeBody")}</p>
+              </div>
+            </div>
+            <ActionButton className="sm:w-auto" onClick={onNavigateToCoach} type="button">
+              {t("coach.openQuestionnaire")}
+            </ActionButton>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-[1.5rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
         <div className="rounded-[1.4rem] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4 py-5 text-white sm:px-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">

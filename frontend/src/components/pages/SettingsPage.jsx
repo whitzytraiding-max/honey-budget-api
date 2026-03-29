@@ -60,6 +60,14 @@ function SettingsPage({
             />
           </div>
 
+          <Select
+            label={t("settings.incomeCurrency")}
+            name="incomeCurrencyCode"
+            value={incomeProfileForm.incomeCurrencyCode}
+            onChange={onIncomeProfileChange}
+            options={currencyOptions}
+          />
+
           <Input
             label={t("settings.incomeDayOfMonth")}
             name="incomeDayOfMonth"
@@ -77,10 +85,10 @@ function SettingsPage({
               {t("settings.totalMonthlySalary")}
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {currency(
-                Number(incomeProfileForm.salaryCashAmount || 0) +
-                  Number(incomeProfileForm.salaryCardAmount || 0),
-              )}
+              {currency(Number(incomeProfileForm.salaryCashAmount || 0) + Number(incomeProfileForm.salaryCardAmount || 0), {
+                sourceCurrency: incomeProfileForm.incomeCurrencyCode,
+                convert: false,
+              })}
             </p>
           </div>
 
@@ -100,15 +108,15 @@ function SettingsPage({
             }))}
           />
           <Select
-            label={t("settings.baseCurrency")}
-            value={baseCurrencyCode}
-            onChange={onBaseCurrencyChange}
-            options={currencyOptions}
-          />
-          <Select
             label={t("settings.displayCurrency")}
             value={currencyCode}
             onChange={onCurrencyChange}
+            options={currencyOptions}
+          />
+          <Select
+            label={t("settings.referenceCurrency")}
+            value={baseCurrencyCode}
+            onChange={onBaseCurrencyChange}
             options={currencyOptions}
           />
           <Select
@@ -141,13 +149,20 @@ function SettingsPage({
           <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
             <p>
               <span className="font-semibold text-slate-900">{t("settings.homeCurrencyLabel")}:</span>{" "}
-              {baseCurrencyCode} {t("settings.howItWorksLineOne")}
+              {incomeProfileForm.incomeCurrencyCode} {t("settings.howItWorksLineOne")}
             </p>
             <p>
               <span className="font-semibold text-slate-900">{t("settings.displayCurrencyLabel")}:</span>{" "}
               {currencyCode} {t("settings.howItWorksLineTwo")}
             </p>
+            <p>
+              <span className="font-semibold text-slate-900">{t("settings.referenceCurrencyLabel")}:</span>{" "}
+              {baseCurrencyCode} {t("settings.referenceCurrencyHelp")}
+            </p>
             <p>{t("settings.howItWorksLineThree")}</p>
+            <p className="rounded-2xl bg-white px-3 py-3 text-slate-700">
+              {t("settings.howItWorksPlainEnglish")}
+            </p>
           </div>
         </div>
       </section>
@@ -169,8 +184,15 @@ function SettingsPage({
             <p className="mt-2 text-xl font-semibold text-slate-900">{user?.name}</p>
             <p className="mt-1 text-sm text-slate-500">{user?.email}</p>
             <p className="mt-3 text-sm text-slate-600">
-              Cash {currency(user?.salaryCashAmount ?? 0)} · Card{" "}
-              {currency(user?.salaryCardAmount ?? 0)}
+              Cash {currency(user?.salaryCashAmount ?? 0, {
+                sourceCurrency: user?.incomeCurrencyCode || "USD",
+                convert: false,
+              })}{" "}
+              · Card{" "}
+              {currency(user?.salaryCardAmount ?? 0, {
+                sourceCurrency: user?.incomeCurrencyCode || "USD",
+                convert: false,
+              })}
             </p>
             <p className="mt-1 text-sm text-slate-500">
               {t("settings.incomeDayOfMonth")}: {user?.incomeDayOfMonth ?? 1}
@@ -184,8 +206,15 @@ function SettingsPage({
             <p className="mt-2 text-xl font-semibold text-slate-900">{partner?.name || t("settings.notLinked")}</p>
             <p className="mt-1 text-sm text-slate-500">{partner?.email || t("settings.partnerHint")}</p>
             <p className="mt-3 text-sm text-slate-600">
-              Cash {currency(partner?.salaryCashAmount ?? 0)} · Card{" "}
-              {currency(partner?.salaryCardAmount ?? 0)}
+              Cash {currency(partner?.salaryCashAmount ?? 0, {
+                sourceCurrency: partner?.incomeCurrencyCode || "USD",
+                convert: false,
+              })}{" "}
+              · Card{" "}
+              {currency(partner?.salaryCardAmount ?? 0, {
+                sourceCurrency: partner?.incomeCurrencyCode || "USD",
+                convert: false,
+              })}
             </p>
             <p className="mt-1 text-sm text-slate-500">
               {t("settings.incomeDayOfMonth")}: {partner?.incomeDayOfMonth ?? 1}

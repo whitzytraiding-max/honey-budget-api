@@ -31,6 +31,18 @@ function Select({ label, options, ...props }) {
   );
 }
 
+function Textarea({ label, ...props }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
+      <textarea
+        className="min-h-[120px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 sm:rounded-2xl"
+        {...props}
+      />
+    </label>
+  );
+}
+
 function ActionButton({ busy, children, className = "", ...props }) {
   return (
     <button
@@ -122,4 +134,13 @@ function EmptyState({ title, body, action }) {
   );
 }
 
-export { ActionButton, EmptyState, InsightSkeleton, Input, ProgressBar, Select, ToggleGroup };
+export {
+  ActionButton,
+  EmptyState,
+  InsightSkeleton,
+  Input,
+  ProgressBar,
+  Select,
+  Textarea,
+  ToggleGroup,
+};

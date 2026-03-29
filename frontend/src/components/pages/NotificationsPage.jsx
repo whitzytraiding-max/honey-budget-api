@@ -48,10 +48,33 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
   );
 }
 
+function ActivityCard({ notification, t, locale }) {
+  const timestamp = new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(notification.createdAt));
+
+  return (
+    <article className="rounded-[1.4rem] border border-slate-100 bg-slate-50/80 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{notification.body}</p>
+        </div>
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500 shadow-sm">
+          <Clock3 className="h-3.5 w-3.5" />
+          {timestamp}
+        </span>
+      </div>
+    </article>
+  );
+}
+
 function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const incoming = notifications?.incoming ?? [];
   const outgoing = notifications?.outgoing ?? [];
+  const activity = notifications?.activity ?? [];
 
   return (
     <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
@@ -61,12 +84,42 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
             <Bell className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-2xl font-semibold">{t("notifications.title")}</h2>
-            <p className="text-sm text-slate-600">{t("notifications.subtitle")}</p>
+            <h2 className="text-2xl font-semibold">{t("notifications.activityTitle")}</h2>
+            <p className="text-sm text-slate-600">{t("notifications.activitySubtitle")}</p>
           </div>
         </div>
 
         <div className="mt-6 space-y-3">
+          {activity.length ? (
+            activity.map((notification) => (
+              <ActivityCard
+                key={`activity-${notification.id}`}
+                notification={notification}
+                t={t}
+                locale={locale}
+              />
+            ))
+          ) : (
+            <EmptyState
+              title={t("notifications.emptyActivityTitle")}
+              body={t("notifications.emptyActivityBody")}
+            />
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-emerald-100 p-2.5 text-emerald-900">
+            <MailPlus className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold">{t("notifications.sentTitle")}</h2>
+            <p className="text-sm text-slate-600">{t("notifications.sentSubtitle")}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 space-y-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("notifications.incoming")}
@@ -90,21 +143,13 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
               body={t("notifications.emptyIncomingBody")}
             />
           )}
-        </div>
-      </div>
 
-      <div className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-emerald-100 p-2.5 text-emerald-900">
-            <MailPlus className="h-5 w-5" />
+          <div className="pt-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              {t("notifications.sentTitle")}
+            </p>
           </div>
-          <div>
-            <h2 className="text-2xl font-semibold">{t("notifications.sentTitle")}</h2>
-            <p className="text-sm text-slate-600">{t("notifications.sentSubtitle")}</p>
-          </div>
-        </div>
 
-        <div className="mt-6 space-y-3">
           {outgoing.length ? (
             outgoing.map((invite) => (
               <InviteCard

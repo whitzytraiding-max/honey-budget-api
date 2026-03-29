@@ -50,13 +50,17 @@ function CalendarPage({
       kind: "income",
       label: `${user.name} ${t("calendar.income").toLowerCase()}`,
       amount: Number(user.monthlySalary ?? 0),
+      originalAmount: Number(user.originalMonthlySalary ?? user.monthlySalary ?? 0),
+      currencyCode: user.incomeCurrencyCode ?? null,
       date: `${selectedMonth}-${String(user.incomeDayOfMonth ?? 1).padStart(2, "0")}`,
     })),
     ...monthTransactions.slice(0, 8).map((transaction) => ({
       key: `expense-${transaction.id}`,
       kind: "expense",
       label: transaction.description,
-      amount: Number(transaction.amount ?? 0),
+      amount: Number(transaction.displayAmount ?? transaction.amount ?? 0),
+      originalAmount: Number(transaction.amount ?? 0),
+      currencyCode: transaction.currencyCode ?? null,
       date: transaction.date,
     })),
   ].sort((left, right) => left.date.localeCompare(right.date));

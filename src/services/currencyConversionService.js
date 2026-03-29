@@ -1,0 +1,60 @@
+import {
+  DEFAULT_CURRENCY_CODE,
+  isCurrencyCode,
+  normalizeCurrencyCode,
+} from "./exchangeRateService.js";
+
+function roundCurrency(value) {
+  return Number(Number(value ?? 0).toFixed(2));
+}
+
+function resolveCurrencyCode(value, fallback = DEFAULT_CURRENCY_CODE) {
+  const normalizedValue = normalizeCurrencyCode(value);
+  if (isCurrencyCode(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  const normalizedFallback = normalizeCurrencyCode(fallback);
+  return isCurrencyCode(normalizedFallback) ? normalizedFallback : DEFAULT_CURRENCY_CODE;
+}
+
+async function createCurrencyConverter({
+  exchangeRateService,
+  displayCurrency,
+  sourceCurrencies = [],
+}) {
+  const targetCurrency = resolveCurrencyCode(displayCurrency);
+  const uniqueSources = [...new Set(sourceCurrencies.map((entry) => resolveCurrencyCode(entry)))];
+  const rates = new Map([[targetCurrency, 1]]);
+
+  await Promise.all(
+    uniqueSources
+      .filter((sourceCurrency) => sourceCurrency !== targetCurrency)
+      .map(async (sourceCurrency) => {
+        const rate = await exchangeRateService.getRate({
+          from: sourceCurrency,
+          to: targetCurrency,
+        });
+        rates.set(sourceCurrency, Number(rate.rate ?? 1));
+      }),
+  );
+
+  return {
+    displayCurrencyCode: targetCurrency,
+    convert(amount, sourceCurrency) {
+      const normalizedSource = resolveCurrencyCode(sourceCurrency);
+      const numericAmount = Number(amount ?? 0);
+
+      if (!Number.isFinite(numericAmount)) {
+        return 0;
+      }
+
+      return roundCurrency(numericAmount * Number(rates.get(normalizedSource) ?? 1));
+    },
+    rateFor(sourceCurrency) {
+      return Number(rates.get(resolveCurrencyCode(sourceCurrency)) ?? 1);
+    },
+  };
+}
+
+export { createCurrencyConverter, resolveCurrencyCode, roundCurrency };

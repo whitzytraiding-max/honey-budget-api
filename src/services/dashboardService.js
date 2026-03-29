@@ -1,8 +1,5 @@
 import { HttpError } from "../lib/http.js";
-
-function roundCurrency(value) {
-  return Number(Number(value).toFixed(2));
-}
+import { createCurrencyConverter, roundCurrency } from "./currencyConversionService.js";
 
 function roundPercent(value) {
   return Number(Number(value).toFixed(1));
@@ -31,7 +28,13 @@ function normalizeUserSpending(user, userTotals, userCategoryTotals, totalSpent)
   };
 }
 
-async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
+async function buildBudgetSnapshot({
+  budgetRepository,
+  exchangeRateService,
+  coupleId,
+  days = 30,
+  displayCurrency = null,
+}) {
   const couple = await budgetRepository.getCoupleById(coupleId);
 
   if (!couple) {
@@ -40,8 +43,23 @@ async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
 
   const transactions = await budgetRepository.listCoupleTransactions({ coupleId, days });
   const users = [couple.userOne, couple.userTwo];
-  const totalSalary = users.reduce((sum, user) => sum + user.monthlySalary, 0);
-  const totalSpent = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
+  const converter = await createCurrencyConverter({
+    exchangeRateService,
+    displayCurrency: resolvedDisplayCurrency,
+    sourceCurrencies: [
+      ...users.map((user) => user.incomeCurrencyCode),
+      ...transactions.map((transaction) => transaction.currencyCode),
+    ],
+  });
+  const totalSalary = users.reduce(
+    (sum, user) => sum + converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+    0,
+  );
+  const totalSpent = transactions.reduce(
+    (sum, tx) => sum + converter.convert(tx.amount, tx.currencyCode),
+    0,
+  );
   const methodTotals = { cash: 0, card: 0 };
   const typeTotals = { recurring: 0, "one-time": 0 };
   const categoryTotals = {};
@@ -49,9 +67,10 @@ async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
   const userCategoryTotals = {};
 
   for (const transaction of transactions) {
-    methodTotals[transaction.paymentMethod] += transaction.amount;
-    typeTotals[transaction.type] += transaction.amount;
-    incrementBucket(categoryTotals, transaction.category, transaction.amount);
+    const convertedAmount = converter.convert(transaction.amount, transaction.currencyCode);
+    methodTotals[transaction.paymentMethod] += convertedAmount;
+    typeTotals[transaction.type] += convertedAmount;
+    incrementBucket(categoryTotals, transaction.category, convertedAmount);
 
     if (!userTotals[transaction.userId]) {
       userTotals[transaction.userId] = {
@@ -65,23 +84,28 @@ async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
     }
 
     userTotals[transaction.userId].totalSpent = roundCurrency(
-      userTotals[transaction.userId].totalSpent + transaction.amount,
+      userTotals[transaction.userId].totalSpent + convertedAmount,
     );
     userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] = roundCurrency(
-      userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] + transaction.amount,
+      userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] + convertedAmount,
     );
     incrementBucket(
       userCategoryTotals[transaction.userId],
       transaction.category,
-      transaction.amount,
+      convertedAmount,
     );
   }
 
   const fairSplit = users.map((user) => ({
     userId: user.id,
     name: user.name,
-    monthlySalary: roundCurrency(user.monthlySalary),
-    sharePct: totalSalary === 0 ? 50 : roundPercent((user.monthlySalary / totalSalary) * 100),
+    monthlySalary: converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+    sharePct:
+      totalSalary === 0
+        ? 50
+        : roundPercent(
+            (converter.convert(user.monthlySalary, user.incomeCurrencyCode) / totalSalary) * 100,
+          ),
   }));
 
   return {
@@ -95,12 +119,21 @@ async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
       id: user.id,
       name: user.name,
       email: user.email,
-      monthlySalary: roundCurrency(user.monthlySalary),
+      incomeCurrencyCode: user.incomeCurrencyCode ?? "USD",
+      monthlySalary: converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+      originalMonthlySalary: roundCurrency(user.monthlySalary),
       salaryPaymentMethod: user.salaryPaymentMethod,
-      salaryCashAmount: roundCurrency(user.salaryCashAmount ?? 0),
-      salaryCardAmount: roundCurrency(user.salaryCardAmount ?? user.monthlySalary ?? 0),
+      incomeDayOfMonth: Number(user.incomeDayOfMonth ?? 1),
+      salaryCashAmount: converter.convert(user.salaryCashAmount ?? 0, user.incomeCurrencyCode),
+      salaryCardAmount: converter.convert(
+        user.salaryCardAmount ?? user.monthlySalary ?? 0,
+        user.incomeCurrencyCode,
+      ),
+      originalSalaryCashAmount: roundCurrency(user.salaryCashAmount ?? 0),
+      originalSalaryCardAmount: roundCurrency(user.salaryCardAmount ?? user.monthlySalary ?? 0),
       spending: normalizeUserSpending(user, userTotals, userCategoryTotals, totalSpent),
     })),
+    displayCurrencyCode: converter.displayCurrencyCode,
     fairSplit,
     summary: {
       totalSpent: roundCurrency(totalSpent),
@@ -119,16 +152,26 @@ async function buildBudgetSnapshot({ budgetRepository, coupleId, days = 30 }) {
         amount: roundCurrency(amount),
         sharePct: totalSpent === 0 ? 0 : roundPercent((amount / totalSpent) * 100),
       })),
-    recentTransactions: transactions.slice(0, 20),
-    transactions,
+    recentTransactions: transactions.slice(0, 20).map((transaction) => ({
+      ...transaction,
+      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayCurrencyCode: converter.displayCurrencyCode,
+    })),
+    transactions: transactions.map((transaction) => ({
+      ...transaction,
+      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayCurrencyCode: converter.displayCurrencyCode,
+    })),
   };
 }
 
 async function buildBudgetSnapshotForUsers({
   budgetRepository,
+  exchangeRateService,
   currentUser,
   partnerUser,
   days = 30,
+  displayCurrency = null,
 }) {
   if (!currentUser || !partnerUser) {
     throw new HttpError(404, "COUPLE_NOT_FOUND", "Linked partner not found.");
@@ -139,8 +182,23 @@ async function buildBudgetSnapshotForUsers({
     days,
   });
   const users = [currentUser, partnerUser];
-  const totalSalary = users.reduce((sum, user) => sum + user.monthlySalary, 0);
-  const totalSpent = transactions.reduce((sum, tx) => sum + tx.amount, 0);
+  const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
+  const converter = await createCurrencyConverter({
+    exchangeRateService,
+    displayCurrency: resolvedDisplayCurrency,
+    sourceCurrencies: [
+      ...users.map((user) => user.incomeCurrencyCode),
+      ...transactions.map((transaction) => transaction.currencyCode),
+    ],
+  });
+  const totalSalary = users.reduce(
+    (sum, user) => sum + converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+    0,
+  );
+  const totalSpent = transactions.reduce(
+    (sum, tx) => sum + converter.convert(tx.amount, tx.currencyCode),
+    0,
+  );
   const methodTotals = { cash: 0, card: 0 };
   const typeTotals = { recurring: 0, "one-time": 0 };
   const categoryTotals = {};
@@ -148,9 +206,10 @@ async function buildBudgetSnapshotForUsers({
   const userCategoryTotals = {};
 
   for (const transaction of transactions) {
-    methodTotals[transaction.paymentMethod] += transaction.amount;
-    typeTotals[transaction.type] += transaction.amount;
-    incrementBucket(categoryTotals, transaction.category, transaction.amount);
+    const convertedAmount = converter.convert(transaction.amount, transaction.currencyCode);
+    methodTotals[transaction.paymentMethod] += convertedAmount;
+    typeTotals[transaction.type] += convertedAmount;
+    incrementBucket(categoryTotals, transaction.category, convertedAmount);
 
     if (!userTotals[transaction.userId]) {
       userTotals[transaction.userId] = {
@@ -164,23 +223,28 @@ async function buildBudgetSnapshotForUsers({
     }
 
     userTotals[transaction.userId].totalSpent = roundCurrency(
-      userTotals[transaction.userId].totalSpent + transaction.amount,
+      userTotals[transaction.userId].totalSpent + convertedAmount,
     );
     userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] = roundCurrency(
-      userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] + transaction.amount,
+      userTotals[transaction.userId][`${transaction.paymentMethod}Spent`] + convertedAmount,
     );
     incrementBucket(
       userCategoryTotals[transaction.userId],
       transaction.category,
-      transaction.amount,
+      convertedAmount,
     );
   }
 
   const fairSplit = users.map((user) => ({
     userId: user.id,
     name: user.name,
-    monthlySalary: roundCurrency(user.monthlySalary),
-    sharePct: totalSalary === 0 ? 50 : roundPercent((user.monthlySalary / totalSalary) * 100),
+    monthlySalary: converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+    sharePct:
+      totalSalary === 0
+        ? 50
+        : roundPercent(
+            (converter.convert(user.monthlySalary, user.incomeCurrencyCode) / totalSalary) * 100,
+          ),
   }));
 
   return {
@@ -194,12 +258,21 @@ async function buildBudgetSnapshotForUsers({
       id: user.id,
       name: user.name,
       email: user.email,
-      monthlySalary: roundCurrency(user.monthlySalary),
+      incomeCurrencyCode: user.incomeCurrencyCode ?? "USD",
+      monthlySalary: converter.convert(user.monthlySalary, user.incomeCurrencyCode),
+      originalMonthlySalary: roundCurrency(user.monthlySalary),
       salaryPaymentMethod: user.salaryPaymentMethod,
-      salaryCashAmount: roundCurrency(user.salaryCashAmount ?? 0),
-      salaryCardAmount: roundCurrency(user.salaryCardAmount ?? user.monthlySalary ?? 0),
+      incomeDayOfMonth: Number(user.incomeDayOfMonth ?? 1),
+      salaryCashAmount: converter.convert(user.salaryCashAmount ?? 0, user.incomeCurrencyCode),
+      salaryCardAmount: converter.convert(
+        user.salaryCardAmount ?? user.monthlySalary ?? 0,
+        user.incomeCurrencyCode,
+      ),
+      originalSalaryCashAmount: roundCurrency(user.salaryCashAmount ?? 0),
+      originalSalaryCardAmount: roundCurrency(user.salaryCardAmount ?? user.monthlySalary ?? 0),
       spending: normalizeUserSpending(user, userTotals, userCategoryTotals, totalSpent),
     })),
+    displayCurrencyCode: converter.displayCurrencyCode,
     fairSplit,
     summary: {
       totalSpent: roundCurrency(totalSpent),
@@ -218,8 +291,16 @@ async function buildBudgetSnapshotForUsers({
         amount: roundCurrency(amount),
         sharePct: totalSpent === 0 ? 0 : roundPercent((amount / totalSpent) * 100),
       })),
-    recentTransactions: transactions.slice(0, 20),
-    transactions,
+    recentTransactions: transactions.slice(0, 20).map((transaction) => ({
+      ...transaction,
+      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayCurrencyCode: converter.displayCurrencyCode,
+    })),
+    transactions: transactions.map((transaction) => ({
+      ...transaction,
+      displayAmount: converter.convert(transaction.amount, transaction.currencyCode),
+      displayCurrencyCode: converter.displayCurrencyCode,
+    })),
   };
 }
 

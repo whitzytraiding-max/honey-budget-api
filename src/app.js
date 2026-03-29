@@ -8,6 +8,11 @@ import { createAuthService, createRequireAuth } from "./lib/auth.js";
 import { HttpError, asyncHandler, sendData } from "./lib/http.js";
 import { buildBudgetSnapshot } from "./services/dashboardService.js";
 import { createExchangeRateService } from "./services/exchangeRateService.js";
+import {
+  createCurrencyConverter,
+  resolveCurrencyCode,
+  roundCurrency,
+} from "./services/currencyConversionService.js";
 
 function parsePaymentMethod(value) {
   return value === "cash" || value === "card" ? value : null;
@@ -174,9 +179,62 @@ function validateCurrencyCode(value) {
   return /^[A-Z]{3}$/.test(String(value ?? "").trim().toUpperCase());
 }
 
+function normalizeCoachProfilePayload(payload) {
+  const primaryGoal = String(payload?.primaryGoal ?? "").trim();
+  const goalHorizon = String(payload?.goalHorizon ?? "").trim();
+  const biggestMoneyStress = String(payload?.biggestMoneyStress ?? "").trim();
+  const hardestCategory = String(payload?.hardestCategory ?? "").trim();
+  const conflictTrigger = String(payload?.conflictTrigger ?? "").trim();
+  const coachingFocus = String(payload?.coachingFocus ?? "").trim();
+  const notes = String(payload?.notes ?? "").trim();
+
+  if (!primaryGoal) {
+    throw new HttpError(400, "VALIDATION_ERROR", "primaryGoal is required.");
+  }
+
+  if (!goalHorizon) {
+    throw new HttpError(400, "VALIDATION_ERROR", "goalHorizon is required.");
+  }
+
+  if (!biggestMoneyStress) {
+    throw new HttpError(400, "VALIDATION_ERROR", "biggestMoneyStress is required.");
+  }
+
+  if (!hardestCategory) {
+    throw new HttpError(400, "VALIDATION_ERROR", "hardestCategory is required.");
+  }
+
+  if (!conflictTrigger) {
+    throw new HttpError(400, "VALIDATION_ERROR", "conflictTrigger is required.");
+  }
+
+  if (!coachingFocus) {
+    throw new HttpError(400, "VALIDATION_ERROR", "coachingFocus is required.");
+  }
+
+  if (notes.length > 500) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "notes must be 500 characters or fewer.",
+    );
+  }
+
+  return {
+    primaryGoal,
+    goalHorizon,
+    biggestMoneyStress,
+    hardestCategory,
+    conflictTrigger,
+    coachingFocus,
+    notes,
+  };
+}
+
 function normalizeTransactionPayload(payload) {
   const {
     amount,
+    currencyCode,
     description,
     category,
     type,
@@ -198,6 +256,17 @@ function normalizeTransactionPayload(payload) {
 
   const normalizedCategory = category.trim();
   const normalizedDescription = description?.trim() || `${normalizedCategory} expense`;
+  const normalizedCurrencyCode = currencyCode?.trim?.()
+    ? String(currencyCode).trim().toUpperCase()
+    : null;
+
+  if (normalizedCurrencyCode && !validateCurrencyCode(normalizedCurrencyCode)) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "currencyCode must be a valid ISO 4217 currency code.",
+    );
+  }
 
   const normalizedType = parseExpenseType(type);
   if (!normalizedType) {
@@ -223,6 +292,7 @@ function normalizeTransactionPayload(payload) {
 
   return {
     amount: Number(numericAmount.toFixed(2)),
+    currencyCode: normalizedCurrencyCode,
     description: normalizedDescription,
     category: normalizedCategory,
     type: normalizedType,
@@ -238,6 +308,7 @@ function sanitizeUser(user) {
         name: user.name,
         email: user.email,
         monthlySalary: Number(user.monthlySalary ?? 0),
+        incomeCurrencyCode: user.incomeCurrencyCode ?? "USD",
         salaryPaymentMethod: user.salaryPaymentMethod,
         salaryCashAmount: Number(user.salaryCashAmount ?? 0),
         salaryCardAmount: Number(user.salaryCardAmount ?? 0),
@@ -281,8 +352,26 @@ function clampIncomeDay(day) {
   return Math.max(1, Math.min(28, numericDay));
 }
 
+function resolveDisplayCurrencyCode({ requestedDisplayCurrency, currentUser, partnerUser }) {
+  if (requestedDisplayCurrency && validateCurrencyCode(requestedDisplayCurrency)) {
+    return String(requestedDisplayCurrency).trim().toUpperCase();
+  }
+
+  return resolveCurrencyCode(
+    currentUser?.incomeCurrencyCode || partnerUser?.incomeCurrencyCode || "USD",
+  );
+}
+
 function formatUtcDate(date) {
   return date.toISOString().slice(0, 10);
+}
+
+function formatNotificationMoney(amount, currencyCode) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: resolveCurrencyCode(currencyCode || "USD"),
+    maximumFractionDigits: 2,
+  }).format(Number(amount ?? 0));
 }
 
 function createUtcDate(year, monthIndex, dayOfMonth) {
@@ -400,6 +489,7 @@ function buildIncomeEvents(users, fromDate, limit) {
         userName: user.name,
         label: `${user.name} income`,
         amount: Number(user.monthlySalary ?? 0),
+        currencyCode: user.incomeCurrencyCode ?? "USD",
         date: formatUtcDate(cursor),
       });
       cursor = addMonthsUtc(cursor, 1);
@@ -441,6 +531,7 @@ function buildRecurringPaymentEvents(transactions, fromDate) {
       userName: transaction.userName,
       label: transaction.description,
       amount: Number(transaction.amount ?? 0),
+      currencyCode: transaction.currencyCode ?? "USD",
       category: transaction.category,
       paymentMethod: transaction.paymentMethod,
       date: formatUtcDate(cursor),
@@ -490,7 +581,14 @@ async function resolvePartnerUser({ budgetRepository, user }) {
   return getPartner(couple, user.id);
 }
 
-async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser, month = null }) {
+async function buildMonthlySummary({
+  budgetRepository,
+  exchangeRateService,
+  currentUser,
+  partnerUser,
+  month = null,
+  displayCurrency = null,
+}) {
   const budgetWindow = month
     ? getCalendarMonthWindow(month)
     : getBudgetWindowForUsers([currentUser, partnerUser]);
@@ -506,30 +604,55 @@ async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser,
     fromDate: from,
     toDate: to,
   });
+  const resolvedDisplayCurrency = resolveDisplayCurrencyCode({
+    requestedDisplayCurrency: displayCurrency,
+    currentUser,
+    partnerUser,
+  });
+  const converter = await createCurrencyConverter({
+    exchangeRateService,
+    displayCurrency: resolvedDisplayCurrency,
+    sourceCurrencies: [
+      currentUser.incomeCurrencyCode,
+      partnerUser.incomeCurrencyCode,
+      ...transactions.map((transaction) => transaction.currencyCode),
+    ],
+  });
   const monthlyTransactions = transactions.filter(
     (transaction) => transaction.date >= from && transaction.date <= to,
   );
-  const householdIncome =
-    Number(currentUser.monthlySalary ?? 0) + Number(partnerUser.monthlySalary ?? 0);
+  const householdIncome = [currentUser, partnerUser].reduce((sum, user) => {
+    return sum + converter.convert(user.monthlySalary ?? 0, user.incomeCurrencyCode);
+  }, 0);
   const cashIncome = [currentUser, partnerUser].reduce((sum, user) => {
-    return sum + Number(user.salaryCashAmount ?? 0);
+    return sum + converter.convert(user.salaryCashAmount ?? 0, user.incomeCurrencyCode);
   }, 0);
   const cardIncome = [currentUser, partnerUser].reduce((sum, user) => {
-    return sum + Number(user.salaryCardAmount ?? 0);
+    return sum + converter.convert(user.salaryCardAmount ?? 0, user.incomeCurrencyCode);
   }, 0);
   const totalExpenses = monthlyTransactions.reduce(
-    (sum, transaction) => sum + Number(transaction.amount ?? 0),
+    (sum, transaction) => sum + converter.convert(transaction.amount ?? 0, transaction.currencyCode),
     0,
   );
   const cashSpent = monthlyTransactions.reduce((sum, transaction) => {
-    return sum + (transaction.paymentMethod === "cash" ? Number(transaction.amount ?? 0) : 0);
+    return (
+      sum +
+      (transaction.paymentMethod === "cash"
+        ? converter.convert(transaction.amount ?? 0, transaction.currencyCode)
+        : 0)
+    );
   }, 0);
   const cardSpent = monthlyTransactions.reduce((sum, transaction) => {
-    return sum + (transaction.paymentMethod === "card" ? Number(transaction.amount ?? 0) : 0);
+    return (
+      sum +
+      (transaction.paymentMethod === "card"
+        ? converter.convert(transaction.amount ?? 0, transaction.currencyCode)
+        : 0)
+    );
   }, 0);
-  const remainingBudget = Number((householdIncome - totalExpenses).toFixed(2));
-  const cashRemaining = Number((cashIncome - cashSpent).toFixed(2));
-  const cardRemaining = Number((cardIncome - cardSpent).toFixed(2));
+  const remainingBudget = roundCurrency(householdIncome - totalExpenses);
+  const cashRemaining = roundCurrency(cashIncome - cashSpent);
+  const cardRemaining = roundCurrency(cardIncome - cardSpent);
   const remainingPct =
     householdIncome > 0
       ? Number(Math.max(0, Math.min(100, (remainingBudget / householdIncome) * 100)).toFixed(1))
@@ -550,7 +673,12 @@ async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser,
     currentUser,
     partnerUser,
     transactions,
-  });
+  }).map((event) => ({
+    ...event,
+    sourceCurrencyCode: event.currencyCode ?? currentUser.incomeCurrencyCode,
+    amount: converter.convert(event.amount ?? 0, event.currencyCode ?? currentUser.incomeCurrencyCode),
+    displayCurrencyCode: converter.displayCurrencyCode,
+  }));
 
   return {
     period: {
@@ -562,12 +690,13 @@ async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser,
       monthKey: budgetWindow.monthKey ?? null,
       mode: month ? "calendar-month" : "income-window",
     },
-    householdIncome: Number(householdIncome.toFixed(2)),
-    cashIncome: Number(cashIncome.toFixed(2)),
-    cardIncome: Number(cardIncome.toFixed(2)),
-    totalExpenses: Number(totalExpenses.toFixed(2)),
-    cashSpent: Number(cashSpent.toFixed(2)),
-    cardSpent: Number(cardSpent.toFixed(2)),
+    displayCurrencyCode: converter.displayCurrencyCode,
+    householdIncome: roundCurrency(householdIncome),
+    cashIncome: roundCurrency(cashIncome),
+    cardIncome: roundCurrency(cardIncome),
+    totalExpenses: roundCurrency(totalExpenses),
+    cashSpent: roundCurrency(cashSpent),
+    cardSpent: roundCurrency(cardSpent),
     remainingBudget,
     cashRemaining,
     cardRemaining,
@@ -581,31 +710,54 @@ async function buildMonthlySummary({ budgetRepository, currentUser, partnerUser,
   };
 }
 
-async function buildSavingsSummary({ budgetRepository, currentUser, partnerUser }) {
+async function buildSavingsSummary({
+  budgetRepository,
+  exchangeRateService,
+  currentUser,
+  partnerUser,
+  displayCurrency = null,
+}) {
   const users = [currentUser, partnerUser].filter(Boolean);
   const budgetWindow = getBudgetWindowForUsers(users);
   const couple =
     partnerUser && currentUser
       ? await budgetRepository.getCoupleForUser(currentUser.id)
       : null;
-  const goal = couple ? await budgetRepository.getSavingsGoalForCouple(couple.id) : null;
+  const goals = couple ? await budgetRepository.listSavingsGoalsForCouple(couple.id) : [];
   const entries = await budgetRepository.listSavingsEntriesForUserIds({
     userIds: users.map((user) => user.id),
     days: 3650,
+  });
+  const resolvedDisplayCurrency = resolveDisplayCurrencyCode({
+    requestedDisplayCurrency: displayCurrency,
+    currentUser,
+    partnerUser,
+  });
+  const converter = await createCurrencyConverter({
+    exchangeRateService,
+    displayCurrency: resolvedDisplayCurrency,
+    sourceCurrencies: [
+      ...users.map((user) => user.incomeCurrencyCode),
+      ...entries.map((entry) => entry.currencyCode),
+      ...goals.map((goal) => goal.currencyCode),
+    ],
   });
   const currentWindowEntries = entries.filter(
     (entry) => entry.date >= budgetWindow.from && entry.date <= budgetWindow.to,
   );
   const totalSaved = currentWindowEntries.reduce(
-    (sum, entry) => sum + Number(entry.amount ?? 0),
+    (sum, entry) => sum + converter.convert(entry.amount ?? 0, entry.currencyCode),
     0,
   );
   const householdTarget = users.reduce(
-    (sum, user) => sum + Number(user.monthlySavingsTarget ?? 0),
+    (sum, user) => sum + converter.convert(user.monthlySavingsTarget ?? 0, user.incomeCurrencyCode),
     0,
   );
-  const allTimeSaved = entries.reduce((sum, entry) => sum + Number(entry.amount ?? 0), 0);
-  const remainingToGoal = Math.max(0, Number((householdTarget - totalSaved).toFixed(2)));
+  const allTimeSaved = entries.reduce(
+    (sum, entry) => sum + converter.convert(entry.amount ?? 0, entry.currencyCode),
+    0,
+  );
+  const remainingToGoal = Math.max(0, roundCurrency(householdTarget - totalSaved));
   const targetProgressPct =
     householdTarget > 0
       ? Number(Math.min(100, ((totalSaved / householdTarget) * 100)).toFixed(1))
@@ -614,36 +766,51 @@ async function buildSavingsSummary({ budgetRepository, currentUser, partnerUser 
     budgetWindow.daysRemaining > 0
       ? Number((remainingToGoal / budgetWindow.daysRemaining).toFixed(2))
       : 0;
+  const goalsWithProgress = goals.map((goal) => {
+    const convertedTargetAmount = converter.convert(goal.targetAmount ?? 0, goal.currencyCode);
+    const totalSavedForGoal = entries
+      .filter((entry) => Number(entry.savingsGoalId) === Number(goal.id))
+      .reduce(
+        (sum, entry) => sum + converter.convert(entry.amount ?? 0, entry.currencyCode),
+        0,
+      );
+
+    return {
+      ...goal,
+      targetAmount: convertedTargetAmount,
+      totalSaved: roundCurrency(totalSavedForGoal),
+      remainingAmount: Math.max(0, roundCurrency(convertedTargetAmount - totalSavedForGoal)),
+      progressPct:
+        convertedTargetAmount > 0
+          ? Number(Math.min(100, (totalSavedForGoal / convertedTargetAmount) * 100).toFixed(1))
+          : 0,
+    };
+  });
 
   return {
     period: budgetWindow,
-    householdSavingsTarget: Number(householdTarget.toFixed(2)),
-    totalSavedThisWindow: Number(totalSaved.toFixed(2)),
-    allTimeSaved: Number(allTimeSaved.toFixed(2)),
+    displayCurrencyCode: converter.displayCurrencyCode,
+    householdSavingsTarget: roundCurrency(householdTarget),
+    totalSavedThisWindow: roundCurrency(totalSaved),
+    allTimeSaved: roundCurrency(allTimeSaved),
     remainingToGoal,
     targetProgressPct,
     suggestedDailySave,
-    longTermGoal: goal
-      ? {
-          ...goal,
-          totalSaved: Number(allTimeSaved.toFixed(2)),
-          remainingAmount: Math.max(
-            0,
-            Number((Number(goal.targetAmount ?? 0) - allTimeSaved).toFixed(2)),
-          ),
-          progressPct:
-            Number(goal.targetAmount ?? 0) > 0
-              ? Number(
-                  Math.min(100, (allTimeSaved / Number(goal.targetAmount ?? 0)) * 100).toFixed(1),
-                )
-              : 0,
-        }
-      : null,
-    entries: entries.slice(0, 20),
+    goals: goalsWithProgress,
+    longTermGoal: goalsWithProgress[0] ?? null,
+    entries: entries.slice(0, 20).map((entry) => ({
+      ...entry,
+      displayAmount: converter.convert(entry.amount ?? 0, entry.currencyCode),
+      displayCurrencyCode: converter.displayCurrencyCode,
+    })),
     users: users.map((user) => ({
       userId: user.id,
       name: user.name,
-      monthlySavingsTarget: Number(user.monthlySavingsTarget ?? 0),
+      incomeCurrencyCode: user.incomeCurrencyCode,
+      monthlySavingsTarget: converter.convert(
+        user.monthlySavingsTarget ?? 0,
+        user.incomeCurrencyCode,
+      ),
     })),
   };
 }
@@ -706,6 +873,58 @@ function buildStaticInsightsResponse(currentUser, partnerUser) {
     insights,
     tips: insights.tips,
   };
+}
+
+async function createPartnerExpenseNotification({
+  budgetRepository,
+  actor,
+  transaction,
+  previousTransaction = null,
+}) {
+  const couple = await budgetRepository.getCoupleForUser(actor.id);
+  if (!couple) {
+    return null;
+  }
+
+  const partner = getPartner(couple, actor.id);
+  if (!partner) {
+    return null;
+  }
+
+  let type = "expense_added";
+  let title = `${actor.name} added an expense`;
+  let body = transaction
+    ? `${actor.name} added ${formatNotificationMoney(
+        transaction.amount,
+        transaction.currencyCode,
+      )} for ${transaction.category.toLowerCase()}.`
+    : "";
+
+  if (previousTransaction && transaction) {
+    type = "expense_edited";
+    title = `${actor.name} edited an expense`;
+    body = `${actor.name} edited ${transaction.category.toLowerCase()} from ${formatNotificationMoney(
+      previousTransaction.amount,
+      previousTransaction.currencyCode,
+    )} to ${formatNotificationMoney(transaction.amount, transaction.currencyCode)}.`;
+  }
+
+  if (previousTransaction && !transaction) {
+    type = "expense_deleted";
+    title = `${actor.name} deleted an expense`;
+    body = `${actor.name} deleted ${formatNotificationMoney(
+      previousTransaction.amount,
+      previousTransaction.currencyCode,
+    )} from ${previousTransaction.category.toLowerCase()}.`;
+  }
+
+  return budgetRepository.createActivityNotification({
+    recipientId: partner.id,
+    actorId: actor.id,
+    type,
+    title,
+    body,
+  });
 }
 
 function createApp({
@@ -776,6 +995,7 @@ function createApp({
         email,
         password,
         monthlySalary,
+        incomeCurrencyCode,
         salaryPaymentMethod,
         salaryCashAmount,
         salaryCardAmount,
@@ -844,6 +1064,7 @@ function createApp({
       }
 
       const normalizedEmail = email.trim().toLowerCase();
+      const normalizedIncomeCurrencyCode = resolveCurrencyCode(incomeCurrencyCode || "USD");
       const existingUser = await budgetRepository.getUserAuthByEmail(normalizedEmail);
       if (existingUser) {
         throw new HttpError(409, "EMAIL_TAKEN", "An account with this email already exists.");
@@ -858,6 +1079,7 @@ function createApp({
           email: normalizedEmail,
           passwordHash,
           monthlySalary: incomeAllocation.monthlySalary ?? normalizedMonthlySalary,
+          incomeCurrencyCode: normalizedIncomeCurrencyCode,
           salaryPaymentMethod: incomeAllocation.salaryPaymentMethod,
           salaryCashAmount: incomeAllocation.salaryCashAmount,
           salaryCardAmount: incomeAllocation.salaryCardAmount,
@@ -1019,15 +1241,65 @@ function createApp({
     requireAuth,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
-      const notifications = await budgetRepository.listPendingCoupleInvitesForUser(
-        request.user.id,
-      );
+      const coachProfile = couple
+        ? await budgetRepository.getCoupleCoachProfile(couple.id)
+        : null;
+      const [inviteNotifications, activityNotifications] = await Promise.all([
+        budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
+        budgetRepository.listActivityNotificationsForUser(request.user.id),
+      ]);
 
       sendData(response, 200, {
         user: sanitizeUser(request.user),
         couple,
-        notifications,
+        coachProfile,
+        notifications: {
+          ...inviteNotifications,
+          activity: activityNotifications,
+        },
       });
+    }),
+  );
+
+  app.get(
+    "/api/coach-profile",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before opening the coach setup.",
+        );
+      }
+
+      const profile = await budgetRepository.getCoupleCoachProfile(couple.id);
+      sendData(response, 200, { profile });
+    }),
+  );
+
+  app.put(
+    "/api/coach-profile",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before saving the coach setup.",
+        );
+      }
+
+      const profile = await budgetRepository.upsertCoupleCoachProfile({
+        coupleId: couple.id,
+        ...normalizeCoachProfilePayload(request.body),
+      });
+
+      sendData(response, 200, { profile });
     }),
   );
 
@@ -1037,6 +1309,7 @@ function createApp({
     asyncHandler(async (request, response) => {
       const {
         monthlySalary,
+        incomeCurrencyCode,
         salaryPaymentMethod,
         salaryCashAmount,
         salaryCardAmount,
@@ -1082,6 +1355,9 @@ function createApp({
       const user = await budgetRepository.updateUserIncomeProfile({
         userId: request.user.id,
         monthlySalary: incomeAllocation.monthlySalary ?? Number(monthlySalary),
+        incomeCurrencyCode: resolveCurrencyCode(
+          incomeCurrencyCode || request.user.incomeCurrencyCode || "USD",
+        ),
         salaryPaymentMethod: incomeAllocation.salaryPaymentMethod,
         salaryCashAmount: incomeAllocation.salaryCashAmount,
         salaryCardAmount: incomeAllocation.salaryCardAmount,
@@ -1170,11 +1446,15 @@ function createApp({
     "/api/notifications",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const notifications = await budgetRepository.listPendingCoupleInvitesForUser(
-        request.user.id,
-      );
+      const [inviteNotifications, activityNotifications] = await Promise.all([
+        budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
+        budgetRepository.listActivityNotificationsForUser(request.user.id),
+      ]);
 
-      sendData(response, 200, notifications);
+      sendData(response, 200, {
+        ...inviteNotifications,
+        activity: activityNotifications,
+      });
     }),
   );
 
@@ -1212,6 +1492,7 @@ function createApp({
     requireAuth,
     asyncHandler(async (request, response) => {
       const days = Number(request.query.days ?? 30);
+      const displayCurrency = request.query.displayCurrency?.trim();
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
 
       if (!couple) {
@@ -1224,8 +1505,10 @@ function createApp({
 
       const snapshot = await buildBudgetSnapshot({
         budgetRepository,
+        exchangeRateService,
         coupleId: couple.id,
         days: Number.isFinite(days) && days > 0 ? days : 30,
+        displayCurrency,
       });
 
       sendData(response, 200, {
@@ -1242,6 +1525,7 @@ function createApp({
     requireAuth,
     asyncHandler(async (request, response) => {
       const month = request.query.month?.trim();
+      const displayCurrency = request.query.displayCurrency?.trim();
       const partnerUser = await resolvePartnerUser({
         budgetRepository,
         user: request.user,
@@ -1249,9 +1533,11 @@ function createApp({
 
       const summary = await buildMonthlySummary({
         budgetRepository,
+        exchangeRateService,
         currentUser: request.user,
         partnerUser,
         month: month || null,
+        displayCurrency,
       });
 
       sendData(response, 200, summary);
@@ -1276,11 +1562,20 @@ function createApp({
       const transaction = await budgetRepository.addTransaction({
         userId: request.user.id,
         ...normalizedTransaction,
+        currencyCode:
+          normalizedTransaction.currencyCode ??
+          resolveCurrencyCode(request.user.incomeCurrencyCode || "USD"),
+      });
+      const notification = await createPartnerExpenseNotification({
+        budgetRepository,
+        actor: request.user,
+        transaction,
       });
 
       sendData(response, 201, {
         transaction,
         coupleId: couple.id,
+        notification,
       });
     }),
   );
@@ -1296,13 +1591,26 @@ function createApp({
       }
 
       const normalizedTransaction = normalizeTransactionPayload(request.body);
-      const transaction = await budgetRepository.updateUserTransaction({
+      const result = await budgetRepository.updateUserTransaction({
         transactionId,
         userId: request.user.id,
         ...normalizedTransaction,
+        currencyCode:
+          normalizedTransaction.currencyCode ??
+          resolveCurrencyCode(request.user.incomeCurrencyCode || "USD"),
+      });
+      const notification = await createPartnerExpenseNotification({
+        budgetRepository,
+        actor: request.user,
+        transaction: result.transaction,
+        previousTransaction: result.previousTransaction,
       });
 
-      sendData(response, 200, { transaction });
+      sendData(response, 200, {
+        transaction: result.transaction,
+        previousTransaction: result.previousTransaction,
+        notification,
+      });
     }),
   );
 
@@ -1320,8 +1628,14 @@ function createApp({
         transactionId,
         userId: request.user.id,
       });
+      const notification = await createPartnerExpenseNotification({
+        budgetRepository,
+        actor: request.user,
+        transaction: null,
+        previousTransaction: transaction,
+      });
 
-      sendData(response, 200, { transaction });
+      sendData(response, 200, { transaction, notification });
     }),
   );
 
@@ -1331,6 +1645,10 @@ function createApp({
     asyncHandler(async (request, response) => {
       const days = Number(request.query.days ?? 30);
       const month = request.query.month?.trim();
+      const displayCurrency = resolveDisplayCurrencyCode({
+        requestedDisplayCurrency: request.query.displayCurrency?.trim(),
+        currentUser: request.user,
+      });
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
 
       if (!couple) {
@@ -1352,12 +1670,22 @@ function createApp({
         fromDate: monthWindow?.from,
         toDate: monthWindow?.to,
       });
+      const converter = await createCurrencyConverter({
+        exchangeRateService,
+        displayCurrency,
+        sourceCurrencies: transactions.map((transaction) => transaction.currencyCode),
+      });
 
       sendData(
         response,
         200,
         {
-          transactions,
+          displayCurrencyCode: displayCurrency,
+          transactions: transactions.map((transaction) => ({
+            ...transaction,
+            displayAmount: converter.convert(transaction.amount ?? 0, transaction.currencyCode),
+            displayCurrencyCode: displayCurrency,
+          })),
         },
         { count: transactions.length },
       );
@@ -1369,18 +1697,26 @@ function createApp({
     requireAuth,
     asyncHandler(async (request, response) => {
       let partnerUser = null;
+      let coachProfile = null;
 
       try {
         const days = Number(request.query.days ?? 30);
+        const displayCurrency = request.query.displayCurrency?.trim();
         partnerUser = await resolvePartnerUser({
           budgetRepository,
           user: request.user,
         });
+        const couple = await budgetRepository.getCoupleForUser(request.user.id);
+        coachProfile = couple
+          ? await budgetRepository.getCoupleCoachProfile(couple.id)
+          : null;
 
         const result = await insightsService.getAiInsights({
           currentUser: request.user,
           partnerUser,
           days: Number.isFinite(days) && days > 0 ? days : 30,
+          displayCurrency,
+          coachProfile,
         });
 
         sendData(response, 200, {
@@ -1419,8 +1755,10 @@ function createApp({
 
       const savings = await buildSavingsSummary({
         budgetRepository,
+        exchangeRateService,
         currentUser: request.user,
         partnerUser,
+        displayCurrency: request.query.displayCurrency?.trim(),
       });
 
       sendData(response, 200, savings);
@@ -1439,6 +1777,9 @@ function createApp({
       const title = String(request.body?.title ?? "").trim();
       const targetAmount = parseMoney(request.body?.targetAmount);
       const targetDate = request.body?.targetDate?.trim?.() || null;
+      const currencyCode = resolveCurrencyCode(
+        request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
+      );
 
       if (!couple || !partnerUser) {
         throw new HttpError(
@@ -1464,11 +1805,102 @@ function createApp({
         throw new HttpError(400, "VALIDATION_ERROR", "targetDate must use YYYY-MM-DD.");
       }
 
-      const goal = await budgetRepository.upsertSavingsGoalForCouple({
+      const goal = await budgetRepository.createSavingsGoalForCouple({
         coupleId: couple.id,
         title,
         targetAmount,
+        currencyCode,
         targetDate: targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null,
+      });
+
+      sendData(response, 200, { goal });
+    }),
+  );
+
+  app.patch(
+    "/api/savings/goal/:goalId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const partnerUser = await resolvePartnerUser({
+        budgetRepository,
+        user: request.user,
+      });
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      const goalId = Number.parseInt(request.params.goalId, 10);
+      const title = String(request.body?.title ?? "").trim();
+      const targetAmount = parseMoney(request.body?.targetAmount);
+      const targetDate = request.body?.targetDate?.trim?.() || null;
+      const currencyCode = resolveCurrencyCode(
+        request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
+      );
+
+      if (!Number.isInteger(goalId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "goalId must be an integer.");
+      }
+
+      if (!couple || !partnerUser) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before editing a shared savings goal.",
+        );
+      }
+
+      if (!title) {
+        throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
+      }
+
+      if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "targetAmount must be a positive number.",
+        );
+      }
+
+      if (targetDate && !validateIsoDate(targetDate)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "targetDate must use YYYY-MM-DD.");
+      }
+
+      const goal = await budgetRepository.updateSavingsGoalForCouple({
+        goalId,
+        coupleId: couple.id,
+        title,
+        targetAmount,
+        currencyCode,
+        targetDate: targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null,
+      });
+
+      sendData(response, 200, { goal });
+    }),
+  );
+
+  app.delete(
+    "/api/savings/goal/:goalId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const partnerUser = await resolvePartnerUser({
+        budgetRepository,
+        user: request.user,
+      });
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      const goalId = Number.parseInt(request.params.goalId, 10);
+
+      if (!Number.isInteger(goalId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "goalId must be an integer.");
+      }
+
+      if (!couple || !partnerUser) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before removing a shared savings goal.",
+        );
+      }
+
+      const goal = await budgetRepository.deleteSavingsGoalForCouple({
+        goalId,
+        coupleId: couple.id,
       });
 
       sendData(response, 200, { goal });
@@ -1482,6 +1914,14 @@ function createApp({
       const amount = Number(request.body?.amount);
       const note = request.body?.note?.trim();
       const date = request.body?.date;
+      const currencyCode = resolveCurrencyCode(
+        request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
+      );
+      const rawSavingsGoalId = request.body?.savingsGoalId;
+      const savingsGoalId =
+        rawSavingsGoalId === undefined || rawSavingsGoalId === null || rawSavingsGoalId === ""
+          ? null
+          : Number.parseInt(String(rawSavingsGoalId), 10);
 
       if (!Number.isFinite(amount) || amount <= 0) {
         throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
@@ -1495,9 +1935,50 @@ function createApp({
         throw new HttpError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD.");
       }
 
+      if (savingsGoalId !== null) {
+        if (!Number.isInteger(savingsGoalId)) {
+          throw new HttpError(
+            400,
+            "VALIDATION_ERROR",
+            "savingsGoalId must be an integer when provided.",
+          );
+        }
+
+        const couple = await budgetRepository.getCoupleForUser(request.user.id);
+        if (!couple) {
+          throw new HttpError(
+            404,
+            "COUPLE_NOT_FOUND",
+            "Link both partners before assigning savings to a shared goal.",
+          );
+        }
+
+        const goals = await budgetRepository.listSavingsGoalsForCouple(couple.id);
+        if (!goals.some((goal) => goal.id === savingsGoalId)) {
+          throw new HttpError(
+            404,
+            "SAVINGS_GOAL_NOT_FOUND",
+            "Selected savings goal was not found for this couple.",
+          );
+        }
+      }
+
+      let resolvedSavingsGoalId = savingsGoalId;
+      if (resolvedSavingsGoalId === null) {
+        const couple = await budgetRepository.getCoupleForUser(request.user.id);
+        if (couple) {
+          const goals = await budgetRepository.listSavingsGoalsForCouple(couple.id);
+          if (goals.length === 1) {
+            resolvedSavingsGoalId = goals[0].id;
+          }
+        }
+      }
+
       const entry = await budgetRepository.addSavingsEntry({
         userId: request.user.id,
+        savingsGoalId: resolvedSavingsGoalId,
         amount,
+        currencyCode,
         note,
         date,
       });

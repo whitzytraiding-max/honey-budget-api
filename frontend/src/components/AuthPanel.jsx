@@ -5,6 +5,7 @@
  */
 import { Brain, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
+import { getCurrencyOptions } from "../lib/format.js";
 import { ActionButton, Input, Select } from "./ui.jsx";
 
 function AuthPanel({
@@ -28,7 +29,8 @@ function AuthPanel({
   previewResetUrl,
   resetToken,
 }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const currencyOptions = getCurrencyOptions(locale);
   const showResetForm = Boolean(resetToken) || authMode === "reset";
   const showForgotPassword = authMode === "forgot" && !showResetForm;
 
@@ -163,6 +165,13 @@ function AuthPanel({
                   ]}
                 />
               </div>
+              <Select
+                label={t("settings.incomeCurrency")}
+                name="incomeCurrencyCode"
+                value={registerForm.incomeCurrencyCode}
+                onChange={onRegisterChange}
+                options={currencyOptions}
+              />
               <p className="auth-helper-copy text-sm leading-6 text-slate-600">{t("auth.currencySetupHelp")}</p>
               <ActionButton busy={isSubmitting}>{t("auth.createAccount")}</ActionButton>
             </form>

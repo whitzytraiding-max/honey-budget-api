@@ -61,14 +61,21 @@ function setCurrencyConversionPreferences({
   }
 }
 
-function currency(value) {
+function currency(value, options = {}) {
   const numericValue = Number(value ?? 0);
+  const sourceCurrency = options.sourceCurrency || activeBaseCurrency;
+  const targetCurrency = options.displayCurrency || activeCurrency;
+  const convert =
+    options.convert ?? (sourceCurrency === activeBaseCurrency && targetCurrency === activeCurrency);
   const convertedValue =
-    activeBaseCurrency === activeCurrency ? numericValue : numericValue * activeExchangeRate;
+    convert && sourceCurrency !== targetCurrency
+      ? numericValue * activeExchangeRate
+      : numericValue;
+  const formatterCurrency = convert ? targetCurrency : sourceCurrency;
 
   return new Intl.NumberFormat(activeLocale, {
     style: "currency",
-    currency: activeCurrency,
+    currency: formatterCurrency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(convertedValue);

@@ -6,6 +6,7 @@
 
 const DEFAULT_TTL_MS = 12 * 60 * 60 * 1000;
 const DEFAULT_API_BASE_URL = "https://api.frankfurter.app/latest";
+const DEFAULT_CURRENCY_CODE = "USD";
 
 function normalizeCurrencyCode(value) {
   return String(value ?? "")
@@ -101,4 +102,9 @@ function createExchangeRateService({
   };
 }
 
-export { createExchangeRateService };
+export {
+  DEFAULT_CURRENCY_CODE,
+  createExchangeRateService,
+  isCurrencyCode,
+  normalizeCurrencyCode,
+};

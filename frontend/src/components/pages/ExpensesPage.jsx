@@ -1,6 +1,6 @@
 import { Pencil, Trash2, Wallet, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
-import { currency } from "../../lib/format.js";
+import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select, ToggleGroup } from "../ui.jsx";
 
 const CATEGORIES = [
@@ -42,7 +42,8 @@ function ExpensesPage({
   onDeleteTransaction,
   onCancelEdit,
 }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
+  const currencyOptions = getCurrencyOptions(locale);
   const recentTransactions = transactions.slice(0, 10);
 
   return (
@@ -64,6 +65,9 @@ function ExpensesPage({
           <p className="mt-2">
             <span className="font-semibold text-slate-900">{t("expenses.displayCurrencyLabel")}:</span>{" "}
             {currencyCode} {t("expenses.displayCurrencyHelp")}
+          </p>
+          <p className="mt-2 rounded-2xl bg-white px-3 py-3 text-slate-700">
+            {t("expenses.dummyProofCurrency")}
           </p>
         </div>
 
@@ -111,6 +115,16 @@ function ExpensesPage({
               onChange={onExpenseChange}
               options={CATEGORIES.map((entry) => ({ label: entry, value: entry }))}
             />
+            <Select
+              label={t("expenses.entryCurrencyLabel")}
+              name="currencyCode"
+              value={expenseForm.currencyCode}
+              onChange={onExpenseChange}
+              options={currencyOptions}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <Input
               label={t("expenses.date")}
               name="date"
@@ -186,7 +200,15 @@ function ExpensesPage({
                         {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
                       </td>
                       <td className="px-4 py-4 font-semibold text-slate-900">
-                        {currency(transaction.amount)}
+                        {currency(transaction.displayAmount ?? transaction.amount)}
+                        {transaction.currencyCode && transaction.currencyCode !== transaction.displayCurrencyCode ? (
+                          <p className="mt-1 text-xs font-normal text-slate-500">
+                            {currency(transaction.amount, {
+                              sourceCurrency: transaction.currencyCode,
+                              convert: false,
+                            })} {transaction.currencyCode}
+                          </p>
+                        ) : null}
                       </td>
                       <td className="px-4 py-4 text-right">
                         {transaction.userId === currentUserId ? (
@@ -239,11 +261,12 @@ function ExpensesPage({
                     </p>
                   </div>
                   <p className="text-base font-semibold text-slate-900">
-                    {currency(transaction.amount)}
+                    {currency(transaction.displayAmount ?? transaction.amount)}
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
                   <span className="rounded-full bg-white px-2.5 py-1">{transaction.category}</span>
+                  <span className="rounded-full bg-white px-2.5 py-1">{transaction.currencyCode}</span>
                   <span className="rounded-full bg-white px-2.5 py-1">
                     {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
                   </span>
