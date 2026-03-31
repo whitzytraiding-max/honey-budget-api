@@ -85,7 +85,7 @@ function SettingsPage({
             placeholder="1"
           />
 
-          <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
+          <div className="hb-panel-soft rounded-3xl px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.totalMonthlySalary")}
             </p>
@@ -135,7 +135,7 @@ function SettingsPage({
             ]}
           />
         </div>
-        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
+        <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.exchangeRate")}
           </p>
@@ -147,7 +147,7 @@ function SettingsPage({
           <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
+        <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.howItWorks")}
           </p>
@@ -165,13 +165,13 @@ function SettingsPage({
               {baseCurrencyCode} {t("settings.referenceCurrencyHelp")}
             </p>
             <p>{t("settings.howItWorksLineThree")}</p>
-            <p className="rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
+            <p className="hb-surface-strong rounded-2xl px-3 py-3 text-slate-700">
               {t("settings.howItWorksPlainEnglish")}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,244,210,0.96),rgba(239,247,255,0.88))] px-4 py-4">
+        <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.mmkMonthlyRate")}
           </p>
@@ -180,7 +180,7 @@ function SettingsPage({
               <p className="mt-2 text-sm text-slate-600">
                 {t("settings.mmkMonthlyRateHelp")}
               </p>
-              <p className="mt-3 rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
+              <p className="hb-surface-strong mt-3 rounded-2xl px-3 py-3 text-sm text-slate-700">
                 {mmkRateData?.rate
                   ? `${t("settings.mmkActiveRatePrefix")} 1 USD = ${Number(
                       mmkRateData.rate.rate,
@@ -213,11 +213,11 @@ function SettingsPage({
                     placeholder="4500.00"
                   />
                 ) : (
-                  <div className="rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
+                  <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
                     {t("settings.mmkKbzAutoFetch")}
                   </div>
                 )}
-                <div className="rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
+                <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
                   {t("settings.mmkPlainEnglish")}
                 </div>
                 <ActionButton busy={mmkRateBusy} className="sm:w-auto">
@@ -241,7 +241,7 @@ function SettingsPage({
         </div>
 
         <div className="mt-6 grid gap-4">
-          <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
+          <div className="hb-panel-soft rounded-3xl px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.you")}
             </p>
@@ -263,7 +263,7 @@ function SettingsPage({
             </p>
           </div>
 
-          <div className="rounded-3xl bg-slate-50 px-4 py-4">
+          <div className="hb-panel-mint rounded-3xl px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.partner")}
             </p>
