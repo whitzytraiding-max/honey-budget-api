@@ -131,7 +131,10 @@ serverApp.use((request, response, next) => {
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization",
   );
-  response.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,OPTIONS");
+  response.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+  );
 
   if (request.method === "OPTIONS") {
     response.status(204).end();
