@@ -74,6 +74,11 @@ const SAVINGS_FIELDS = {
   savingsGoalId: "",
   date: new Date().toISOString().slice(0, 10),
 };
+const EMPTY_NOTIFICATIONS = {
+  incoming: [],
+  outgoing: [],
+  activity: [],
+};
 const MMK_SETTINGS_FIELDS = {
   year: new Date().getUTCFullYear(),
   month: new Date().getUTCMonth() + 1,
@@ -112,6 +117,19 @@ function getCurrentUtcMonthParts() {
   return {
     year: now.getUTCFullYear(),
     month: now.getUTCMonth() + 1,
+  };
+}
+
+function createDefaultMmkRateForm() {
+  return {
+    ...MMK_SETTINGS_FIELDS,
+    ...getCurrentUtcMonthParts(),
+  };
+}
+
+function createEmptyNotificationsState() {
+  return {
+    ...EMPTY_NOTIFICATIONS,
   };
 }
 
@@ -282,6 +300,7 @@ export default function App() {
   const [linkBusy, setLinkBusy] = useState(false);
   const [incomeProfileBusy, setIncomeProfileBusy] = useState(false);
   const [coachProfileBusy, setCoachProfileBusy] = useState(false);
+  const [suppressNextInsightsError, setSuppressNextInsightsError] = useState(false);
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
   const [notificationsBusy, setNotificationsBusy] = useState(false);
@@ -290,11 +309,7 @@ export default function App() {
   const [householdIncome, setHouseholdIncome] = useState(0);
   const [remainingBudget, setRemainingBudget] = useState(0);
   const [savingsData, setSavingsData] = useState(null);
-  const [notificationsData, setNotificationsData] = useState({
-    incoming: [],
-    outgoing: [],
-    activity: [],
-  });
+  const [notificationsData, setNotificationsData] = useState(createEmptyNotificationsState);
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
   const [savingsGoalForm, setSavingsGoalForm] = useState(() => createSavingsGoalDraft(null));
   const [editingSavingsGoalId, setEditingSavingsGoalId] = useState(null);
@@ -307,7 +322,7 @@ export default function App() {
   const [exchangeRate, setExchangeRate] = useState(1);
   const [exchangeRateLabel, setExchangeRateLabel] = useState("");
   const [mmkRateData, setMmkRateData] = useState(null);
-  const [mmkRateForm, setMmkRateForm] = useState(MMK_SETTINGS_FIELDS);
+  const [mmkRateForm, setMmkRateForm] = useState(createDefaultMmkRateForm);
   const [mmkRateBusy, setMmkRateBusy] = useState(false);
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
@@ -380,12 +395,7 @@ export default function App() {
   async function loadMmkRate(year = null, month = null) {
     if (!token || !session?.couple) {
       setMmkRateData(null);
-      setMmkRateForm((current) => ({
-        ...current,
-        ...getCurrentUtcMonthParts(),
-        rateSource: "kbz",
-        rate: "",
-      }));
+      setMmkRateForm(createDefaultMmkRateForm());
       return;
     }
 
@@ -499,6 +509,44 @@ export default function App() {
     setAuthMode((current) => (current === "reset" ? "login" : current));
   }, [route, token]);
 
+  function clearAuthFeedback() {
+    setAuthError("");
+    setAuthInfo("");
+    setPreviewResetUrl("");
+  }
+
+  function resetAuthenticatedState() {
+    setSession(null);
+    setDashboardData(null);
+    setInsightData(null);
+    setSummaryData(null);
+    setSavingsData(null);
+    setCoachProfile(null);
+    setCoachProfileForm(createCoachProfileDraft(null));
+    setMonthSummary(null);
+    setMonthTransactions([]);
+    setHouseholdIncome(0);
+    setNotificationsData(createEmptyNotificationsState());
+    setNotificationsLoaded(false);
+    setMmkRateData(null);
+    setMmkRateForm(createDefaultMmkRateForm());
+    setRemainingBudget(0);
+  }
+
+  function resetCoupleData() {
+    setDashboardData(null);
+    setInsightData(null);
+    setSummaryData(null);
+    setSavingsData(null);
+    setCoachProfile(null);
+    setCoachProfileForm(createCoachProfileDraft(null));
+    setMonthSummary(null);
+    setMonthTransactions([]);
+    setMmkRateData(null);
+    setMmkRateForm(createDefaultMmkRateForm());
+    setRemainingBudget(0);
+  }
+
   async function fetchHouseholdData() {
     const data = await apiFetch("/api/auth/me", {
       headers: authHeaders,
@@ -573,7 +621,7 @@ export default function App() {
     }
   }
 
-  async function loadInsights() {
+  async function loadInsights({ suppressError = false } = {}) {
     setInsightsBusy(true);
 
     try {
@@ -586,7 +634,9 @@ export default function App() {
       setInsightData(data);
     } catch (error) {
       setInsightData(null);
-      setPageError(error.message);
+      if (!suppressError) {
+        setPageError(error.message);
+      }
     } finally {
       setInsightsBusy(false);
     }
@@ -674,11 +724,7 @@ export default function App() {
       setNotificationsData(data);
       setNotificationsLoaded(true);
     } catch (error) {
-      setNotificationsData({
-        incoming: [],
-        outgoing: [],
-        activity: [],
-      });
+      setNotificationsData(createEmptyNotificationsState());
       setNotificationsLoaded(false);
       setPageError(error.message);
     } finally {
@@ -686,24 +732,46 @@ export default function App() {
     }
   }
 
+  async function refreshBudgetViews({
+    monthKey = selectedMonth,
+    includeMonth = route === "calendar" || route === "history" || Boolean(monthSummary),
+    includeInsights = Boolean((route === "insights" || insightData) && coachProfile?.completed),
+    includeSavings = Boolean(route === "savings" || savingsData),
+    includeNotifications = notificationsLoaded,
+  } = {}) {
+    const refreshTasks = [loadDashboard(), loadSummary()];
+
+    if (includeMonth) {
+      refreshTasks.push(loadMonthView(monthKey));
+    }
+
+    if (includeInsights) {
+      refreshTasks.push(loadInsights());
+    }
+
+    if (includeSavings) {
+      refreshTasks.push(loadSavings());
+    }
+
+    if (includeNotifications) {
+      refreshTasks.push(loadNotifications());
+    }
+
+    await Promise.all(refreshTasks);
+  }
+
   async function refreshDashboardBundle() {
     const me = await fetchHouseholdData();
 
     if (me.couple) {
-      await Promise.all([
-        loadDashboard(),
-        loadSummary(),
-      ]);
+      await refreshBudgetViews({
+        includeMonth: false,
+        includeInsights: false,
+        includeSavings: false,
+        includeNotifications: false,
+      });
     } else {
-      setDashboardData(null);
-      setInsightData(null);
-      setSummaryData(null);
-      setSavingsData(null);
-      setCoachProfile(null);
-      setCoachProfileForm(createCoachProfileDraft(null));
-      setMonthSummary(null);
-      setMonthTransactions([]);
-      setRemainingBudget(0);
+      resetCoupleData();
     }
 
     setPostAuthFailureMessage("");
@@ -717,26 +785,11 @@ export default function App() {
 
     refreshDashboardBundle().catch((error) => {
       setAuthError(postAuthFailureMessage || error.message);
-      setAuthInfo("");
-      setPreviewResetUrl("");
+      clearAuthFeedback();
       setPageError("");
       localStorage.removeItem("budget_token");
       setToken("");
-      setSession(null);
-      setDashboardData(null);
-      setInsightData(null);
-      setSummaryData(null);
-      setMonthSummary(null);
-      setMonthTransactions([]);
-      setSavingsData(null);
-      setCoachProfile(null);
-      setCoachProfileForm(createCoachProfileDraft(null));
-      setNotificationsData({
-        incoming: [],
-        outgoing: [],
-        activity: [],
-      });
-      setNotificationsLoaded(false);
+      resetAuthenticatedState();
     });
   }, [token]);
 
@@ -760,9 +813,15 @@ export default function App() {
     }
 
     if (route === "insights" && !insightData && !insightsBusy) {
-      loadInsights().catch((error) => {
-        setPageError(error.message);
-      });
+      loadInsights({ suppressError: suppressNextInsightsError })
+        .catch((error) => {
+          setPageError(error.message);
+        })
+        .finally(() => {
+          if (suppressNextInsightsError) {
+            setSuppressNextInsightsError(false);
+          }
+        });
     }
 
     if (route === "savings" && !savingsData) {
@@ -802,21 +861,9 @@ export default function App() {
       return;
     }
 
-    const refreshTasks = [loadDashboard(), loadSummary()];
-
-    if (route === "calendar" || route === "history" || monthSummary) {
-      refreshTasks.push(loadMonthView(selectedMonth));
-    }
-
-    if ((route === "insights" || insightData) && coachProfile?.completed) {
-      refreshTasks.push(loadInsights());
-    }
-
-    if (route === "savings" || savingsData) {
-      refreshTasks.push(loadSavings());
-    }
-
-    Promise.all(refreshTasks).catch((error) => {
+    refreshBudgetViews({
+      includeNotifications: false,
+    }).catch((error) => {
       setPageError(error.message);
     });
   }, [currencyCode, coachProfile?.completed]);
@@ -827,9 +874,7 @@ export default function App() {
   }
 
   function updateAuthMode(nextMode) {
-    setAuthError("");
-    setAuthInfo("");
-    setPreviewResetUrl("");
+    clearAuthFeedback();
     setPostAuthFailureMessage("");
     setAuthMode(nextMode);
 
@@ -866,8 +911,7 @@ export default function App() {
   }
 
   function updateLoginForm(event) {
-    setAuthError("");
-    setAuthInfo("");
+    clearAuthFeedback();
     setLoginForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
@@ -875,9 +919,7 @@ export default function App() {
   }
 
   function updateForgotPasswordForm(event) {
-    setAuthError("");
-    setAuthInfo("");
-    setPreviewResetUrl("");
+    clearAuthFeedback();
     setForgotPasswordForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
@@ -885,8 +927,7 @@ export default function App() {
   }
 
   function updateResetPasswordForm(event) {
-    setAuthError("");
-    setAuthInfo("");
+    clearAuthFeedback();
     setResetPasswordForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
@@ -1001,13 +1042,9 @@ export default function App() {
 
       await Promise.all([
         loadMmkRate(Number(mmkRateForm.year), Number(mmkRateForm.month)),
-        loadDashboard(),
-        loadSummary(),
-        route === "calendar" || route === "history" || monthSummary
-          ? loadMonthView(selectedMonth)
-          : Promise.resolve(),
-        route === "insights" || insightData ? loadInsights() : Promise.resolve(),
-        route === "savings" || savingsData ? loadSavings() : Promise.resolve(),
+        refreshBudgetViews({
+          includeNotifications: false,
+        }),
       ]);
     } catch (error) {
       setPageError(error.message);
@@ -1019,9 +1056,7 @@ export default function App() {
   async function handleRegister(event) {
     event.preventDefault();
     setAuthBusy(true);
-    setAuthError("");
-    setAuthInfo("");
-    setPreviewResetUrl("");
+    clearAuthFeedback();
     setPostAuthFailureMessage("");
 
     const normalizedEmail = registerForm.email.trim().toLowerCase();
@@ -1056,9 +1091,7 @@ export default function App() {
   async function handleLogin(event) {
     event.preventDefault();
     setAuthBusy(true);
-    setAuthError("");
-    setAuthInfo("");
-    setPreviewResetUrl("");
+    clearAuthFeedback();
     setPostAuthFailureMessage("");
 
     const normalizedEmail = loginForm.email.trim().toLowerCase();
@@ -1086,9 +1119,7 @@ export default function App() {
   async function handleForgotPassword(event) {
     event.preventDefault();
     setAuthBusy(true);
-    setAuthError("");
-    setAuthInfo("");
-    setPreviewResetUrl("");
+    clearAuthFeedback();
 
     const normalizedEmail = forgotPasswordForm.email.trim().toLowerCase();
     if (!normalizedEmail) {
@@ -1118,8 +1149,7 @@ export default function App() {
   async function handleResetPassword(event) {
     event.preventDefault();
     setAuthBusy(true);
-    setAuthError("");
-    setAuthInfo("");
+    clearAuthFeedback();
 
     if (!resetToken) {
       setAuthError("This reset link is missing its token.");
@@ -1243,21 +1273,9 @@ export default function App() {
         resetExpenseEditor();
       }
 
-      const refreshTasks = [loadDashboard(), loadSummary(), loadMonthView(selectedMonth)];
-
-      if (notificationsLoaded) {
-        refreshTasks.push(loadNotifications());
-      }
-
-      if (insightData) {
-        refreshTasks.push(loadInsights());
-      }
-
-      if (savingsData) {
-        refreshTasks.push(loadSavings());
-      }
-
-      await Promise.all(refreshTasks);
+      await refreshBudgetViews({
+        includeMonth: true,
+      });
     } catch (error) {
       setPageError(error.message);
     } finally {
@@ -1375,22 +1393,10 @@ export default function App() {
 
       resetExpenseEditor();
       setSelectedMonth(expenseMonthKey);
-      const refreshTasks = [loadDashboard(), loadSummary()];
-
-      if (insightData) {
-        refreshTasks.push(loadInsights());
-      }
-
-      if (savingsData) {
-        refreshTasks.push(loadSavings());
-      }
-
-      refreshTasks.push(loadMonthView(expenseMonthKey));
-      if (notificationsLoaded) {
-        refreshTasks.push(loadNotifications());
-      }
-
-      await Promise.all(refreshTasks);
+      await refreshBudgetViews({
+        monthKey: expenseMonthKey,
+        includeMonth: true,
+      });
       navigate("notifications");
     } catch (error) {
       setPageError(error.message);
@@ -1428,17 +1434,13 @@ export default function App() {
         }),
       });
 
-      const refreshTasks = [fetchHouseholdData(), loadSummary(), loadSavings()];
-
-      if (dashboardData) {
-        refreshTasks.push(loadDashboard());
-      }
-
-      if (route === "calendar" || route === "history" || monthSummary) {
-        refreshTasks.push(loadMonthView(selectedMonth));
-      }
-
-      await Promise.all(refreshTasks);
+      await Promise.all([
+        fetchHouseholdData(),
+        refreshBudgetViews({
+          includeSavings: true,
+          includeNotifications: false,
+        }),
+      ]);
     } catch (error) {
       setPageError(error.message);
     } finally {
@@ -1583,7 +1585,7 @@ export default function App() {
     setPageError("");
 
     try {
-      await apiFetch("/api/coach-profile", {
+      const data = await apiFetch("/api/coach-profile", {
         method: "PUT",
         headers: {
           ...authHeaders,
@@ -1595,11 +1597,17 @@ export default function App() {
         }),
       });
 
-      await Promise.all([
-        fetchHouseholdData(),
-        route === "insights" || insightData ? loadInsights() : Promise.resolve(),
-      ]);
+      setCoachProfile(data.profile);
+      setCoachProfileForm(createCoachProfileDraft(data.profile));
+      setSuppressNextInsightsError(true);
       navigate("insights");
+
+      fetchHouseholdData().catch((error) => {
+        console.error("Coach profile refresh failed:", error);
+      });
+      loadInsights({ suppressError: true }).catch((error) => {
+        console.error("Coach insights refresh failed:", error);
+      });
     } catch (error) {
       setPageError(error.message);
     } finally {
@@ -1610,28 +1618,7 @@ export default function App() {
   function handleLogout() {
     localStorage.removeItem("budget_token");
     setToken("");
-    setSession(null);
-    setDashboardData(null);
-    setInsightData(null);
-    setSummaryData(null);
-    setSavingsData(null);
-    setCoachProfile(null);
-    setCoachProfileForm(createCoachProfileDraft(null));
-    setMonthSummary(null);
-      setMonthTransactions([]);
-      setHouseholdIncome(0);
-    setNotificationsData({
-      incoming: [],
-      outgoing: [],
-      activity: [],
-    });
-    setNotificationsLoaded(false);
-    setMmkRateData(null);
-    setMmkRateForm({
-      ...MMK_SETTINGS_FIELDS,
-      ...getCurrentUtcMonthParts(),
-    });
-    setRemainingBudget(0);
+    resetAuthenticatedState();
     setPageError("");
     setAuthError("");
     navigate("home");
@@ -1639,9 +1626,9 @@ export default function App() {
 
   if (!token) {
     return (
-        <AuthPanel
-          authMode={authMode}
-          setAuthMode={updateAuthMode}
+      <AuthPanel
+        authMode={authMode}
+        setAuthMode={updateAuthMode}
         registerForm={registerForm}
         loginForm={loginForm}
         forgotPasswordForm={forgotPasswordForm}

@@ -16,7 +16,7 @@ function HistoryPage({
   const { t } = useLanguage();
 
   return (
-    <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+    <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
       <div className="flex items-center gap-3">
         <ClipboardList className="h-5 w-5 text-slate-700" />
         <div>
@@ -35,7 +35,7 @@ function HistoryPage({
           />
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.totalSpent")}
               </p>
@@ -43,7 +43,7 @@ function HistoryPage({
                 {currency(monthSummary?.totalExpenses ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cashSpent")}
               </p>
@@ -51,7 +51,7 @@ function HistoryPage({
                 {currency(monthSummary?.cashSpent ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cardSpent")}
               </p>
@@ -62,10 +62,10 @@ function HistoryPage({
           </div>
         </div>
 
-        <div className="mt-2 overflow-hidden rounded-3xl border border-slate-100">
+        <div className="mt-2 overflow-hidden rounded-3xl border border-sky-100">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-[linear-gradient(180deg,rgba(255,250,243,0.98),rgba(239,247,255,0.92))]">
                 <tr>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.description")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.person")}</th>
@@ -76,7 +76,7 @@ function HistoryPage({
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.actions")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-slate-100 bg-white/92">
                 {transactions.length ? (
                   transactions.map((transaction) => (
                     <tr key={transaction.id}>
@@ -109,7 +109,7 @@ function HistoryPage({
                         {transaction.userId === currentUserId ? (
                           <div className="inline-flex gap-2">
                             <button
-                              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-70"
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-70"
                               disabled={actionBusy}
                               onClick={() => onEditTransaction(transaction)}
                               type="button"

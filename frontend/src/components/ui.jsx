@@ -6,7 +6,7 @@ function Input({ label, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <input
-        className="w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 sm:rounded-2xl"
+        className="w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
         {...props}
       />
     </label>
@@ -18,7 +18,7 @@ function Select({ label, options, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <select
-        className="w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 sm:rounded-2xl"
+        className="w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
         {...props}
       >
         {options.map((option) => (
@@ -36,7 +36,7 @@ function Textarea({ label, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <textarea
-        className="min-h-[120px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100 sm:rounded-2xl"
+        className="min-h-[120px] w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
         {...props}
       />
     </label>
@@ -46,7 +46,7 @@ function Textarea({ label, ...props }) {
 function ActionButton({ busy, children, className = "", ...props }) {
   return (
     <button
-      className={`inline-flex w-full items-center justify-center gap-2 rounded-[1.2rem] bg-slate-900 px-5 py-3 font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70 sm:rounded-2xl ${className}`}
+      className={`hb-button-primary inline-flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-5 py-3 font-medium transition disabled:cursor-not-allowed disabled:opacity-70 sm:rounded-2xl ${className}`}
       disabled={busy}
       {...props}
     >
@@ -60,7 +60,7 @@ function ToggleGroup({ label, name, value, onChange, options }) {
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-slate-700">{label}</p>
-      <div className="grid grid-cols-2 rounded-[1.2rem] bg-slate-100 p-1 sm:rounded-2xl">
+      <div className="grid grid-cols-2 rounded-[1.2rem] bg-sky-50/90 p-1 sm:rounded-2xl">
         {options.map((option) => (
           <label
             key={option.value}
@@ -87,11 +87,11 @@ function ToggleGroup({ label, name, value, onChange, options }) {
 function ProgressBar({ label, percentage, salary, cashAmount, cardAmount, tone }) {
   const barTone =
     tone === "mint"
-      ? "from-emerald-400 via-teal-300 to-cyan-300"
-      : "from-sky-400 via-cyan-300 to-emerald-200";
+      ? "from-green-400 via-amber-300 to-sky-300"
+      : "from-sky-400 via-blue-300 to-amber-200";
 
   return (
-    <div className="rounded-[1.35rem] border border-slate-100 bg-slate-50/70 p-4 sm:rounded-3xl">
+    <div className="rounded-[1.35rem] border border-sky-100/80 bg-[linear-gradient(180deg,rgba(255,250,240,0.96),rgba(240,248,255,0.88))] p-4 sm:rounded-3xl">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">{label}</p>
@@ -99,11 +99,11 @@ function ProgressBar({ label, percentage, salary, cashAmount, cardAmount, tone }
             {currency(salary)} · Cash {currency(cashAmount)} · Card {currency(cardAmount)}
           </p>
         </div>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm">
+        <span className="rounded-full bg-white/95 px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm">
           {percentage}%
         </span>
       </div>
-      <div className="mt-3 h-3 overflow-hidden rounded-full bg-white shadow-inner">
+      <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/90 shadow-inner">
         <div
           className={`h-full rounded-full bg-gradient-to-r ${barTone}`}
           style={{ width: `${percentage}%` }}
@@ -126,7 +126,7 @@ function InsightSkeleton() {
 
 function EmptyState({ title, body, action }) {
   return (
-    <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/70 p-8 text-center">
+    <div className="rounded-[2rem] border border-dashed border-sky-200 bg-[linear-gradient(180deg,rgba(255,252,245,0.9),rgba(239,247,255,0.82))] p-8 text-center">
       <h3 className="text-2xl font-semibold text-slate-900">{title}</h3>
       <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">{body}</p>
       {action}

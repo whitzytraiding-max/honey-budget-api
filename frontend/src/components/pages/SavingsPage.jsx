@@ -33,7 +33,7 @@ function SavingsPage({
   return (
     <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr] xl:gap-6">
       <div className="space-y-4">
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <div className="flex items-center gap-3">
             <PiggyBank className="h-5 w-5 text-emerald-700" />
             <div>
@@ -43,7 +43,7 @@ function SavingsPage({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.householdTarget")}
               </p>
@@ -51,7 +51,7 @@ function SavingsPage({
                 {currency(savingsData?.householdSavingsTarget ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(240,252,244,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.savedThisWindow")}
               </p>
@@ -59,7 +59,7 @@ function SavingsPage({
                 {currency(savingsData?.totalSavedThisWindow ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(240,252,244,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.savedAllTime")}
               </p>
@@ -67,7 +67,7 @@ function SavingsPage({
                 {currency(savingsData?.allTimeSaved ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.remainingToGoal")}
               </p>
@@ -77,7 +77,7 @@ function SavingsPage({
                 )}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.dailySave")}
               </p>
@@ -87,9 +87,9 @@ function SavingsPage({
             </div>
           </div>
 
-          <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+          <div className="hb-progress-track mt-4 h-3 overflow-hidden rounded-full shadow-inner">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 transition-all duration-500"
+              className="hb-progress-fill h-full rounded-full bg-gradient-to-r transition-all duration-500"
               style={{
                 width: `${savingsData?.targetProgressPct ?? 0}%`,
               }}
@@ -97,7 +97,7 @@ function SavingsPage({
           </div>
         </section>
 
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-sky-700" />
             <div>
@@ -107,7 +107,7 @@ function SavingsPage({
           </div>
 
           <div className="mt-4 space-y-4">
-            <form className="space-y-4 rounded-[1.2rem] border border-slate-100 bg-slate-50/80 p-4" onSubmit={onSavingsGoalSubmit}>
+            <form className="space-y-4 rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4" onSubmit={onSavingsGoalSubmit}>
               <Input
                 label={t("savings.goalName")}
                 name="title"
@@ -153,7 +153,7 @@ function SavingsPage({
                 goals.map((goal) => (
                   <article
                     key={goal.id}
-                    className="rounded-[1.3rem] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-cyan-50 px-4 py-4"
+                    className="rounded-[1.3rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(255,244,210,0.96),rgba(240,252,244,0.96),rgba(231,244,255,0.94))] px-4 py-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -165,7 +165,7 @@ function SavingsPage({
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                          className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
+                          className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
                           onClick={() => onEditSavingsGoal(goal)}
                           type="button"
                         >
@@ -183,9 +183,9 @@ function SavingsPage({
                       </div>
                     </div>
 
-                    <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/90 shadow-inner">
+                    <div className="hb-progress-track mt-4 h-3 overflow-hidden rounded-full shadow-inner">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-500"
+                        className="hb-progress-fill h-full rounded-full bg-gradient-to-r transition-all duration-500"
                         style={{ width: `${goal.progressPct}%` }}
                       />
                     </div>
@@ -201,7 +201,7 @@ function SavingsPage({
                   </article>
                 ))
               ) : (
-                <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/85 px-4 py-6 text-sm text-slate-500">
+                <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
                   {t("savings.emptyGoals")}
                 </div>
               )}
@@ -209,7 +209,7 @@ function SavingsPage({
           </div>
         </section>
 
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-slate-700" />
             <div>
@@ -236,7 +236,7 @@ function SavingsPage({
       </div>
 
       <div className="space-y-4">
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <h3 className="text-lg font-semibold">{t("savings.addEntry")}</h3>
 
           <form className="mt-4 grid gap-4" onSubmit={onSavingsSubmit}>
@@ -286,7 +286,7 @@ function SavingsPage({
           </form>
         </section>
 
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <h3 className="text-lg font-semibold">{t("savings.recent")}</h3>
 
           <div className="mt-4 space-y-3">
@@ -294,7 +294,7 @@ function SavingsPage({
               entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="rounded-[1.2rem] border border-slate-100 bg-slate-50/85 px-4 py-4"
+                  className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -311,7 +311,7 @@ function SavingsPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/85 px-4 py-6 text-sm text-slate-500">
+              <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
                 {t("savings.empty")}
               </div>
             )}

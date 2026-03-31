@@ -1,39 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  color: #153241;
+  color: #17324f;
   background:
-    radial-gradient(circle at top left, rgba(134, 239, 172, 0.35), transparent 34%),
-    radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%),
-    linear-gradient(180deg, #f4fbf7 0%, #eef7fb 52%, #f9fcfa 100%);
+    radial-gradient(circle at top center, rgba(253, 224, 71, 0.16), transparent 22%),
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.2), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.24), transparent 34%),
+    linear-gradient(180deg, #fbf7e8 0%, #eef6ff 48%, #f3fbf5 100%);
   font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+  --hb-blue-900: #10253f;
+  --hb-blue-800: #17385d;
+  --hb-blue-700: #245188;
+  --hb-blue-100: #dcecff;
+  --hb-gold-500: #f3bf29;
+  --hb-gold-400: #ffd75a;
+  --hb-gold-100: #fff0bf;
+  --hb-green-600: #16995a;
+  --hb-green-500: #22b36b;
+  --hb-green-100: #dff8e8;
+  --hb-surface: rgba(255, 252, 245, 0.86);
+  --hb-surface-strong: rgba(255, 251, 240, 0.92);
+  --hb-border: rgba(186, 208, 235, 0.52);
+  --hb-shadow: 0 24px 70px -28px rgba(16, 37, 63, 0.28);
 }
 
 :root[data-theme="dark"] {
   color: #e5eef6;
   background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 30%),
-    linear-gradient(180deg, #09111b 0%, #0c1622 55%, #0f1724 100%);
+    radial-gradient(circle at top center, rgba(243, 191, 41, 0.14), transparent 18%),
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.22), transparent 34%),
+    linear-gradient(180deg, #071225 0%, #0b1730 55%, #0e1f39 100%);
+  --hb-surface: rgba(13, 24, 43, 0.86);
+  --hb-surface-strong: rgba(13, 24, 43, 0.94);
+  --hb-border: rgba(82, 113, 157, 0.48);
+  --hb-shadow: 0 24px 70px -28px rgba(2, 6, 23, 0.72);
 }
 
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(134, 239, 172, 0.35), transparent 34%),
-    radial-gradient(circle at top right, rgba(125, 211, 252, 0.28), transparent 30%),
-    linear-gradient(180deg, #f4fbf7 0%, #eef7fb 52%, #f9fcfa 100%);
+    radial-gradient(circle at top center, rgba(253, 224, 71, 0.16), transparent 22%),
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.2), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.24), transparent 34%),
+    linear-gradient(180deg, #fbf7e8 0%, #eef6ff 48%, #f3fbf5 100%);
 }
 
 html[data-theme="dark"] {
   background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 30%),
-    linear-gradient(180deg, #09111b 0%, #0c1622 55%, #0f1724 100%);
+    radial-gradient(circle at top center, rgba(243, 191, 41, 0.14), transparent 18%),
+    radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(59, 130, 246, 0.22), transparent 34%),
+    linear-gradient(180deg, #071225 0%, #0b1730 55%, #0e1f39 100%);
 }
 
 body {
@@ -228,4 +250,87 @@ html[data-theme="dark"] .auth-info {
 
 html[data-theme="dark"] .auth-info-link {
   color: #dcfce7 !important;
+}
+
+.hb-surface-card {
+  border: 1px solid var(--hb-border);
+  background: var(--hb-surface);
+  box-shadow: var(--hb-shadow);
+  backdrop-filter: blur(18px);
+}
+
+.hb-surface-strong {
+  border: 1px solid var(--hb-border);
+  background: var(--hb-surface-strong);
+  box-shadow: var(--hb-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.hb-brand-pill {
+  background: linear-gradient(135deg, var(--hb-gold-100), rgba(255, 248, 220, 0.94));
+  color: var(--hb-blue-900);
+  border: 1px solid rgba(243, 191, 41, 0.22);
+}
+
+.hb-summary-chip {
+  background: linear-gradient(135deg, var(--hb-green-100), rgba(220, 252, 231, 0.92));
+  color: #0f6a43;
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+
+.hb-button-primary {
+  background: linear-gradient(135deg, var(--hb-blue-900), var(--hb-blue-700));
+  color: white;
+  box-shadow: 0 18px 40px -22px rgba(16, 37, 63, 0.6);
+}
+
+.hb-button-primary:hover {
+  filter: brightness(1.04);
+}
+
+.hb-nav-active {
+  background: linear-gradient(135deg, var(--hb-blue-900), var(--hb-blue-700));
+  color: white;
+  box-shadow: 0 16px 38px -20px rgba(16, 37, 63, 0.55);
+}
+
+.hb-nav-idle {
+  background: linear-gradient(135deg, rgba(220, 236, 255, 0.7), rgba(255, 247, 226, 0.72));
+  color: #39516d;
+}
+
+.hb-hero-panel {
+  background:
+    radial-gradient(circle at 78% 18%, rgba(253, 224, 71, 0.14), transparent 16%),
+    radial-gradient(circle at 18% 100%, rgba(34, 197, 94, 0.16), transparent 22%),
+    linear-gradient(180deg, #1c3760 0%, #183152 48%, #10253f 100%);
+}
+
+.hb-progress-track {
+  background: rgba(197, 217, 242, 0.5);
+}
+
+.hb-progress-fill {
+  background-image: linear-gradient(90deg, var(--hb-green-500), var(--hb-gold-400), #8cc8ff);
+}
+
+html[data-theme="dark"] .hb-brand-pill {
+  background: linear-gradient(135deg, rgba(243, 191, 41, 0.18), rgba(245, 158, 11, 0.12));
+  color: #fde68a;
+  border-color: rgba(243, 191, 41, 0.22);
+}
+
+html[data-theme="dark"] .hb-summary-chip {
+  background: linear-gradient(135deg, rgba(22, 153, 90, 0.22), rgba(34, 197, 94, 0.12));
+  color: #a7f3d0;
+  border-color: rgba(74, 222, 128, 0.2);
+}
+
+html[data-theme="dark"] .hb-nav-idle {
+  background: linear-gradient(135deg, rgba(22, 40, 68, 0.88), rgba(19, 33, 59, 0.92));
+  color: #d3e2f6;
+}
+
+html[data-theme="dark"] .hb-progress-track {
+  background: rgba(27, 40, 66, 0.9);
 }

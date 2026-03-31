@@ -32,7 +32,7 @@ function SettingsPage({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-      <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+      <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
         <div className="flex items-center gap-3">
           <Settings2 className="h-5 w-5 text-slate-700" />
           <div>
@@ -85,7 +85,7 @@ function SettingsPage({
             placeholder="1"
           />
 
-          <div className="rounded-3xl bg-slate-50 px-4 py-4">
+          <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.totalMonthlySalary")}
             </p>
@@ -135,7 +135,7 @@ function SettingsPage({
             ]}
           />
         </div>
-        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.exchangeRate")}
           </p>
@@ -147,7 +147,7 @@ function SettingsPage({
           <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.howItWorks")}
           </p>
@@ -165,13 +165,13 @@ function SettingsPage({
               {baseCurrencyCode} {t("settings.referenceCurrencyHelp")}
             </p>
             <p>{t("settings.howItWorksLineThree")}</p>
-            <p className="rounded-2xl bg-white px-3 py-3 text-slate-700">
+            <p className="rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
               {t("settings.howItWorksPlainEnglish")}
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-3xl bg-slate-50 px-4 py-4">
+        <div className="mt-4 rounded-3xl bg-[linear-gradient(180deg,rgba(255,244,210,0.96),rgba(239,247,255,0.88))] px-4 py-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
             {t("settings.mmkMonthlyRate")}
           </p>
@@ -180,7 +180,7 @@ function SettingsPage({
               <p className="mt-2 text-sm text-slate-600">
                 {t("settings.mmkMonthlyRateHelp")}
               </p>
-              <p className="mt-3 rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+              <p className="mt-3 rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
                 {mmkRateData?.rate
                   ? `${t("settings.mmkActiveRatePrefix")} 1 USD = ${Number(
                       mmkRateData.rate.rate,
@@ -213,11 +213,11 @@ function SettingsPage({
                     placeholder="4500.00"
                   />
                 ) : (
-                  <div className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                  <div className="rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
                     {t("settings.mmkKbzAutoFetch")}
                   </div>
                 )}
-                <div className="rounded-2xl bg-white px-3 py-3 text-sm text-slate-700">
+                <div className="rounded-2xl bg-white/95 px-3 py-3 text-sm text-slate-700">
                   {t("settings.mmkPlainEnglish")}
                 </div>
                 <ActionButton busy={mmkRateBusy} className="sm:w-auto">
@@ -231,7 +231,7 @@ function SettingsPage({
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+      <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
         <div className="flex items-center gap-3">
           <Users className="h-5 w-5 text-emerald-700" />
           <div>
@@ -241,7 +241,7 @@ function SettingsPage({
         </div>
 
         <div className="mt-6 grid gap-4">
-          <div className="rounded-3xl bg-slate-50 px-4 py-4">
+          <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.you")}
             </p>

@@ -49,7 +49,7 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
   return (
     <div className="space-y-4 sm:space-y-6">
       {!coachProfile?.completed ? (
-        <section className="rounded-[1.5rem] border border-amber-200/80 bg-amber-50/95 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
+        <section className="rounded-[1.5rem] border border-amber-200/80 bg-[linear-gradient(135deg,rgba(255,244,210,0.96),rgba(235,249,240,0.92))] p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span className="inline-flex rounded-full bg-white p-2 text-amber-700 shadow-sm">
@@ -67,8 +67,8 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
         </section>
       ) : null}
 
-      <section className="rounded-[1.5rem] border border-white/70 bg-white/88 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
-        <div className="rounded-[1.4rem] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 px-4 py-5 text-white sm:px-6">
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:p-6">
+        <div className="hb-hero-panel rounded-[1.4rem] px-4 py-5 text-white sm:px-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
             {t("home.remaining")}
           </p>
@@ -77,7 +77,7 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <div
-              className={`inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs ${summaryTone.badge}`}
+              className="hb-brand-pill inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs"
             >
               {t("shell.totalHouseholdIncome")}
             </div>
@@ -92,9 +92,9 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
           </p>
         </div>
 
-        <div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+        <div className="hb-progress-track mt-4 h-3 overflow-hidden rounded-full shadow-inner">
           <div
-            className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ${summaryTone.bar}`}
+            className={`hb-progress-fill h-full rounded-full bg-gradient-to-r transition-all duration-500 ${summaryTone.bar}`}
             style={{ width: `${summaryData?.remainingPct ?? 0}%` }}
           />
         </div>
@@ -105,7 +105,7 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
             return (
               <div
                 key={item.key}
-                className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 p-4"
+                className="rounded-[1.2rem] border border-sky-100/70 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-xs">
@@ -123,7 +123,7 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
         </div>
       </section>
 
-      <section className="rounded-[1.5rem] border border-white/70 bg-white/82 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:p-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-emerald-700" />
             <div>

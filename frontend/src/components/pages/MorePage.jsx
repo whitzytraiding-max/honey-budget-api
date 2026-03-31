@@ -25,7 +25,7 @@ function MorePage({ onNavigate, showNotifications, showCoach }) {
   });
 
   return (
-    <section className="rounded-[1.75rem] border border-white/70 bg-white/82 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+    <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
       <div>
         <h2 className="text-xl font-semibold sm:text-2xl">{t("more.title")}</h2>
         <p className="mt-1 text-sm text-slate-600">{t("more.subtitle")}</p>
@@ -38,12 +38,12 @@ function MorePage({ onNavigate, showNotifications, showCoach }) {
           return (
             <button
               key={item.key}
-              className="flex w-full items-center justify-between rounded-[1.2rem] border border-slate-100 bg-slate-50/90 px-4 py-4 text-left transition hover:bg-slate-100"
+              className="flex w-full items-center justify-between rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-left transition hover:bg-amber-50/75"
               onClick={() => onNavigate(item.key)}
               type="button"
             >
               <div className="flex items-center gap-3">
-                <span className="inline-flex rounded-full bg-white p-2 text-slate-700 shadow-sm">
+                <span className="inline-flex rounded-full bg-white/95 p-2 text-slate-700 shadow-sm">
                   <Icon className="h-4 w-4" />
                 </span>
                 <div>

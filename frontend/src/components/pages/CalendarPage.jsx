@@ -67,7 +67,7 @@ function CalendarPage({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr] xl:gap-6">
-      <section className="rounded-[1.75rem] border border-white/70 bg-white/82 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+      <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <CalendarDays className="h-5 w-5 text-sky-700" />
           <div>
@@ -85,7 +85,7 @@ function CalendarPage({
           />
         </div>
 
-        <div className="mt-4 rounded-[1.25rem] border border-slate-100 bg-slate-50/90 p-4">
+        <div className="mt-4 rounded-[1.25rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900">{grid.label}</p>
             <div className="flex gap-3 text-[11px] text-slate-500">
@@ -104,7 +104,7 @@ function CalendarPage({
               cell ? (
                 <div
                   key={`${cell.day}-${index}`}
-                  className="rounded-xl bg-white px-1 py-2 text-sm text-slate-700"
+                  className="rounded-xl bg-white/96 px-1 py-2 text-sm text-slate-700 shadow-sm"
                 >
                   <div>{cell.day}</div>
                   <div className="mt-1 flex justify-center gap-1">
@@ -129,9 +129,9 @@ function CalendarPage({
       </section>
 
       <div className="space-y-4">
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("calendar.spentThisMonth")}
               </p>
@@ -139,7 +139,7 @@ function CalendarPage({
                 {currency(monthSummary?.totalExpenses ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cashSpent")}
               </p>
@@ -147,7 +147,7 @@ function CalendarPage({
                 {currency(monthSummary?.cashSpent ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-slate-50 p-4">
+            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cardSpent")}
               </p>
@@ -158,17 +158,17 @@ function CalendarPage({
           </div>
         </section>
 
-        <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <h3 className="text-lg font-semibold text-slate-900">Events</h3>
           <div className="mt-4 space-y-3">
             {featuredEvents.length ? (
               featuredEvents.map((event) => (
                 <div
                   key={event.key}
-                  className="flex items-center justify-between rounded-[1.2rem] border border-slate-100 bg-slate-50/90 px-4 py-3"
+                  className="flex items-center justify-between rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-3"
                 >
                   <div className="flex items-start gap-3">
-                    <span className="mt-0.5 inline-flex rounded-full bg-white p-2 text-slate-700">
+                    <span className="mt-0.5 inline-flex rounded-full bg-white/95 p-2 text-slate-700 shadow-sm">
                       {event.kind === "income" ? (
                         <Wallet className="h-4 w-4 text-emerald-700" />
                       ) : (
@@ -187,7 +187,7 @@ function CalendarPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.2rem] border border-slate-100 bg-slate-50/90 px-4 py-6 text-sm text-slate-500">
+              <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
                 {t("calendar.noEvents")}
               </div>
             )}

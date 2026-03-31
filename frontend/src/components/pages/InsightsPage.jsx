@@ -11,9 +11,9 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <section className="rounded-[2rem] border border-emerald-200/70 bg-gradient-to-br from-emerald-100/90 via-teal-50 to-sky-100/90 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-8">
+      <section className="rounded-[2rem] border border-sky-200/70 bg-[linear-gradient(145deg,rgba(255,245,214,0.92),rgba(231,247,238,0.92),rgba(224,238,255,0.94))] p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-8">
         <div className="flex items-center gap-3">
-          <Brain className="h-5 w-5 text-emerald-800" />
+          <Brain className="h-5 w-5 text-[#17385d]" />
           <div>
             <h2 className="text-2xl font-semibold text-slate-900">{t("insights.title")}</h2>
             <p className="text-sm text-slate-700">{t("insights.subtitle")}</p>
@@ -25,14 +25,14 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
             <InsightSkeleton />
           ) : (
             <>
-              <p className="rounded-3xl bg-white/70 px-4 py-3 text-sm leading-6 text-slate-700">
+              <p className="rounded-3xl bg-white/72 px-4 py-3 text-sm leading-6 text-slate-700">
                 {insights.overview}
               </p>
               <ul className="mt-5 space-y-3">
                 {insights.tips.map((tip, index) => (
                   <li
                     key={tip.title}
-                    className="rounded-3xl bg-white/80 px-4 py-4 text-sm text-slate-700 shadow-sm"
+                    className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,251,242,0.94),rgba(238,246,255,0.88))] px-4 py-4 text-sm text-slate-700 shadow-sm"
                   >
                     <p className="font-semibold text-slate-900">
                       {INSIGHT_EMOJIS[index] || "💡"} {tip.title}
@@ -50,9 +50,9 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
       </section>
 
       <div className="space-y-6">
-        <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+        <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
           <div className="flex items-center gap-3">
-            <Wallet className="h-5 w-5 text-cyan-700" />
+            <Wallet className="h-5 w-5 text-[#245188]" />
             <div>
               <h2 className="text-2xl font-semibold">{t("insights.mix")}</h2>
               <p className="text-sm text-slate-600">{t("insights.mixSubtitle")}</p>
@@ -60,7 +60,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
           </div>
 
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-3xl bg-slate-50 p-4">
+            <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("insights.cash")}
               </p>
@@ -71,7 +71,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
                 {summary?.cashSharePct ?? 0}{t("insights.recentSpendPct")}
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
+            <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(240,252,244,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("insights.card")}
               </p>
@@ -82,7 +82,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
                 {summary?.cardSharePct ?? 0}{t("insights.recentSpendPct")}
               </p>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
+            <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("insights.recurring")}
               </p>
@@ -91,7 +91,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
               </p>
               <p className="mt-1 text-sm text-slate-500">{t("insights.fixedMonthly")}</p>
             </div>
-            <div className="rounded-3xl bg-slate-50 p-4">
+            <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("insights.oneTime")}
               </p>
@@ -103,9 +103,9 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+        <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-emerald-700" />
+            <TrendingUp className="h-5 w-5 text-[#16995a]" />
             <div>
               <h2 className="text-2xl font-semibold">{t("insights.topCategories")}</h2>
               <p className="text-sm text-slate-600">{t("insights.categoriesSubtitle")}</p>
@@ -117,7 +117,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
               dashboard.topCategories.map((category) => (
                 <div
                   key={category.category}
-                  className="flex items-center justify-between rounded-3xl bg-slate-50 px-4 py-4"
+                  className="flex items-center justify-between rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4"
                 >
                   <div>
                     <p className="font-semibold text-slate-900">{category.category}</p>
@@ -131,7 +131,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
                 </div>
               ))
             ) : (
-              <div className="rounded-3xl bg-slate-50 px-4 py-6 text-sm text-slate-500">
+              <div className="rounded-3xl bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
                 {t("insights.categoryEmpty")}
               </div>
             )}

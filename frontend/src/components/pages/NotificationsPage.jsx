@@ -6,7 +6,7 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
   const person = isIncoming ? invite.sender : invite.recipient;
 
   return (
-    <article className="rounded-[1.4rem] border border-slate-100 bg-slate-50/80 p-4">
+    <article className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">
@@ -15,7 +15,7 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
               : `${t("notifications.to")} ${person?.name ?? ""}`.trim()}
           </p>
           <p className="mt-1 text-sm text-slate-500">{person?.email}</p>
-          <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+          <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
             <Clock3 className="h-3.5 w-3.5" />
             {t("notifications.pending")}
           </p>
@@ -34,7 +34,7 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
             {t("notifications.accept")}
           </ActionButton>
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-70 sm:rounded-2xl"
+            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] border border-sky-100 bg-white/95 px-5 py-3 font-medium text-slate-700 transition hover:bg-amber-50/70 disabled:opacity-70 sm:rounded-2xl"
             disabled={busy}
             onClick={() => onRespond(invite.id, "decline")}
             type="button"
@@ -55,13 +55,13 @@ function ActivityCard({ notification, t, locale }) {
   }).format(new Date(notification.createdAt));
 
   return (
-    <article className="rounded-[1.4rem] border border-slate-100 bg-slate-50/80 p-4">
+    <article className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
           <p className="mt-1 text-sm leading-6 text-slate-600">{notification.body}</p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500 shadow-sm">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/95 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500 shadow-sm">
           <Clock3 className="h-3.5 w-3.5" />
           {timestamp}
         </span>
@@ -78,9 +78,9 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
 
   return (
     <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-      <div className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+      <div className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-amber-100 p-2.5 text-amber-900">
+          <div className="rounded-full bg-amber-100/90 p-2.5 text-[#17385d]">
             <Bell className="h-5 w-5" />
           </div>
           <div>
@@ -108,9 +108,9 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
         </div>
       </div>
 
-      <div className="rounded-[2rem] border border-white/70 bg-white/80 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+      <div className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
         <div className="flex items-center gap-3">
-          <div className="rounded-full bg-emerald-100 p-2.5 text-emerald-900">
+          <div className="rounded-full bg-emerald-100/90 p-2.5 text-[#16995a]">
             <MailPlus className="h-5 w-5" />
           </div>
           <div>
@@ -169,7 +169,7 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
           )}
         </div>
 
-        <div className="mt-6 rounded-[1.4rem] bg-slate-50 px-4 py-4 text-sm text-slate-600">
+        <div className="mt-6 rounded-[1.4rem] bg-[linear-gradient(180deg,rgba(255,244,210,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-sm text-slate-600">
           <div className="flex items-center gap-2 font-semibold text-slate-900">
             <UserRoundPlus className="h-4 w-4" />
             {t("notifications.onlyTwoTitle")}

@@ -56,7 +56,7 @@ function ExpensesPage({
 
   return (
     <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr] xl:gap-6">
-      <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+      <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <Wallet className="h-5 w-5 text-sky-700" />
           <div>
@@ -65,7 +65,7 @@ function ExpensesPage({
           </div>
         </div>
 
-        <div className="mt-4 rounded-[1.2rem] bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
+        <div className="mt-4 rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-sm leading-6 text-slate-600">
           <p>
             <span className="font-semibold text-slate-900">{t("expenses.entryCurrencyLabel")}:</span>{" "}
             {expenseForm.currencyCode || baseCurrencyCode} {t("expenses.entryCurrencyHelp")}
@@ -74,11 +74,11 @@ function ExpensesPage({
             <span className="font-semibold text-slate-900">{t("expenses.displayCurrencyLabel")}:</span>{" "}
             {currencyCode} {t("expenses.displayCurrencyHelp")}
           </p>
-          <p className="mt-2 rounded-2xl bg-white px-3 py-3 text-slate-700">
+          <p className="mt-2 rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
             {t("expenses.dummyProofCurrency")}
           </p>
           {showMmkRateHelper ? (
-            <p className="mt-2 rounded-2xl bg-white px-3 py-3 text-slate-700">
+            <p className="mt-2 rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
               {mmkRateText || t("expenses.mmkRateMissing")}
             </p>
           ) : null}
@@ -177,7 +177,7 @@ function ExpensesPage({
         </form>
       </section>
 
-      <section className="rounded-[1.75rem] border border-white/70 bg-white/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-6">
+      <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <Wallet className="h-5 w-5 text-slate-700" />
           <div>
@@ -186,10 +186,10 @@ function ExpensesPage({
           </div>
         </div>
 
-        <div className="mt-4 hidden overflow-hidden rounded-[1.5rem] border border-slate-100 sm:mt-6 sm:block">
+        <div className="mt-4 hidden overflow-hidden rounded-[1.5rem] border border-sky-100 sm:mt-6 sm:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-[linear-gradient(180deg,rgba(255,250,243,0.98),rgba(239,247,255,0.92))]">
                 <tr>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.description")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.category")}</th>
@@ -198,7 +198,7 @@ function ExpensesPage({
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.actions")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-slate-100 bg-white/92">
                 {recentTransactions.length ? (
                   recentTransactions.map((transaction) => (
                     <tr key={transaction.id}>
@@ -227,7 +227,7 @@ function ExpensesPage({
                         {transaction.userId === currentUserId ? (
                           <div className="inline-flex gap-2">
                             <button
-                              className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700"
                               onClick={() => onEditTransaction(transaction)}
                               type="button"
                             >
@@ -264,7 +264,7 @@ function ExpensesPage({
             recentTransactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="rounded-[1.35rem] border border-slate-100 bg-slate-50/85 p-4"
+                className="rounded-[1.35rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -278,16 +278,16 @@ function ExpensesPage({
                   </p>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-                  <span className="rounded-full bg-white px-2.5 py-1">{transaction.category}</span>
-                  <span className="rounded-full bg-white px-2.5 py-1">{transaction.currencyCode}</span>
-                  <span className="rounded-full bg-white px-2.5 py-1">
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">{transaction.category}</span>
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">{transaction.currencyCode}</span>
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">
                     {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
                   </span>
                 </div>
                 {transaction.userId === currentUserId ? (
                   <div className="mt-3 flex gap-2">
                     <button
-                      className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700"
                       onClick={() => onEditTransaction(transaction)}
                       type="button"
                     >
@@ -307,7 +307,7 @@ function ExpensesPage({
               </div>
             ))
           ) : (
-            <div className="rounded-[1.35rem] border border-slate-100 bg-slate-50/85 px-4 py-6 text-sm text-slate-500">
+            <div className="rounded-[1.35rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
               {t("expenses.empty")}
             </div>
           )}

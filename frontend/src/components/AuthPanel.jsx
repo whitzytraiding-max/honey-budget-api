@@ -37,51 +37,51 @@ function AuthPanel({
   return (
     <section className="auth-shell mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-10 sm:px-6">
       <div className="grid w-full gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="auth-hero-panel relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(255,252,248,0.98),rgba(255,244,235,0.92))] p-8 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur">
+        <div className="auth-hero-panel relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(18,37,66,0.96),rgba(25,54,94,0.94),rgba(16,37,63,0.98))] p-8 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur">
           <div className="auth-hero-glow-left pointer-events-none absolute -left-12 top-8 h-36 w-36 rounded-full bg-amber-200/40 blur-3xl" />
-          <div className="auth-hero-glow-right pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-rose-200/35 blur-3xl" />
+          <div className="auth-hero-glow-right pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-sky-300/30 blur-3xl" />
 
-          <div className="auth-brand-pill relative inline-flex items-center gap-2 rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-900">
+          <div className="auth-brand-pill hb-brand-pill relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold">
             <img alt="Honey Budget" className="h-5 w-5" src="/icons/brand-mark.svg" />
             {t("auth.title")}
           </div>
 
           <div className="relative mt-6 flex items-center gap-6">
-            <div className="auth-brand-mark rounded-[2rem] bg-white/78 p-4 shadow-[0_16px_40px_-24px_rgba(122,59,48,0.45)]">
+            <div className="auth-brand-mark rounded-[2rem] bg-white/10 p-4 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.55)] backdrop-blur">
               <img alt="Honey Budget mark" className="h-28 w-28 sm:h-36 sm:w-36" src="/icons/brand-mark.svg" />
             </div>
             <div className="hidden sm:block">
-              <p className="auth-kicker text-sm font-semibold uppercase tracking-[0.22em] text-amber-800/80">
+              <p className="auth-kicker text-sm font-semibold uppercase tracking-[0.22em] text-amber-200/90">
                 For Couples
               </p>
-              <p className="mt-2 bg-gradient-to-r from-amber-500 via-orange-400 to-rose-400 bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
+              <p className="mt-2 bg-gradient-to-r from-amber-300 via-yellow-200 to-sky-200 bg-clip-text text-4xl font-semibold tracking-tight text-transparent">
                 Honey Budget
               </p>
             </div>
           </div>
 
-          <h1 className="auth-hero-title relative mt-6 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className="auth-hero-title relative mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
             {t("auth.hero")}
           </h1>
-          <p className="auth-hero-copy relative mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+          <p className="auth-hero-copy relative mt-4 max-w-xl text-base leading-7 text-slate-200 sm:text-lg">
             {t("auth.subhero")}
           </p>
 
           <div className="relative mt-8 grid gap-4 sm:grid-cols-3">
-            <div className="auth-feature-card rounded-3xl border border-sky-100 bg-white/75 p-4">
-              <Brain className="h-6 w-6 text-sky-600" />
-              <p className="auth-feature-title mt-3 text-sm font-medium text-slate-900">{t("auth.aiPromptsTitle")}</p>
-              <p className="auth-feature-copy mt-1 text-sm text-slate-600">{t("auth.aiPromptsBody")}</p>
+            <div className="auth-feature-card rounded-3xl border border-sky-300/20 bg-white/10 p-4 backdrop-blur">
+              <Brain className="h-6 w-6 text-sky-200" />
+              <p className="auth-feature-title mt-3 text-sm font-medium text-white">{t("auth.aiPromptsTitle")}</p>
+              <p className="auth-feature-copy mt-1 text-sm text-slate-200">{t("auth.aiPromptsBody")}</p>
             </div>
-            <div className="auth-feature-card rounded-3xl border border-emerald-100 bg-white/75 p-4">
-              <TrendingUp className="h-6 w-6 text-emerald-600" />
-              <p className="auth-feature-title mt-3 text-sm font-medium text-slate-900">{t("auth.fairSplitTitle")}</p>
-              <p className="auth-feature-copy mt-1 text-sm text-slate-600">{t("auth.fairSplitBody")}</p>
+            <div className="auth-feature-card rounded-3xl border border-emerald-300/20 bg-white/10 p-4 backdrop-blur">
+              <TrendingUp className="h-6 w-6 text-emerald-200" />
+              <p className="auth-feature-title mt-3 text-sm font-medium text-white">{t("auth.fairSplitTitle")}</p>
+              <p className="auth-feature-copy mt-1 text-sm text-slate-200">{t("auth.fairSplitBody")}</p>
             </div>
-            <div className="auth-feature-card rounded-3xl border border-amber-100 bg-white/75 p-4">
-              <Wallet className="h-6 w-6 text-cyan-700" />
-              <p className="auth-feature-title mt-3 text-sm font-medium text-slate-900">{t("auth.fastCaptureTitle")}</p>
-              <p className="auth-feature-copy mt-1 text-sm text-slate-600">{t("auth.fastCaptureBody")}</p>
+            <div className="auth-feature-card rounded-3xl border border-amber-300/20 bg-white/10 p-4 backdrop-blur">
+              <Wallet className="h-6 w-6 text-amber-200" />
+              <p className="auth-feature-title mt-3 text-sm font-medium text-white">{t("auth.fastCaptureTitle")}</p>
+              <p className="auth-feature-copy mt-1 text-sm text-slate-200">{t("auth.fastCaptureBody")}</p>
             </div>
           </div>
         </div>
