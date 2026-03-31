@@ -58,14 +58,14 @@ function AppShell({
   return (
     <div className="min-h-screen bg-transparent px-3 py-4 text-slate-900 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-10">
-        <header className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <header className="hb-surface-card hb-header-panel rounded-[1.75rem] p-4 sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="hb-brand-pill inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-xs">
                 <img alt="Honey Budget" className="h-4 w-4" src="/icons/brand-mark.svg" />
                 {t("shell.title")}
               </div>
-              <h1 className="mt-3 text-2xl font-semibold tracking-tight sm:mt-4 sm:text-4xl">
+              <h1 className="mt-3 max-w-4xl text-2xl font-semibold tracking-tight sm:mt-4 sm:text-4xl">
                 {coupleNames || "Shared Money Mode"}
               </h1>
               <p className="mt-1 hidden text-sm leading-6 text-slate-600 sm:block sm:text-base">
@@ -81,7 +81,7 @@ function AppShell({
                 <p className="mt-1 text-xl font-semibold sm:text-2xl">{currency(remainingBudget)}</p>
               </div>
               <button
-                className="rounded-[1.25rem] border border-sky-100 bg-white/82 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-amber-200 hover:bg-amber-50/70"
+                className="hb-button-secondary rounded-[1.25rem] px-4 py-3 text-sm font-medium transition"
                 onClick={onLogout}
                 type="button"
               >
@@ -99,9 +99,7 @@ function AppShell({
                 <button
                   key={item.key}
                   className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${
-                    isActive
-                      ? "hb-nav-active"
-                      : "hb-nav-idle hover:bg-amber-50/90"
+                    isActive ? "hb-nav-active" : "hb-nav-idle"
                   }`}
                   onClick={() => onNavigate(item.key)}
                   type="button"
@@ -128,7 +126,7 @@ function AppShell({
         </footer>
       </div>
 
-      <nav className="fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 rounded-[1.5rem] border border-white/80 bg-white/92 p-2 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur md:hidden">
+      <nav className="hb-surface-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 rounded-[1.5rem] p-2 md:hidden">
         <div className="grid grid-cols-4 gap-1.5">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;

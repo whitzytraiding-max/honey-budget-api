@@ -49,18 +49,19 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
   return (
     <div className="space-y-4 sm:space-y-6">
       {!coachProfile?.completed ? (
-        <section className="rounded-[1.5rem] border border-amber-200/80 bg-[linear-gradient(135deg,rgba(255,244,210,0.96),rgba(235,249,240,0.92))] p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
+        <section className="hb-panel-highlight rounded-[1.5rem] border border-amber-200/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
-              <span className="inline-flex rounded-full bg-white p-2 text-amber-700 shadow-sm">
+              <span className="inline-flex rounded-full bg-white/90 p-2 text-amber-700 shadow-sm">
                 <Sparkles className="h-4 w-4" />
               </span>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">{t("coach.homeTitle")}</h2>
-                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-700">{t("coach.homeBody")}</p>
+                <p className="hb-kicker">Couples finance coach</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">{t("coach.homeTitle")}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{t("coach.homeBody")}</p>
               </div>
             </div>
-            <ActionButton className="sm:w-auto" onClick={onNavigateToCoach} type="button">
+            <ActionButton className="sm:w-auto sm:min-w-[220px]" onClick={onNavigateToCoach} type="button">
               {t("coach.openQuestionnaire")}
             </ActionButton>
           </div>
@@ -68,11 +69,11 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
       ) : null}
 
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:p-6">
-        <div className="hb-hero-panel rounded-[1.4rem] px-4 py-5 text-white sm:px-6">
+        <div className="hb-hero-panel rounded-[1.4rem] px-4 py-5 text-white sm:px-6 sm:py-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
             {t("home.remaining")}
           </p>
-          <p className="mt-2 text-3xl font-semibold tracking-tight sm:text-5xl">
+          <p className="hb-stat-emphasis mt-2 text-3xl font-semibold tracking-tight sm:text-6xl">
             {currency(remainingBudget)}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -85,7 +86,7 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
               {currency(householdIncome)}
             </p>
           </div>
-          <p className="mt-2 text-sm leading-6 text-white/72">
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
             {summaryData
               ? `${currency(summaryData.totalExpenses)} spent in ${summaryData.period.label}.`
               : "Calculating your current budget window."}
@@ -105,18 +106,18 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
             return (
               <div
                 key={item.key}
-                className="rounded-[1.2rem] border border-sky-100/70 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4"
+                className="hb-panel-soft rounded-[1.2rem] border border-sky-100/70 p-4 shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500 sm:text-xs">
+                  <p className="hb-kicker">
                     {item.label}
                   </p>
                   <span className={`inline-flex rounded-full p-1.5 ${item.tone.badge}`}>
                     <Icon className="h-3.5 w-3.5" />
                   </span>
                 </div>
-                <p className={`mt-3 text-xl font-semibold ${item.tone.text}`}>{item.value}</p>
-                <p className="mt-1 text-xs text-slate-500 sm:text-sm">{item.detail}</p>
+                <p className={`hb-stat-emphasis mt-3 text-2xl font-semibold ${item.tone.text}`}>{item.value}</p>
+                <p className="mt-2 text-xs text-slate-500 sm:text-sm">{item.detail}</p>
               </div>
             );
           })}
@@ -127,7 +128,8 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
           <div className="flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-emerald-700" />
             <div>
-              <h2 className="text-lg font-semibold sm:text-2xl">{t("home.incomeFairSplit")}</h2>
+              <p className="hb-kicker">Shared balance</p>
+              <h2 className="mt-1 text-lg font-semibold sm:text-2xl">{t("home.incomeFairSplit")}</h2>
               <p className="text-sm text-slate-600">Shared bill ratios stay synced with the saved income mix.</p>
             </div>
           </div>

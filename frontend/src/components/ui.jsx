@@ -60,7 +60,7 @@ function ToggleGroup({ label, name, value, onChange, options }) {
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-slate-700">{label}</p>
-      <div className="grid grid-cols-2 rounded-[1.2rem] bg-sky-50/90 p-1 sm:rounded-2xl">
+      <div className="hb-panel-soft grid grid-cols-2 rounded-[1.2rem] p-1 sm:rounded-2xl">
         {options.map((option) => (
           <label
             key={option.value}
@@ -91,7 +91,7 @@ function ProgressBar({ label, percentage, salary, cashAmount, cardAmount, tone }
       : "from-sky-400 via-blue-300 to-amber-200";
 
   return (
-    <div className="rounded-[1.35rem] border border-sky-100/80 bg-[linear-gradient(180deg,rgba(255,250,240,0.96),rgba(240,248,255,0.88))] p-4 sm:rounded-3xl">
+    <div className="hb-panel-soft rounded-[1.35rem] border border-sky-100/80 p-4 sm:rounded-3xl">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">{label}</p>
@@ -103,7 +103,7 @@ function ProgressBar({ label, percentage, salary, cashAmount, cardAmount, tone }
           {percentage}%
         </span>
       </div>
-      <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/90 shadow-inner">
+      <div className="hb-progress-track mt-3 h-3 overflow-hidden rounded-full shadow-inner">
         <div
           className={`h-full rounded-full bg-gradient-to-r ${barTone}`}
           style={{ width: `${percentage}%` }}
@@ -126,7 +126,7 @@ function InsightSkeleton() {
 
 function EmptyState({ title, body, action }) {
   return (
-    <div className="rounded-[2rem] border border-dashed border-sky-200 bg-[linear-gradient(180deg,rgba(255,252,245,0.9),rgba(239,247,255,0.82))] p-8 text-center">
+    <div className="hb-empty-state rounded-[2rem] border border-dashed border-sky-200 p-8 text-center">
       <h3 className="text-2xl font-semibold text-slate-900">{title}</h3>
       <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-slate-600">{body}</p>
       {action}
