@@ -38,7 +38,7 @@ function MorePage({ onNavigate, showNotifications, showCoach }) {
           return (
             <button
               key={item.key}
-              className="flex w-full items-center justify-between rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-left transition hover:bg-amber-50/75"
+              className="hb-panel-soft flex w-full items-center justify-between rounded-[1.2rem] border border-sky-100 px-4 py-4 text-left transition"
               onClick={() => onNavigate(item.key)}
               type="button"
             >

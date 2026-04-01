@@ -64,7 +64,7 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed 
   const { t } = useLanguage();
 
   return (
-    <section className="rounded-[2rem] border border-white/70 bg-white/82 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+    <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
       <div className="flex items-center gap-3">
         <Sparkles className="h-5 w-5 text-amber-600" />
         <div>
@@ -73,7 +73,7 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed 
         </div>
       </div>
 
-      <div className="mt-4 rounded-3xl bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-900">
+      <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4 text-sm leading-6 text-amber-900">
         <p className="font-semibold">{t("coach.whyTitle")}</p>
         <p className="mt-1">{t("coach.whyBody")}</p>
       </div>

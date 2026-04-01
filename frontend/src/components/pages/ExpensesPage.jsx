@@ -65,7 +65,7 @@ function ExpensesPage({
           </div>
         </div>
 
-        <div className="mt-4 rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-sm leading-6 text-slate-600">
+        <div className="hb-panel-soft mt-4 rounded-[1.2rem] px-4 py-4 text-sm leading-6 text-slate-600">
           <p>
             <span className="font-semibold text-slate-900">{t("expenses.entryCurrencyLabel")}:</span>{" "}
             {expenseForm.currencyCode || baseCurrencyCode} {t("expenses.entryCurrencyHelp")}
@@ -74,18 +74,18 @@ function ExpensesPage({
             <span className="font-semibold text-slate-900">{t("expenses.displayCurrencyLabel")}:</span>{" "}
             {currencyCode} {t("expenses.displayCurrencyHelp")}
           </p>
-          <p className="mt-2 rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
+          <p className="hb-surface-strong mt-2 rounded-2xl px-3 py-3 text-slate-700">
             {t("expenses.dummyProofCurrency")}
           </p>
           {showMmkRateHelper ? (
-            <p className="mt-2 rounded-2xl bg-white/95 px-3 py-3 text-slate-700">
+            <p className="hb-surface-strong mt-2 rounded-2xl px-3 py-3 text-slate-700">
               {mmkRateText || t("expenses.mmkRateMissing")}
             </p>
           ) : null}
         </div>
 
         {editingTransactionId ? (
-          <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.2rem] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="hb-panel-highlight mt-4 flex items-center justify-between gap-3 rounded-[1.2rem] border border-amber-200 px-4 py-3 text-sm text-amber-800">
             <p>{t("expenses.editingHelp")}</p>
             <button
               className="inline-flex items-center gap-1 font-semibold"
@@ -189,7 +189,7 @@ function ExpensesPage({
         <div className="mt-4 hidden overflow-hidden rounded-[1.5rem] border border-sky-100 sm:mt-6 sm:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-              <thead className="bg-[linear-gradient(180deg,rgba(255,250,243,0.98),rgba(239,247,255,0.92))]">
+              <thead className="hb-table-head">
                 <tr>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.description")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("expenses.category")}</th>
@@ -264,7 +264,7 @@ function ExpensesPage({
             recentTransactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="rounded-[1.35rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4"
+                className="hb-panel-soft rounded-[1.35rem] border border-sky-100 p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -307,7 +307,7 @@ function ExpensesPage({
               </div>
             ))
           ) : (
-            <div className="rounded-[1.35rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
+            <div className="hb-panel-soft rounded-[1.35rem] border border-sky-100 px-4 py-6 text-sm text-slate-500">
               {t("expenses.empty")}
             </div>
           )}

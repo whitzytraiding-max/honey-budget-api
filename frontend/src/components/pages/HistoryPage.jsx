@@ -35,7 +35,7 @@ function HistoryPage({
           />
 
           <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1">
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.totalSpent")}
               </p>
@@ -43,7 +43,7 @@ function HistoryPage({
                 {currency(monthSummary?.totalExpenses ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cashSpent")}
               </p>
@@ -51,7 +51,7 @@ function HistoryPage({
                 {currency(monthSummary?.cashSpent ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cardSpent")}
               </p>
@@ -65,7 +65,7 @@ function HistoryPage({
         <div className="mt-2 overflow-hidden rounded-3xl border border-sky-100">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
-              <thead className="bg-[linear-gradient(180deg,rgba(255,250,243,0.98),rgba(239,247,255,0.92))]">
+              <thead className="hb-table-head">
                 <tr>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.description")}</th>
                   <th className="px-4 py-3 font-medium text-slate-500">{t("history.person")}</th>

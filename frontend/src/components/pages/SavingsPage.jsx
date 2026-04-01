@@ -43,7 +43,7 @@ function SavingsPage({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.householdTarget")}
               </p>
@@ -51,7 +51,7 @@ function SavingsPage({
                 {currency(savingsData?.householdSavingsTarget ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(240,252,244,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-mint rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.savedThisWindow")}
               </p>
@@ -59,7 +59,7 @@ function SavingsPage({
                 {currency(savingsData?.totalSavedThisWindow ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(240,252,244,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-mint rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.savedAllTime")}
               </p>
@@ -67,7 +67,7 @@ function SavingsPage({
                 {currency(savingsData?.allTimeSaved ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.remainingToGoal")}
               </p>
@@ -77,7 +77,7 @@ function SavingsPage({
                 )}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.dailySave")}
               </p>
@@ -107,7 +107,7 @@ function SavingsPage({
           </div>
 
           <div className="mt-4 space-y-4">
-            <form className="space-y-4 rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4" onSubmit={onSavingsGoalSubmit}>
+            <form className="hb-panel-soft space-y-4 rounded-[1.2rem] border border-sky-100 p-4" onSubmit={onSavingsGoalSubmit}>
               <Input
                 label={t("savings.goalName")}
                 name="title"
@@ -138,7 +138,7 @@ function SavingsPage({
                 </ActionButton>
                 {editingSavingsGoalId ? (
                   <button
-                    className="inline-flex items-center justify-center rounded-[1.2rem] border border-slate-200 bg-white px-5 py-3 font-medium text-slate-700 transition hover:bg-slate-50"
+                    className="hb-button-secondary inline-flex items-center justify-center rounded-[1.2rem] px-5 py-3 font-medium transition"
                     onClick={onCancelSavingsGoalEdit}
                     type="button"
                   >
@@ -153,7 +153,7 @@ function SavingsPage({
                 goals.map((goal) => (
                   <article
                     key={goal.id}
-                    className="rounded-[1.3rem] border border-sky-100 bg-[linear-gradient(135deg,rgba(255,244,210,0.96),rgba(240,252,244,0.96),rgba(231,244,255,0.94))] px-4 py-4"
+                    className="hb-panel-multi rounded-[1.3rem] border border-sky-100 px-4 py-4"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -201,7 +201,7 @@ function SavingsPage({
                   </article>
                 ))
               ) : (
-                <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
+                <div className="hb-panel-soft rounded-[1.2rem] border border-sky-100 px-4 py-6 text-sm text-slate-500">
                   {t("savings.emptyGoals")}
                 </div>
               )}
@@ -294,7 +294,7 @@ function SavingsPage({
               entries.map((entry) => (
                 <div
                   key={entry.id}
-                  className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-4"
+                  className="hb-panel-soft rounded-[1.2rem] border border-sky-100 px-4 py-4"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -311,7 +311,7 @@ function SavingsPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
+              <div className="hb-panel-soft rounded-[1.2rem] border border-sky-100 px-4 py-6 text-sm text-slate-500">
                 {t("savings.empty")}
               </div>
             )}

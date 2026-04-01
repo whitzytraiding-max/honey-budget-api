@@ -6,7 +6,7 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
   const person = isIncoming ? invite.sender : invite.recipient;
 
   return (
-    <article className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+    <article className="hb-panel-soft rounded-[1.4rem] border border-sky-100 p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-slate-900">
@@ -34,7 +34,7 @@ function InviteCard({ invite, isIncoming, busy, onRespond, t }) {
             {t("notifications.accept")}
           </ActionButton>
           <button
-            className="inline-flex items-center justify-center gap-2 rounded-[1.2rem] border border-sky-100 bg-white/95 px-5 py-3 font-medium text-slate-700 transition hover:bg-amber-50/70 disabled:opacity-70 sm:rounded-2xl"
+            className="hb-button-secondary inline-flex items-center justify-center gap-2 rounded-[1.2rem] px-5 py-3 font-medium transition disabled:opacity-70 sm:rounded-2xl"
             disabled={busy}
             onClick={() => onRespond(invite.id, "decline")}
             type="button"
@@ -55,7 +55,7 @@ function ActivityCard({ notification, t, locale }) {
   }).format(new Date(notification.createdAt));
 
   return (
-    <article className="rounded-[1.4rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+    <article className="hb-panel-soft rounded-[1.4rem] border border-sky-100 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
@@ -169,7 +169,7 @@ function NotificationsPage({ notifications, notificationsBusy, onRespond }) {
           )}
         </div>
 
-        <div className="mt-6 rounded-[1.4rem] bg-[linear-gradient(180deg,rgba(255,244,210,0.96),rgba(239,247,255,0.88))] px-4 py-4 text-sm text-slate-600">
+        <div className="hb-panel-highlight mt-6 rounded-[1.4rem] px-4 py-4 text-sm text-slate-600">
           <div className="flex items-center gap-2 font-semibold text-slate-900">
             <UserRoundPlus className="h-4 w-4" />
             {t("notifications.onlyTwoTitle")}

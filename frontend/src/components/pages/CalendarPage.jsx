@@ -85,7 +85,7 @@ function CalendarPage({
           />
         </div>
 
-        <div className="mt-4 rounded-[1.25rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+        <div className="hb-panel-soft mt-4 rounded-[1.25rem] border border-sky-100 p-4">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-900">{grid.label}</p>
             <div className="flex gap-3 text-[11px] text-slate-500">
@@ -131,7 +131,7 @@ function CalendarPage({
       <div className="space-y-4">
         <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("calendar.spentThisMonth")}
               </p>
@@ -139,7 +139,7 @@ function CalendarPage({
                 {currency(monthSummary?.totalExpenses ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cashSpent")}
               </p>
@@ -147,7 +147,7 @@ function CalendarPage({
                 {currency(monthSummary?.cashSpent ?? 0)}
               </p>
             </div>
-            <div className="rounded-[1.2rem] bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] p-4">
+            <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("history.cardSpent")}
               </p>
@@ -165,7 +165,7 @@ function CalendarPage({
               featuredEvents.map((event) => (
                 <div
                   key={event.key}
-                  className="flex items-center justify-between rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-3"
+                  className="hb-panel-soft flex items-center justify-between rounded-[1.2rem] border border-sky-100 px-4 py-3"
                 >
                   <div className="flex items-start gap-3">
                     <span className="mt-0.5 inline-flex rounded-full bg-white/95 p-2 text-slate-700 shadow-sm">
@@ -187,7 +187,7 @@ function CalendarPage({
                 </div>
               ))
             ) : (
-              <div className="rounded-[1.2rem] border border-sky-100 bg-[linear-gradient(180deg,rgba(255,250,243,0.96),rgba(239,247,255,0.88))] px-4 py-6 text-sm text-slate-500">
+              <div className="hb-panel-soft rounded-[1.2rem] border border-sky-100 px-4 py-6 text-sm text-slate-500">
                 {t("calendar.noEvents")}
               </div>
             )}
