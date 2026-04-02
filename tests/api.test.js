@@ -185,6 +185,9 @@ function createInMemoryBudgetRepository() {
   let activityNotificationId = 1;
   let coupleCoachProfileId = 1;
   let coupleMmkMonthlyRateId = 1;
+  let recurringBillId = 1;
+  let householdRuleId = 1;
+  let pushDeviceId = 1;
   const users = [];
   const couples = [];
   const transactions = [];
@@ -195,6 +198,9 @@ function createInMemoryBudgetRepository() {
   const activityNotifications = [];
   const coupleCoachProfiles = [];
   const coupleMmkMonthlyRates = [];
+  const recurringBills = [];
+  const householdRules = [];
+  const pushDevices = [];
 
   function sanitizeUser(user) {
     if (!user) {
@@ -570,6 +576,8 @@ function createInMemoryBudgetRepository() {
 
     async addTransaction({
       userId,
+      recurringBillId = null,
+      autoCreated = false,
       amount,
       currencyCode = "USD",
       convertedAmount = null,
@@ -587,6 +595,8 @@ function createInMemoryBudgetRepository() {
       const transaction = {
         id: transactionId++,
         userId,
+        recurringBillId,
+        autoCreated,
         userName: owner?.name,
         amount,
         currencyCode,
@@ -634,6 +644,8 @@ function createInMemoryBudgetRepository() {
 
       const previousTransaction = { ...transaction };
       transaction.amount = amount;
+      transaction.recurringBillId = arguments[0].recurringBillId ?? transaction.recurringBillId ?? null;
+      transaction.autoCreated = arguments[0].autoCreated ?? transaction.autoCreated ?? false;
       transaction.currencyCode = currencyCode;
       transaction.convertedAmount = convertedAmount;
       transaction.convertedCurrencyCode = convertedCurrencyCode;
@@ -839,6 +851,168 @@ function createInMemoryBudgetRepository() {
           return belongsToCouple && transaction.date >= cutoff && withinUpperBound;
         })
         .sort((left, right) => right.date.localeCompare(left.date) || right.id - left.id);
+    },
+
+    async listRecurringBillsForCouple(coupleId) {
+      return recurringBills
+        .filter((bill) => bill.coupleId === coupleId)
+        .sort((left, right) => left.dayOfMonth - right.dayOfMonth || left.id - right.id);
+    },
+
+    async getMaterializedRecurringBillTransaction({ recurringBillId: nextRecurringBillId, userId, date }) {
+      const transaction = transactions.find(
+        (entry) =>
+          entry.recurringBillId === nextRecurringBillId &&
+          entry.userId === userId &&
+          entry.date === date,
+      );
+      return transaction ? { ...transaction } : null;
+    },
+
+    async createRecurringBill({
+      coupleId,
+      userId,
+      title,
+      amount,
+      currencyCode = "USD",
+      category,
+      paymentMethod,
+      dayOfMonth,
+      notes = "",
+      isActive = true,
+      autoCreate = true,
+      startDate,
+      endDate = null,
+    }) {
+      const bill = {
+        id: recurringBillId++,
+        coupleId,
+        userId,
+        userName: users.find((user) => user.id === userId)?.name ?? null,
+        title,
+        amount,
+        currencyCode,
+        category,
+        paymentMethod,
+        dayOfMonth,
+        notes,
+        isActive,
+        autoCreate,
+        startDate: startDate.toISOString().slice(0, 10),
+        endDate: endDate ? endDate.toISOString().slice(0, 10) : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      recurringBills.push(bill);
+      return bill;
+    },
+
+    async updateRecurringBill({ recurringBillId: nextRecurringBillId, coupleId, ...data }) {
+      const bill = recurringBills.find(
+        (entry) => entry.id === nextRecurringBillId && entry.coupleId === coupleId,
+      );
+      if (!bill) {
+        throw new HttpError(404, "RECURRING_BILL_NOT_FOUND", "Recurring bill not found.");
+      }
+      Object.assign(bill, {
+        ...data,
+        startDate: data.startDate.toISOString().slice(0, 10),
+        endDate: data.endDate ? data.endDate.toISOString().slice(0, 10) : null,
+        updatedAt: new Date().toISOString(),
+      });
+      return { ...bill };
+    },
+
+    async deleteRecurringBill({ recurringBillId: nextRecurringBillId, coupleId }) {
+      const index = recurringBills.findIndex(
+        (entry) => entry.id === nextRecurringBillId && entry.coupleId === coupleId,
+      );
+      if (index < 0) {
+        throw new HttpError(404, "RECURRING_BILL_NOT_FOUND", "Recurring bill not found.");
+      }
+      const [bill] = recurringBills.splice(index, 1);
+      return bill;
+    },
+
+    async listHouseholdRulesForCouple(coupleId) {
+      return householdRules.filter((rule) => rule.coupleId === coupleId);
+    },
+
+    async createHouseholdRule({
+      coupleId,
+      title,
+      details,
+      thresholdAmount = null,
+      currencyCode = null,
+      isActive = true,
+    }) {
+      const rule = {
+        id: householdRuleId++,
+        coupleId,
+        title,
+        details,
+        thresholdAmount,
+        currencyCode,
+        isActive,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      householdRules.push(rule);
+      return rule;
+    },
+
+    async updateHouseholdRule({ ruleId, coupleId, ...data }) {
+      const rule = householdRules.find(
+        (entry) => entry.id === ruleId && entry.coupleId === coupleId,
+      );
+      if (!rule) {
+        throw new HttpError(404, "HOUSEHOLD_RULE_NOT_FOUND", "Household rule not found.");
+      }
+      Object.assign(rule, {
+        ...data,
+        updatedAt: new Date().toISOString(),
+      });
+      return { ...rule };
+    },
+
+    async deleteHouseholdRule({ ruleId, coupleId }) {
+      const index = householdRules.findIndex(
+        (entry) => entry.id === ruleId && entry.coupleId === coupleId,
+      );
+      if (index < 0) {
+        throw new HttpError(404, "HOUSEHOLD_RULE_NOT_FOUND", "Household rule not found.");
+      }
+      const [rule] = householdRules.splice(index, 1);
+      return rule;
+    },
+
+    async registerPushDevice({ userId, platform, token, enabled = true }) {
+      const existing = pushDevices.find((entry) => entry.token === token);
+      if (existing) {
+        existing.userId = userId;
+        existing.platform = platform;
+        existing.enabled = enabled;
+        existing.lastSeenAt = new Date().toISOString();
+        existing.updatedAt = new Date().toISOString();
+        return { ...existing };
+      }
+
+      const device = {
+        id: pushDeviceId++,
+        userId,
+        platform,
+        token,
+        enabled,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      };
+      pushDevices.push(device);
+      return device;
+    },
+
+    async listPushDevicesForUser(userId) {
+      return pushDevices.filter((entry) => entry.userId === userId);
     },
 
     async listTransactionsForUserIds({ userIds, days = 30, fromDate, toDate }) {

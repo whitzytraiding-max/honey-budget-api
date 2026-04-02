@@ -239,6 +239,10 @@ const translations = {
     more: {
       title: "More",
       subtitle: "Open the deeper planning and review sections from one place on mobile.",
+      setup: "Setup",
+      setupBody: "Walk through the shared household checklist in the right order.",
+      planner: "Planner",
+      plannerBody: "Manage recurring bills, rules, and conflict-prevention prompts.",
       coach: "Coach setup",
       coachBody: "Complete the couple questionnaire so the AI coach can focus on your real goals and weak spots.",
       notifications: "Notifications",
@@ -538,6 +542,10 @@ const translations = {
     more: {
       title: "Más",
       subtitle: "Abre desde un solo lugar las secciones de planificación y revisión.",
+      setup: "Configuración",
+      setupBody: "Sigue la lista compartida del hogar en el orden correcto.",
+      planner: "Planificador",
+      plannerBody: "Gestiona gastos recurrentes, reglas y avisos para evitar conflictos.",
       coach: "Configurar coach",
       coachBody: "Completa el cuestionario de la pareja para que la IA se enfoque en sus metas y puntos débiles reales.",
       notifications: "Avisos",

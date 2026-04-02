@@ -3,8 +3,17 @@ import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getRemainingTone } from "../../lib/format.js";
 import { ActionButton, ProgressBar } from "../ui.jsx";
 
-function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavigateToCoach }) {
+function HomePage({
+  summaryData,
+  dashboard,
+  dashboardBusy,
+  coachProfile,
+  setupChecklist = [],
+  onNavigateToCoach,
+  onNavigateToSetup,
+}) {
   const { t } = useLanguage();
+  const setupRemaining = setupChecklist.filter((item) => !item.completed).length;
   const householdIncome = Number(summaryData?.householdIncome ?? 0);
   const remainingBudget = Number(summaryData?.remainingBudget ?? 0);
   const summaryTone = getRemainingTone(remainingBudget, householdIncome);
@@ -48,6 +57,32 @@ function HomePage({ summaryData, dashboard, dashboardBusy, coachProfile, onNavig
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {setupRemaining > 0 ? (
+        <section className="hb-panel-soft rounded-[1.5rem] border border-sky-100/80 p-4 shadow-[0_18px_50px_-28px_rgba(21,50,65,0.28)] sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="inline-flex rounded-full bg-white/90 p-2 text-sky-700 shadow-sm">
+                <Sparkles className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="hb-kicker">Household setup</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">
+                  Finish the shared setup
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+                  {setupRemaining} step{setupRemaining === 1 ? "" : "s"} still need attention.
+                  Add recurring bills, savings goals, and your coach answers so the app can act
+                  more like a shared planner and less like a blank tracker.
+                </p>
+              </div>
+            </div>
+            <ActionButton className="sm:w-auto sm:min-w-[220px]" onClick={onNavigateToSetup} type="button">
+              Open setup checklist
+            </ActionButton>
+          </div>
+        </section>
+      ) : null}
+
       {!coachProfile?.completed ? (
         <section className="hb-panel-highlight rounded-[1.5rem] border border-amber-200/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

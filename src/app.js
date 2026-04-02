@@ -337,6 +337,552 @@ function normalizeCoachProfilePayload(payload) {
   };
 }
 
+function parseBoolean(value, defaultValue = false) {
+  if (value === undefined || value === null || value === "") {
+    return defaultValue;
+  }
+
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return defaultValue;
+}
+
+function normalizeRecurringBillPayload(payload, currentUser) {
+  const title = String(payload?.title ?? "").trim();
+  const amount = parseMoney(payload?.amount);
+  const category = String(payload?.category ?? "").trim();
+  const paymentMethod = parsePaymentMethod(payload?.paymentMethod);
+  const dayOfMonth = parseDayOfMonth(payload?.dayOfMonth);
+  const notes = String(payload?.notes ?? "").trim();
+  const currencyCode = resolveCurrencyCode(
+    payload?.currencyCode || currentUser?.incomeCurrencyCode || "USD",
+  );
+  const startDate = String(payload?.startDate ?? "").trim();
+  const endDate = String(payload?.endDate ?? "").trim();
+  const isActive = parseBoolean(payload?.isActive, true);
+  const autoCreate = parseBoolean(payload?.autoCreate, true);
+
+  if (!title) {
+    throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
+  }
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
+  }
+
+  if (!category) {
+    throw new HttpError(400, "VALIDATION_ERROR", "category is required.");
+  }
+
+  if (!paymentMethod) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "paymentMethod must be 'cash' or 'card'.",
+    );
+  }
+
+  if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "dayOfMonth must be between 1 and 28.",
+    );
+  }
+
+  if (!validateIsoDate(startDate)) {
+    throw new HttpError(400, "VALIDATION_ERROR", "startDate must use YYYY-MM-DD.");
+  }
+
+  if (endDate && !validateIsoDate(endDate)) {
+    throw new HttpError(400, "VALIDATION_ERROR", "endDate must use YYYY-MM-DD.");
+  }
+
+  if (endDate && endDate < startDate) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "endDate must be on or after startDate.",
+    );
+  }
+
+  return {
+    title,
+    amount,
+    category,
+    paymentMethod,
+    dayOfMonth,
+    notes,
+    currencyCode,
+    startDate: new Date(`${startDate}T00:00:00.000Z`),
+    endDate: endDate ? new Date(`${endDate}T00:00:00.000Z`) : null,
+    isActive,
+    autoCreate,
+  };
+}
+
+function normalizeHouseholdRulePayload(payload, currentUser) {
+  const title = String(payload?.title ?? "").trim();
+  const details = String(payload?.details ?? "").trim();
+  const thresholdAmount = parseMoney(payload?.thresholdAmount);
+  const currencyCode =
+    thresholdAmount !== null
+      ? resolveCurrencyCode(payload?.currencyCode || currentUser?.incomeCurrencyCode || "USD")
+      : null;
+  const isActive = parseBoolean(payload?.isActive, true);
+
+  if (!title) {
+    throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
+  }
+
+  if (!details) {
+    throw new HttpError(400, "VALIDATION_ERROR", "details is required.");
+  }
+
+  if (thresholdAmount !== null && thresholdAmount <= 0) {
+    throw new HttpError(
+      400,
+      "VALIDATION_ERROR",
+      "thresholdAmount must be greater than zero when provided.",
+    );
+  }
+
+  return {
+    title,
+    details,
+    thresholdAmount,
+    currencyCode,
+    isActive,
+  };
+}
+
+function getMonthSpan(startIsoDate, endIsoDate) {
+  const months = [];
+  const startYear = Number(startIsoDate.slice(0, 4));
+  const startMonth = Number(startIsoDate.slice(5, 7));
+  const endYear = Number(endIsoDate.slice(0, 4));
+  const endMonth = Number(endIsoDate.slice(5, 7));
+
+  let year = startYear;
+  let month = startMonth;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    months.push({ year, month });
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+
+  return months;
+}
+
+function buildOccurrenceDate(year, month, dayOfMonth) {
+  const day = String(Math.max(1, Math.min(28, Number(dayOfMonth) || 1))).padStart(2, "0");
+  return `${year}-${String(month).padStart(2, "0")}-${day}`;
+}
+
+function computeNextRecurringDate({ recurringBill, todayIsoDate }) {
+  const today = todayIsoDate ?? new Date().toISOString().slice(0, 10);
+  const [todayYear, todayMonth] = today.split("-").map(Number);
+  const billStart = recurringBill.startDate;
+
+  const candidates = [
+    buildOccurrenceDate(todayYear, todayMonth, recurringBill.dayOfMonth),
+    todayMonth === 12
+      ? buildOccurrenceDate(todayYear + 1, 1, recurringBill.dayOfMonth)
+      : buildOccurrenceDate(todayYear, todayMonth + 1, recurringBill.dayOfMonth),
+  ];
+
+  return (
+    candidates.find((candidate) => {
+      if (candidate < billStart) {
+        return false;
+      }
+
+      if (recurringBill.endDate && candidate > recurringBill.endDate) {
+        return false;
+      }
+
+      return candidate >= today;
+    }) ?? null
+  );
+}
+
+async function materializeRecurringBills({
+  budgetRepository,
+  exchangeRateService,
+  couple,
+  throughDate,
+}) {
+  if (!couple) {
+    return [];
+  }
+
+  const bills = await budgetRepository.listRecurringBillsForCouple(couple.id);
+  const createdTransactions = [];
+  const todayIsoDate = new Date().toISOString().slice(0, 10);
+  const effectiveThroughDate = throughDate || todayIsoDate;
+
+  for (const recurringBill of bills) {
+    if (!recurringBill.isActive || !recurringBill.autoCreate) {
+      continue;
+    }
+
+    const startIsoDate = recurringBill.startDate;
+    const endIsoDate = recurringBill.endDate && recurringBill.endDate < effectiveThroughDate
+      ? recurringBill.endDate
+      : effectiveThroughDate;
+
+    if (!startIsoDate || startIsoDate > endIsoDate) {
+      continue;
+    }
+
+    const monthSpan = getMonthSpan(startIsoDate, endIsoDate);
+    for (const monthPart of monthSpan) {
+      const occurrenceDate = buildOccurrenceDate(
+        monthPart.year,
+        monthPart.month,
+        recurringBill.dayOfMonth,
+      );
+
+      if (occurrenceDate < startIsoDate || occurrenceDate > endIsoDate) {
+        continue;
+      }
+
+      const existing = await budgetRepository.getMaterializedRecurringBillTransaction({
+        recurringBillId: recurringBill.id,
+        userId: recurringBill.userId,
+        date: occurrenceDate,
+      });
+
+      if (existing) {
+        continue;
+      }
+
+      const exchangeSnapshot = await buildMmkTransactionSnapshot({
+        exchangeRateService,
+        coupleId: couple.id,
+        amount: recurringBill.amount,
+        sourceCurrencyCode: recurringBill.currencyCode,
+        targetCurrencyCode: recurringBill.currencyCode,
+        transactionDate: occurrenceDate,
+      });
+
+      const transaction = await budgetRepository.addTransaction({
+        userId: recurringBill.userId,
+        recurringBillId: recurringBill.id,
+        autoCreated: true,
+        amount: recurringBill.amount,
+        currencyCode: recurringBill.currencyCode,
+        description: recurringBill.title,
+        category: recurringBill.category,
+        type: "recurring",
+        paymentMethod: recurringBill.paymentMethod,
+        date: occurrenceDate,
+        ...exchangeSnapshot,
+      });
+
+      createdTransactions.push(transaction);
+    }
+  }
+
+  return createdTransactions;
+}
+
+function buildSetupChecklist({
+  currentUser,
+  partnerUser,
+  coachProfile,
+  recurringBills,
+  goals,
+}) {
+  return [
+    {
+      key: "partner",
+      title: "Link your partner",
+      description: "Connect both accounts so the app can act like one shared household.",
+      completed: Boolean(partnerUser),
+      route: "settings",
+    },
+    {
+      key: "income",
+      title: "Set both income profiles",
+      description: "Make sure income, split, and income day are saved for both partners.",
+      completed: Boolean(
+        currentUser?.monthlySalary > 0 &&
+          partnerUser?.monthlySalary > 0 &&
+          currentUser?.incomeDayOfMonth &&
+          partnerUser?.incomeDayOfMonth,
+      ),
+      route: "settings",
+    },
+    {
+      key: "bills",
+      title: "Add your recurring bills",
+      description: "Rent, subscriptions, and utilities should auto-fill each month.",
+      completed: recurringBills.length > 0,
+      route: "planner",
+    },
+    {
+      key: "goals",
+      title: "Create your first savings goal",
+      description: "Give the coach and planner something concrete to aim toward.",
+      completed: goals.length > 0,
+      route: "savings",
+    },
+    {
+      key: "coach",
+      title: "Finish the couples coach questionnaire",
+      description: "Tell Honey Budget where you want help and where tension usually starts.",
+      completed: Boolean(coachProfile?.completed),
+      route: "coach",
+    },
+  ];
+}
+
+function buildGoalMilestones(goal) {
+  const progressPct = Number(goal.progressPct ?? 0);
+  const milestones = [25, 50, 75, 100].map((milestone) => ({
+    value: milestone,
+    reached: progressPct >= milestone,
+  }));
+
+  const nextMilestone = milestones.find((milestone) => !milestone.reached) ?? null;
+  return {
+    milestones,
+    nextMilestone: nextMilestone?.value ?? null,
+  };
+}
+
+function buildSuggestedMonthlyContribution(goal) {
+  if (!goal?.targetDate || !Number.isFinite(Number(goal.remainingAmount))) {
+    return 0;
+  }
+
+  const today = new Date();
+  const targetDate = new Date(`${goal.targetDate}T00:00:00.000Z`);
+  const monthDiff =
+    (targetDate.getUTCFullYear() - today.getUTCFullYear()) * 12 +
+    (targetDate.getUTCMonth() - today.getUTCMonth()) +
+    1;
+  const remainingMonths = Math.max(1, monthDiff);
+  return roundCurrency(Number(goal.remainingAmount) / remainingMonths);
+}
+
+function buildRecurringBillStatus({ recurringBill, summary, converter }) {
+  const nextDueDate = computeNextRecurringDate({
+    recurringBill,
+    todayIsoDate: new Date().toISOString().slice(0, 10),
+  });
+  const displayAmount = roundCurrency(
+    converter.convert(recurringBill.amount ?? 0, recurringBill.currencyCode),
+  );
+  const dueSoon =
+    nextDueDate &&
+    Math.floor(
+      (new Date(`${nextDueDate}T00:00:00.000Z`).getTime() - Date.now()) /
+        (24 * 60 * 60 * 1000),
+    ) <= 7;
+
+  return {
+    ...recurringBill,
+    nextDueDate,
+    dueSoon: Boolean(dueSoon),
+    displayAmount,
+    displayCurrencyCode: converter.displayCurrencyCode,
+    warning:
+      summary.remainingBudget < displayAmount
+        ? "This bill is larger than the budget currently left in this window."
+        : null,
+  };
+}
+
+function buildConflictRiskAreas({ summary, dashboard, recurringBills, rules }) {
+  const risks = [];
+
+  if (Number(summary?.remainingPct ?? 0) < 35) {
+    risks.push({
+      key: "remaining-tight",
+      title: "Remaining budget is getting tight",
+      body: `Only ${summary.remainingPct}% of this budget window is left, so small spending choices are more likely to create stress right now.`,
+      tone: "amber",
+    });
+  }
+
+  if (Number(dashboard?.summary?.cashSharePct ?? 0) >= 45) {
+    risks.push({
+      key: "cash-visibility",
+      title: "A lot of spending is happening in cash",
+      body: "Cash-heavy months are harder for both partners to review in real time, which can make the budget feel less shared.",
+      tone: "sky",
+    });
+  }
+
+  if ((recurringBills ?? []).some((bill) => bill.warning)) {
+    risks.push({
+      key: "upcoming-bill-pressure",
+      title: "An upcoming bill is larger than the remaining buffer",
+      body: "Check the next due bills together so neither of you gets surprised by a big auto-created expense landing late in the month.",
+      tone: "rose",
+    });
+  }
+
+  if (!(rules ?? []).length) {
+    risks.push({
+      key: "missing-rules",
+      title: "You still do not have shared spending rules",
+      body: "A simple rule like a check-in threshold or a weekly dining cap reduces friction before it starts.",
+      tone: "mint",
+    });
+  }
+
+  return risks.slice(0, 4);
+}
+
+function buildTalkPrompts({ recurringBills, rules, coachProfile, summary }) {
+  const prompts = [];
+  const nextBill = recurringBills.find((bill) => bill.nextDueDate);
+
+  if (nextBill) {
+    prompts.push(
+      `Check who is covering ${nextBill.title} on ${nextBill.nextDueDate} so it does not feel like a surprise.`,
+    );
+  }
+
+  if (!(rules ?? []).length) {
+    prompts.push(
+      "Agree on one money rule this week, like checking in before anything over a set amount.",
+    );
+  }
+
+  if (coachProfile?.conflictTrigger) {
+    prompts.push(
+      `Your coach setup says tension starts around "${coachProfile.conflictTrigger}". Use that as the first thing to talk through when the budget feels tight.`,
+    );
+  }
+
+  if (Number(summary?.comfortableDailySpend ?? 0) > 0) {
+    prompts.push(
+      `If you want the month to feel calmer, try treating ${summary.comfortableDailySpend} per day as the shared flex-spend ceiling until the next income date.`,
+    );
+  }
+
+  return prompts.slice(0, 4);
+}
+
+async function buildPlannerData({
+  budgetRepository,
+  exchangeRateService,
+  currentUser,
+  partnerUser,
+  coachProfile,
+  displayCurrency = null,
+}) {
+  const couple = await budgetRepository.getCoupleForUser(currentUser.id);
+
+  if (!couple || !partnerUser) {
+    throw new HttpError(
+      404,
+      "COUPLE_NOT_FOUND",
+      "Link both partners before opening the planner.",
+    );
+  }
+
+  await materializeRecurringBills({
+    budgetRepository,
+    exchangeRateService,
+    couple,
+    throughDate: new Date().toISOString().slice(0, 10),
+  });
+
+  const [summary, dashboard, recurringBills, rules, goals] = await Promise.all([
+    buildMonthlySummary({
+      budgetRepository,
+      exchangeRateService,
+      currentUser,
+      partnerUser,
+      displayCurrency,
+    }),
+    buildBudgetSnapshot({
+      budgetRepository,
+      exchangeRateService,
+      coupleId: couple.id,
+      displayCurrency,
+      days: 30,
+    }),
+    budgetRepository.listRecurringBillsForCouple(couple.id),
+    budgetRepository.listHouseholdRulesForCouple(couple.id),
+    budgetRepository.listSavingsGoalsForCouple(couple.id),
+  ]);
+
+  const converter = await createCurrencyConverter({
+    exchangeRateService,
+    displayCurrency: summary.displayCurrencyCode,
+    coupleId: couple.id,
+    date: summary.period.from,
+    sourceCurrencies: recurringBills.map((bill) => bill.currencyCode),
+  });
+
+  const recurringBillStatuses = recurringBills.map((bill) =>
+    buildRecurringBillStatus({
+      recurringBill: bill,
+      summary,
+      converter,
+    }),
+  );
+  const upcomingBills = recurringBillStatuses
+    .filter((bill) => bill.nextDueDate)
+    .sort((left, right) => left.nextDueDate.localeCompare(right.nextDueDate))
+    .slice(0, 8);
+  const setupChecklist = buildSetupChecklist({
+    currentUser,
+    partnerUser,
+    coachProfile,
+    recurringBills,
+    goals,
+  });
+
+  return {
+    displayCurrencyCode: summary.displayCurrencyCode,
+    setupChecklist,
+    recurringBills: recurringBillStatuses,
+    upcomingBills,
+    householdRules: rules,
+    pushReadiness: {
+      enabled: false,
+      body: "Push-notification groundwork is now in place, but device registration and native delivery still need the Capacitor push step next.",
+    },
+    conflictCenter: {
+      upcomingBills: upcomingBills.slice(0, 5),
+      sharedRules: rules.filter((rule) => rule.isActive),
+      riskAreas: buildConflictRiskAreas({
+        summary,
+        dashboard,
+        recurringBills: recurringBillStatuses,
+        rules,
+      }),
+      prompts: buildTalkPrompts({
+        recurringBills: recurringBillStatuses,
+        rules,
+        coachProfile,
+        summary,
+      }),
+    },
+  };
+}
+
 function normalizeTransactionPayload(payload) {
   const {
     amount,
@@ -888,16 +1434,24 @@ async function buildSavingsSummary({
         (sum, entry) => sum + converter.convert(entry.amount ?? 0, entry.currencyCode),
         0,
       );
+    const progressPct =
+      convertedTargetAmount > 0
+        ? Number(Math.min(100, (totalSavedForGoal / convertedTargetAmount) * 100).toFixed(1))
+        : 0;
+    const remainingAmount = Math.max(0, roundCurrency(convertedTargetAmount - totalSavedForGoal));
+    const milestoneData = buildGoalMilestones({ progressPct });
 
     return {
       ...goal,
       targetAmount: convertedTargetAmount,
       totalSaved: roundCurrency(totalSavedForGoal),
-      remainingAmount: Math.max(0, roundCurrency(convertedTargetAmount - totalSavedForGoal)),
-      progressPct:
-        convertedTargetAmount > 0
-          ? Number(Math.min(100, (totalSavedForGoal / convertedTargetAmount) * 100).toFixed(1))
-          : 0,
+      remainingAmount,
+      progressPct,
+      suggestedMonthlyContribution: buildSuggestedMonthlyContribution({
+        ...goal,
+        remainingAmount,
+      }),
+      ...milestoneData,
     };
   });
 
@@ -1452,15 +2006,29 @@ function createApp({
       const coachProfile = couple
         ? await budgetRepository.getCoupleCoachProfile(couple.id)
         : null;
+      const partnerUser = couple ? getPartner(couple, request.user.id) : null;
       const [inviteNotifications, activityNotifications] = await Promise.all([
         budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
         budgetRepository.listActivityNotificationsForUser(request.user.id),
       ]);
+      const [recurringBills, goals] = couple
+        ? await Promise.all([
+            budgetRepository.listRecurringBillsForCouple(couple.id),
+            budgetRepository.listSavingsGoalsForCouple(couple.id),
+          ])
+        : [[], []];
 
       sendData(response, 200, {
         user: sanitizeUser(request.user),
         couple,
         coachProfile,
+        setupChecklist: buildSetupChecklist({
+          currentUser: request.user,
+          partnerUser,
+          coachProfile,
+          recurringBills,
+          goals,
+        }),
         notifications: {
           ...inviteNotifications,
           activity: activityNotifications,
@@ -1711,6 +2279,13 @@ function createApp({
         );
       }
 
+      await materializeRecurringBills({
+        budgetRepository,
+        exchangeRateService: resolvedExchangeRateService,
+        couple,
+        throughDate: new Date().toISOString().slice(0, 10),
+      });
+
       const snapshot = await buildBudgetSnapshot({
         budgetRepository,
         exchangeRateService: resolvedExchangeRateService,
@@ -1734,9 +2309,17 @@ function createApp({
     asyncHandler(async (request, response) => {
       const month = request.query.month?.trim();
       const displayCurrency = request.query.displayCurrency?.trim();
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const partnerUser = await resolvePartnerUser({
         budgetRepository,
         user: request.user,
+      });
+
+      await materializeRecurringBills({
+        budgetRepository,
+        exchangeRateService: resolvedExchangeRateService,
+        couple,
+        throughDate: new Date().toISOString().slice(0, 10),
       });
 
       const summary = await buildMonthlySummary({
@@ -1961,6 +2544,13 @@ function createApp({
         throw new HttpError(400, "VALIDATION_ERROR", "month must use YYYY-MM.");
       }
 
+      await materializeRecurringBills({
+        budgetRepository,
+        exchangeRateService: resolvedExchangeRateService,
+        couple,
+        throughDate: new Date().toISOString().slice(0, 10),
+      });
+
       const monthWindow = month ? getCalendarMonthWindow(month) : null;
       const transactions = await budgetRepository.listCoupleTransactions({
         coupleId: couple.id,
@@ -2007,6 +2597,12 @@ function createApp({
           user: request.user,
         });
         const couple = await budgetRepository.getCoupleForUser(request.user.id);
+        await materializeRecurringBills({
+          budgetRepository,
+          exchangeRateService: resolvedExchangeRateService,
+          couple,
+          throughDate: new Date().toISOString().slice(0, 10),
+        });
         coachProfile = couple
           ? await budgetRepository.getCoupleCoachProfile(couple.id)
           : null;
@@ -2284,6 +2880,274 @@ function createApp({
       });
 
       sendData(response, 201, { entry });
+    }),
+  );
+
+  app.get(
+    "/api/recurring-bills",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before opening recurring bills.",
+        );
+      }
+
+      const bills = await budgetRepository.listRecurringBillsForCouple(couple.id);
+      sendData(response, 200, { bills });
+    }),
+  );
+
+  app.post(
+    "/api/recurring-bills",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before adding recurring bills.",
+        );
+      }
+
+      const payload = normalizeRecurringBillPayload(request.body, request.user);
+      const bill = await budgetRepository.createRecurringBill({
+        coupleId: couple.id,
+        userId: request.user.id,
+        ...payload,
+      });
+
+      sendData(response, 201, { bill });
+    }),
+  );
+
+  app.patch(
+    "/api/recurring-bills/:billId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const recurringBillId = Number.parseInt(request.params.billId, 10);
+
+      if (!Number.isInteger(recurringBillId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "billId must be an integer.");
+      }
+
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before editing recurring bills.",
+        );
+      }
+
+      const payload = normalizeRecurringBillPayload(request.body, request.user);
+      const bill = await budgetRepository.updateRecurringBill({
+        recurringBillId,
+        coupleId: couple.id,
+        ...payload,
+      });
+
+      sendData(response, 200, { bill });
+    }),
+  );
+
+  app.delete(
+    "/api/recurring-bills/:billId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const recurringBillId = Number.parseInt(request.params.billId, 10);
+
+      if (!Number.isInteger(recurringBillId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "billId must be an integer.");
+      }
+
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before deleting recurring bills.",
+        );
+      }
+
+      const bill = await budgetRepository.deleteRecurringBill({
+        recurringBillId,
+        coupleId: couple.id,
+      });
+
+      sendData(response, 200, { bill });
+    }),
+  );
+
+  app.get(
+    "/api/household-rules",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before opening household rules.",
+        );
+      }
+
+      const rules = await budgetRepository.listHouseholdRulesForCouple(couple.id);
+      sendData(response, 200, { rules });
+    }),
+  );
+
+  app.post(
+    "/api/household-rules",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before adding household rules.",
+        );
+      }
+
+      const payload = normalizeHouseholdRulePayload(request.body, request.user);
+      const rule = await budgetRepository.createHouseholdRule({
+        coupleId: couple.id,
+        ...payload,
+      });
+
+      sendData(response, 201, { rule });
+    }),
+  );
+
+  app.patch(
+    "/api/household-rules/:ruleId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const ruleId = Number.parseInt(request.params.ruleId, 10);
+
+      if (!Number.isInteger(ruleId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "ruleId must be an integer.");
+      }
+
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before editing household rules.",
+        );
+      }
+
+      const payload = normalizeHouseholdRulePayload(request.body, request.user);
+      const rule = await budgetRepository.updateHouseholdRule({
+        ruleId,
+        coupleId: couple.id,
+        ...payload,
+      });
+
+      sendData(response, 200, { rule });
+    }),
+  );
+
+  app.delete(
+    "/api/household-rules/:ruleId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const ruleId = Number.parseInt(request.params.ruleId, 10);
+
+      if (!Number.isInteger(ruleId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "ruleId must be an integer.");
+      }
+
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Link both partners before deleting household rules.",
+        );
+      }
+
+      const rule = await budgetRepository.deleteHouseholdRule({
+        ruleId,
+        coupleId: couple.id,
+      });
+
+      sendData(response, 200, { rule });
+    }),
+  );
+
+  app.get(
+    "/api/push-devices",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const devices = await budgetRepository.listPushDevicesForUser(request.user.id);
+      sendData(response, 200, { devices });
+    }),
+  );
+
+  app.post(
+    "/api/push-devices",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const platform = String(request.body?.platform ?? "").trim().toLowerCase();
+      const token = String(request.body?.token ?? "").trim();
+      const enabled = parseBoolean(request.body?.enabled, true);
+
+      if (!platform) {
+        throw new HttpError(400, "VALIDATION_ERROR", "platform is required.");
+      }
+
+      if (!token) {
+        throw new HttpError(400, "VALIDATION_ERROR", "token is required.");
+      }
+
+      const device = await budgetRepository.registerPushDevice({
+        userId: request.user.id,
+        platform,
+        token,
+        enabled,
+      });
+
+      sendData(response, 201, { device });
+    }),
+  );
+
+  app.get(
+    "/api/planner",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const partnerUser = await resolvePartnerUser({
+        budgetRepository,
+        user: request.user,
+      });
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      const coachProfile = couple
+        ? await budgetRepository.getCoupleCoachProfile(couple.id)
+        : null;
+      const planner = await buildPlannerData({
+        budgetRepository,
+        exchangeRateService: resolvedExchangeRateService,
+        currentUser: request.user,
+        partnerUser,
+        coachProfile,
+        displayCurrency: request.query.displayCurrency?.trim(),
+      });
+
+      sendData(response, 200, planner);
     }),
   );
 

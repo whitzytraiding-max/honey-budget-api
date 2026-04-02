@@ -69,6 +69,8 @@ function mapTransaction(transaction) {
   return {
     id: transaction.id,
     userId: transaction.userId,
+    recurringBillId: transaction.recurringBillId ?? null,
+    autoCreated: Boolean(transaction.autoCreated),
     userName: transaction.user?.name,
     amount: toNumber(transaction.amount),
     currencyCode: transaction.currencyCode ?? "USD",
@@ -94,6 +96,70 @@ function mapTransaction(transaction) {
     paymentMethod: transaction.paymentMethod,
     date: transaction.date.toISOString().slice(0, 10),
     createdAt: transaction.createdAt?.toISOString?.() ?? transaction.createdAt,
+  };
+}
+
+function mapRecurringBill(bill) {
+  if (!bill) {
+    return null;
+  }
+
+  return {
+    id: bill.id,
+    coupleId: bill.coupleId,
+    userId: bill.userId,
+    userName: bill.user?.name ?? null,
+    title: bill.title,
+    amount: toNumber(bill.amount),
+    currencyCode: bill.currencyCode ?? "USD",
+    category: bill.category,
+    paymentMethod: bill.paymentMethod,
+    dayOfMonth: Number(bill.dayOfMonth),
+    notes: bill.notes ?? "",
+    isActive: Boolean(bill.isActive),
+    autoCreate: Boolean(bill.autoCreate),
+    startDate: bill.startDate?.toISOString?.().slice(0, 10) ?? bill.startDate,
+    endDate: bill.endDate?.toISOString?.().slice(0, 10) ?? bill.endDate ?? null,
+    createdAt: bill.createdAt?.toISOString?.() ?? bill.createdAt,
+    updatedAt: bill.updatedAt?.toISOString?.() ?? bill.updatedAt,
+  };
+}
+
+function mapHouseholdRule(rule) {
+  if (!rule) {
+    return null;
+  }
+
+  return {
+    id: rule.id,
+    coupleId: rule.coupleId,
+    title: rule.title,
+    details: rule.details,
+    thresholdAmount:
+      rule.thresholdAmount !== undefined && rule.thresholdAmount !== null
+        ? toNumber(rule.thresholdAmount)
+        : null,
+    currencyCode: rule.currencyCode ?? null,
+    isActive: Boolean(rule.isActive),
+    createdAt: rule.createdAt?.toISOString?.() ?? rule.createdAt,
+    updatedAt: rule.updatedAt?.toISOString?.() ?? rule.updatedAt,
+  };
+}
+
+function mapPushDevice(device) {
+  if (!device) {
+    return null;
+  }
+
+  return {
+    id: device.id,
+    userId: device.userId,
+    platform: device.platform,
+    token: device.token,
+    enabled: Boolean(device.enabled),
+    createdAt: device.createdAt?.toISOString?.() ?? device.createdAt,
+    updatedAt: device.updatedAt?.toISOString?.() ?? device.updatedAt,
+    lastSeenAt: device.lastSeenAt?.toISOString?.() ?? device.lastSeenAt,
   };
 }
 
@@ -782,6 +848,8 @@ function createPrismaBudgetRepository({ prisma }) {
 
     async addTransaction({
       userId,
+      recurringBillId = null,
+      autoCreated = false,
       amount,
       currencyCode = "USD",
       convertedAmount = null,
@@ -799,6 +867,8 @@ function createPrismaBudgetRepository({ prisma }) {
       const transaction = await prisma.transaction.create({
         data: {
           userId,
+          recurringBillId,
+          autoCreated,
           amount,
           currencyCode,
           convertedAmount,
@@ -828,6 +898,8 @@ function createPrismaBudgetRepository({ prisma }) {
     async updateUserTransaction({
       transactionId,
       userId,
+      recurringBillId = null,
+      autoCreated = false,
       amount,
       currencyCode = "USD",
       convertedAmount = null,
@@ -865,6 +937,8 @@ function createPrismaBudgetRepository({ prisma }) {
           id: transactionId,
         },
         data: {
+          recurringBillId,
+          autoCreated,
           amount,
           currencyCode,
           convertedAmount,
@@ -1006,6 +1080,314 @@ function createPrismaBudgetRepository({ prisma }) {
       });
 
       return sortTransactions(transactions);
+    },
+
+    async listRecurringBillsForCouple(coupleId) {
+      const bills = await prisma.recurringBill.findMany({
+        where: {
+          coupleId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [{ dayOfMonth: "asc" }, { createdAt: "asc" }],
+      });
+
+      return bills.map(mapRecurringBill);
+    },
+
+    async getRecurringBillForCouple({ recurringBillId, coupleId }) {
+      const bill = await prisma.recurringBill.findFirst({
+        where: {
+          id: recurringBillId,
+          coupleId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return mapRecurringBill(bill);
+    },
+
+    async createRecurringBill({
+      coupleId,
+      userId,
+      title,
+      amount,
+      currencyCode = "USD",
+      category,
+      paymentMethod,
+      dayOfMonth,
+      notes = "",
+      isActive = true,
+      autoCreate = true,
+      startDate,
+      endDate = null,
+    }) {
+      const bill = await prisma.recurringBill.create({
+        data: {
+          coupleId,
+          userId,
+          title,
+          amount,
+          currencyCode,
+          category,
+          paymentMethod,
+          dayOfMonth,
+          notes,
+          isActive,
+          autoCreate,
+          startDate,
+          endDate,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return mapRecurringBill(bill);
+    },
+
+    async updateRecurringBill({
+      recurringBillId,
+      coupleId,
+      title,
+      amount,
+      currencyCode = "USD",
+      category,
+      paymentMethod,
+      dayOfMonth,
+      notes = "",
+      isActive = true,
+      autoCreate = true,
+      startDate,
+      endDate = null,
+    }) {
+      const existing = await prisma.recurringBill.findFirst({
+        where: {
+          id: recurringBillId,
+          coupleId,
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "RECURRING_BILL_NOT_FOUND", "Recurring bill not found.");
+      }
+
+      const bill = await prisma.recurringBill.update({
+        where: {
+          id: recurringBillId,
+        },
+        data: {
+          title,
+          amount,
+          currencyCode,
+          category,
+          paymentMethod,
+          dayOfMonth,
+          notes,
+          isActive,
+          autoCreate,
+          startDate,
+          endDate,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return mapRecurringBill(bill);
+    },
+
+    async deleteRecurringBill({ recurringBillId, coupleId }) {
+      const existing = await prisma.recurringBill.findFirst({
+        where: {
+          id: recurringBillId,
+          coupleId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "RECURRING_BILL_NOT_FOUND", "Recurring bill not found.");
+      }
+
+      await prisma.recurringBill.delete({
+        where: {
+          id: recurringBillId,
+        },
+      });
+
+      return mapRecurringBill(existing);
+    },
+
+    async getMaterializedRecurringBillTransaction({
+      recurringBillId,
+      userId,
+      date,
+    }) {
+      const transaction = await prisma.transaction.findFirst({
+        where: {
+          recurringBillId,
+          userId,
+          date: new Date(`${date}T00:00:00.000Z`),
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      });
+
+      return transaction ? mapTransaction(transaction) : null;
+    },
+
+    async listHouseholdRulesForCouple(coupleId) {
+      const rules = await prisma.householdRule.findMany({
+        where: {
+          coupleId,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return rules.map(mapHouseholdRule);
+    },
+
+    async createHouseholdRule({
+      coupleId,
+      title,
+      details,
+      thresholdAmount = null,
+      currencyCode = null,
+      isActive = true,
+    }) {
+      const rule = await prisma.householdRule.create({
+        data: {
+          coupleId,
+          title,
+          details,
+          thresholdAmount,
+          currencyCode,
+          isActive,
+        },
+      });
+
+      return mapHouseholdRule(rule);
+    },
+
+    async updateHouseholdRule({
+      ruleId,
+      coupleId,
+      title,
+      details,
+      thresholdAmount = null,
+      currencyCode = null,
+      isActive = true,
+    }) {
+      const existing = await prisma.householdRule.findFirst({
+        where: {
+          id: ruleId,
+          coupleId,
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "HOUSEHOLD_RULE_NOT_FOUND", "Household rule not found.");
+      }
+
+      const rule = await prisma.householdRule.update({
+        where: {
+          id: ruleId,
+        },
+        data: {
+          title,
+          details,
+          thresholdAmount,
+          currencyCode,
+          isActive,
+        },
+      });
+
+      return mapHouseholdRule(rule);
+    },
+
+    async deleteHouseholdRule({ ruleId, coupleId }) {
+      const existing = await prisma.householdRule.findFirst({
+        where: {
+          id: ruleId,
+          coupleId,
+        },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "HOUSEHOLD_RULE_NOT_FOUND", "Household rule not found.");
+      }
+
+      const rule = await prisma.householdRule.delete({
+        where: {
+          id: ruleId,
+        },
+      });
+
+      return mapHouseholdRule(rule);
+    },
+
+    async registerPushDevice({ userId, platform, token, enabled = true }) {
+      const device = await prisma.pushDevice.upsert({
+        where: {
+          token,
+        },
+        update: {
+          userId,
+          platform,
+          enabled,
+          lastSeenAt: new Date(),
+        },
+        create: {
+          userId,
+          platform,
+          token,
+          enabled,
+        },
+      });
+
+      return mapPushDevice(device);
+    },
+
+    async listPushDevicesForUser(userId) {
+      const devices = await prisma.pushDevice.findMany({
+        where: {
+          userId,
+        },
+        orderBy: [{ createdAt: "desc" }],
+      });
+
+      return devices.map(mapPushDevice);
     },
 
     async listTransactionsForUserIds({ userIds, days = 30, fromDate, toDate }) {

@@ -162,6 +162,14 @@ function SavingsPage({
                           {currency(goal.totalSaved)} {t("savings.of")} {currency(goal.targetAmount)}
                           {goal.targetDate ? ` · ${goal.targetDate}` : ""}
                         </p>
+                        {goal.suggestedMonthlyContribution ? (
+                          <p className="mt-2 text-sm text-slate-600">
+                            Suggested monthly contribution:{" "}
+                            <span className="font-semibold text-slate-900">
+                              {currency(goal.suggestedMonthlyContribution)}
+                            </span>
+                          </p>
+                        ) : null}
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -198,6 +206,22 @@ function SavingsPage({
                         {t("savings.remainingToGoal")}: {currency(goal.remainingAmount)}
                       </span>
                     </div>
+                    {goal.milestones?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {goal.milestones.map((milestone) => (
+                          <span
+                            key={milestone.value}
+                            className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                              milestone.reached
+                                ? "bg-emerald-100 text-emerald-700"
+                                : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {milestone.value}%{goal.nextMilestone === milestone.value ? " next" : ""}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
                   </article>
                 ))
               ) : (

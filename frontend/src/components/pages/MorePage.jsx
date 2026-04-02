@@ -1,7 +1,19 @@
-import { Bell, Brain, CalendarDays, ChevronRight, ClipboardList, Settings2, Sparkles } from "lucide-react";
+import {
+  Bell,
+  Brain,
+  CalendarDays,
+  ChevronRight,
+  ClipboardList,
+  ListTodo,
+  Settings2,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 
 const MORE_ITEMS = [
+  { key: "setup", icon: ListTodo },
+  { key: "planner", icon: ShieldCheck },
   { key: "coach", icon: Sparkles },
   { key: "notifications", icon: Bell },
   { key: "calendar", icon: CalendarDays },
@@ -10,7 +22,7 @@ const MORE_ITEMS = [
   { key: "settings", icon: Settings2 },
 ];
 
-function MorePage({ onNavigate, showNotifications, showCoach }) {
+function MorePage({ onNavigate, showNotifications, showCoach, showPlanner, showSetup }) {
   const { t } = useLanguage();
   const items = MORE_ITEMS.filter((item) => {
     if (item.key === "notifications" && !showNotifications) {
@@ -18,6 +30,14 @@ function MorePage({ onNavigate, showNotifications, showCoach }) {
     }
 
     if (item.key === "coach" && !showCoach) {
+      return false;
+    }
+
+    if (item.key === "planner" && !showPlanner) {
+      return false;
+    }
+
+    if (item.key === "setup" && !showSetup) {
       return false;
     }
 

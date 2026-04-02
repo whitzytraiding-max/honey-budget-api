@@ -14,8 +14,10 @@ import HomePage from "./components/pages/HomePage.jsx";
 import InsightsPage from "./components/pages/InsightsPage.jsx";
 import MorePage from "./components/pages/MorePage.jsx";
 import NotificationsPage from "./components/pages/NotificationsPage.jsx";
+import PlannerPage from "./components/pages/PlannerPage.jsx";
 import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
+import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
 import { ActionButton, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
@@ -58,6 +60,8 @@ const APP_ROUTES = new Set([
   "expenses",
   "savings",
   "more",
+  "planner",
+  "setup",
   "coach",
   "notifications",
   "calendar",
@@ -93,6 +97,24 @@ const COACH_PROFILE_FIELDS = {
   conflictTrigger: "",
   coachingFocus: "",
   notes: "",
+};
+const RECURRING_BILL_FIELDS = {
+  title: "",
+  amount: "",
+  currencyCode: "USD",
+  category: "Housing",
+  paymentMethod: "card",
+  dayOfMonth: "1",
+  notes: "",
+  autoCreate: true,
+  startDate: new Date().toISOString().slice(0, 10),
+  endDate: "",
+};
+const HOUSEHOLD_RULE_FIELDS = {
+  title: "",
+  details: "",
+  thresholdAmount: "",
+  currencyCode: "USD",
 };
 const REGISTER_BOOTSTRAP_ERROR =
   "Your account was created, but we couldn't finish signing you in. Please log in once more.";
@@ -206,6 +228,33 @@ function createCoachProfileDraft(profile) {
   };
 }
 
+function createRecurringBillDraft(bill, fallbackCurrency = "USD") {
+  return {
+    title: String(bill?.title ?? ""),
+    amount: String(bill?.amount ?? ""),
+    currencyCode: String(bill?.currencyCode ?? fallbackCurrency),
+    category: String(bill?.category ?? "Housing"),
+    paymentMethod: String(bill?.paymentMethod ?? "card"),
+    dayOfMonth: String(bill?.dayOfMonth ?? 1),
+    notes: String(bill?.notes ?? ""),
+    autoCreate: bill?.autoCreate ?? true,
+    startDate: String(bill?.startDate ?? new Date().toISOString().slice(0, 10)),
+    endDate: String(bill?.endDate ?? ""),
+  };
+}
+
+function createHouseholdRuleDraft(rule, fallbackCurrency = "USD") {
+  return {
+    title: String(rule?.title ?? ""),
+    details: String(rule?.details ?? ""),
+    thresholdAmount:
+      rule?.thresholdAmount === null || rule?.thresholdAmount === undefined
+        ? ""
+        : String(rule.thresholdAmount),
+    currencyCode: String(rule?.currencyCode ?? fallbackCurrency),
+  };
+}
+
 function getInitialTheme() {
   if (typeof window === "undefined") {
     return "system";
@@ -313,6 +362,18 @@ export default function App() {
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
   const [savingsGoalForm, setSavingsGoalForm] = useState(() => createSavingsGoalDraft(null));
   const [editingSavingsGoalId, setEditingSavingsGoalId] = useState(null);
+  const [plannerData, setPlannerData] = useState(null);
+  const [plannerBusy, setPlannerBusy] = useState(false);
+  const [recurringBillForm, setRecurringBillForm] = useState(() =>
+    createRecurringBillDraft(null),
+  );
+  const [editingRecurringBillId, setEditingRecurringBillId] = useState(null);
+  const [recurringBillBusy, setRecurringBillBusy] = useState(false);
+  const [householdRuleForm, setHouseholdRuleForm] = useState(() =>
+    createHouseholdRuleDraft(null),
+  );
+  const [editingHouseholdRuleId, setEditingHouseholdRuleId] = useState(null);
+  const [householdRuleBusy, setHouseholdRuleBusy] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey);
   const [monthSummary, setMonthSummary] = useState(null);
   const [monthTransactions, setMonthTransactions] = useState([]);
@@ -521,6 +582,7 @@ export default function App() {
     setInsightData(null);
     setSummaryData(null);
     setSavingsData(null);
+    setPlannerData(null);
     setCoachProfile(null);
     setCoachProfileForm(createCoachProfileDraft(null));
     setMonthSummary(null);
@@ -531,6 +593,10 @@ export default function App() {
     setMmkRateData(null);
     setMmkRateForm(createDefaultMmkRateForm());
     setRemainingBudget(0);
+    setRecurringBillForm(createRecurringBillDraft(null));
+    setEditingRecurringBillId(null);
+    setHouseholdRuleForm(createHouseholdRuleDraft(null));
+    setEditingHouseholdRuleId(null);
   }
 
   function resetCoupleData() {
@@ -538,6 +604,7 @@ export default function App() {
     setInsightData(null);
     setSummaryData(null);
     setSavingsData(null);
+    setPlannerData(null);
     setCoachProfile(null);
     setCoachProfileForm(createCoachProfileDraft(null));
     setMonthSummary(null);
@@ -545,6 +612,10 @@ export default function App() {
     setMmkRateData(null);
     setMmkRateForm(createDefaultMmkRateForm());
     setRemainingBudget(0);
+    setRecurringBillForm(createRecurringBillDraft(null));
+    setEditingRecurringBillId(null);
+    setHouseholdRuleForm(createHouseholdRuleDraft(null));
+    setEditingHouseholdRuleId(null);
   }
 
   async function fetchHouseholdData() {
@@ -565,6 +636,14 @@ export default function App() {
     setIncomeProfileForm(createIncomeProfileDraft(data.user));
     setCoachProfile(data.coachProfile ?? null);
     setCoachProfileForm(createCoachProfileDraft(data.coachProfile));
+    setPlannerData((current) =>
+      current
+        ? {
+            ...current,
+            setupChecklist: data.setupChecklist ?? current.setupChecklist ?? [],
+          }
+        : current,
+    );
     setBaseCurrencyCode(data.user?.incomeCurrencyCode || "USD");
     setExpenseForm((current) => ({
       ...current,
@@ -577,6 +656,22 @@ export default function App() {
       ...current,
       currencyCode: data.user?.incomeCurrencyCode || "USD",
     }));
+    setRecurringBillForm((current) =>
+      editingRecurringBillId !== null
+        ? current
+        : {
+            ...current,
+            currencyCode: data.user?.incomeCurrencyCode || "USD",
+          },
+    );
+    setHouseholdRuleForm((current) =>
+      editingHouseholdRuleId !== null
+        ? current
+        : {
+            ...current,
+            currencyCode: data.user?.incomeCurrencyCode || "USD",
+          },
+    );
     setNotificationsData(
       data.notifications ?? {
         incoming: [],
@@ -714,6 +809,30 @@ export default function App() {
     }
   }
 
+  async function loadPlanner() {
+    if (!session?.couple) {
+      setPlannerData(null);
+      return;
+    }
+
+    setPlannerBusy(true);
+
+    try {
+      const data = await apiFetch(
+        `/api/planner?displayCurrency=${encodeURIComponent(currencyCode)}`,
+        {
+          headers: authHeaders,
+        },
+      );
+      setPlannerData(data);
+    } catch (error) {
+      setPlannerData(null);
+      setPageError(error.message);
+    } finally {
+      setPlannerBusy(false);
+    }
+  }
+
   async function loadNotifications() {
     setNotificationsBusy(true);
 
@@ -738,6 +857,7 @@ export default function App() {
     includeInsights = Boolean((route === "insights" || insightData) && coachProfile?.completed),
     includeSavings = Boolean(route === "savings" || savingsData),
     includeNotifications = notificationsLoaded,
+    includePlanner = Boolean(route === "planner" || route === "setup" || plannerData),
   } = {}) {
     const refreshTasks = [loadDashboard(), loadSummary()];
 
@@ -755,6 +875,10 @@ export default function App() {
 
     if (includeNotifications) {
       refreshTasks.push(loadNotifications());
+    }
+
+    if (includePlanner) {
+      refreshTasks.push(loadPlanner());
     }
 
     await Promise.all(refreshTasks);
@@ -829,6 +953,17 @@ export default function App() {
         setPageError(error.message);
       });
     }
+
+    if (
+      session?.couple &&
+      (route === "planner" || route === "setup") &&
+      !plannerData &&
+      !plannerBusy
+    ) {
+      loadPlanner().catch((error) => {
+        setPageError(error.message);
+      });
+    }
   }, [
     token,
     route,
@@ -837,6 +972,8 @@ export default function App() {
     insightData,
     insightsBusy,
     savingsData,
+    plannerData,
+    plannerBusy,
     coachProfile?.completed,
     notificationsBusy,
     notificationsLoaded,
@@ -998,6 +1135,23 @@ export default function App() {
     }));
   }
 
+  function updateRecurringBillForm(event) {
+    const { name, type, checked, value } = event.target;
+    setPageError("");
+    setRecurringBillForm((current) => ({
+      ...current,
+      [name]: type === "checkbox" ? checked : value,
+    }));
+  }
+
+  function updateHouseholdRuleForm(event) {
+    setPageError("");
+    setHouseholdRuleForm((current) => ({
+      ...current,
+      [event.target.name]: event.target.value,
+    }));
+  }
+
   function handleEditSavingsGoal(goal) {
     setPageError("");
     setEditingSavingsGoalId(goal.id);
@@ -1007,6 +1161,28 @@ export default function App() {
   function resetSavingsGoalEditor() {
     setEditingSavingsGoalId(null);
     setSavingsGoalForm(createSavingsGoalDraft(null));
+  }
+
+  function resetRecurringBillEditor() {
+    setEditingRecurringBillId(null);
+    setRecurringBillForm(createRecurringBillDraft(null, baseCurrencyCode));
+  }
+
+  function resetHouseholdRuleEditor() {
+    setEditingHouseholdRuleId(null);
+    setHouseholdRuleForm(createHouseholdRuleDraft(null, baseCurrencyCode));
+  }
+
+  function handleEditRecurringBill(bill) {
+    setPageError("");
+    setEditingRecurringBillId(bill.id);
+    setRecurringBillForm(createRecurringBillDraft(bill, baseCurrencyCode));
+  }
+
+  function handleEditHouseholdRule(rule) {
+    setPageError("");
+    setEditingHouseholdRuleId(rule.id);
+    setHouseholdRuleForm(createHouseholdRuleDraft(rule, baseCurrencyCode));
   }
 
   async function handleMmkRateSubmit(event) {
@@ -1280,6 +1456,186 @@ export default function App() {
       setPageError(error.message);
     } finally {
       setExpenseBusy(false);
+    }
+  }
+
+  async function handleRecurringBillSubmit(event) {
+    event.preventDefault();
+    setRecurringBillBusy(true);
+    setPageError("");
+
+    const amount = Number.parseFloat(recurringBillForm.amount);
+    const dayOfMonth = Number.parseInt(recurringBillForm.dayOfMonth, 10);
+
+    if (!recurringBillForm.title.trim()) {
+      setPageError("Enter a recurring bill name.");
+      setRecurringBillBusy(false);
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPageError("Enter a valid recurring bill amount.");
+      setRecurringBillBusy(false);
+      return;
+    }
+
+    if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28) {
+      setPageError("Choose a bill day between 1 and 28.");
+      setRecurringBillBusy(false);
+      return;
+    }
+
+    if (!recurringBillForm.startDate) {
+      setPageError("Pick the bill start date.");
+      setRecurringBillBusy(false);
+      return;
+    }
+
+    try {
+      await apiFetch(
+        editingRecurringBillId
+          ? `/api/recurring-bills/${editingRecurringBillId}`
+          : "/api/recurring-bills",
+        {
+          method: editingRecurringBillId ? "PATCH" : "POST",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...recurringBillForm,
+            title: recurringBillForm.title.trim(),
+            amount,
+            dayOfMonth,
+            notes: recurringBillForm.notes.trim(),
+            endDate: recurringBillForm.endDate || null,
+          }),
+        },
+      );
+
+      resetRecurringBillEditor();
+      await refreshBudgetViews({
+        includeMonth: true,
+        includeNotifications: false,
+        includeInsights: route === "insights",
+      });
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setRecurringBillBusy(false);
+    }
+  }
+
+  async function handleDeleteRecurringBill(bill) {
+    const confirmed = window.confirm(`Delete recurring bill "${bill.title}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setRecurringBillBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch(`/api/recurring-bills/${bill.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (editingRecurringBillId === bill.id) {
+        resetRecurringBillEditor();
+      }
+      await refreshBudgetViews({
+        includeMonth: true,
+        includeNotifications: false,
+        includeInsights: route === "insights",
+      });
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setRecurringBillBusy(false);
+    }
+  }
+
+  async function handleHouseholdRuleSubmit(event) {
+    event.preventDefault();
+    setHouseholdRuleBusy(true);
+    setPageError("");
+
+    const thresholdAmount = householdRuleForm.thresholdAmount
+      ? Number.parseFloat(householdRuleForm.thresholdAmount)
+      : null;
+
+    if (!householdRuleForm.title.trim()) {
+      setPageError("Enter a rule name.");
+      setHouseholdRuleBusy(false);
+      return;
+    }
+
+    if (!householdRuleForm.details.trim()) {
+      setPageError("Add the actual rule so both partners know what it means.");
+      setHouseholdRuleBusy(false);
+      return;
+    }
+
+    if (
+      thresholdAmount !== null &&
+      (!Number.isFinite(thresholdAmount) || thresholdAmount <= 0)
+    ) {
+      setPageError("If you use a threshold, it must be a valid amount.");
+      setHouseholdRuleBusy(false);
+      return;
+    }
+
+    try {
+      await apiFetch(
+        editingHouseholdRuleId
+          ? `/api/household-rules/${editingHouseholdRuleId}`
+          : "/api/household-rules",
+        {
+          method: editingHouseholdRuleId ? "PATCH" : "POST",
+          headers: {
+            ...authHeaders,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title: householdRuleForm.title.trim(),
+            details: householdRuleForm.details.trim(),
+            thresholdAmount,
+            currencyCode: householdRuleForm.currencyCode || baseCurrencyCode,
+          }),
+        },
+      );
+
+      resetHouseholdRuleEditor();
+      await loadPlanner();
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setHouseholdRuleBusy(false);
+    }
+  }
+
+  async function handleDeleteHouseholdRule(rule) {
+    const confirmed = window.confirm(`Delete rule "${rule.title}"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    setHouseholdRuleBusy(true);
+    setPageError("");
+
+    try {
+      await apiFetch(`/api/household-rules/${rule.id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (editingHouseholdRuleId === rule.id) {
+        resetHouseholdRuleEditor();
+      }
+      await loadPlanner();
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setHouseholdRuleBusy(false);
     }
   }
 
@@ -1674,7 +2030,13 @@ export default function App() {
   });
 
   function renderCurrentPage() {
-    if (!couple && route !== "settings" && route !== "more" && route !== "notifications") {
+    if (
+      !couple &&
+      route !== "settings" &&
+      route !== "more" &&
+      route !== "notifications" &&
+      route !== "setup"
+    ) {
       return (
         <EmptyState
           title="Invite your partner to unlock the shared dashboard"
@@ -1750,6 +2112,37 @@ export default function App() {
             completed={Boolean(coachProfile?.completed)}
           />
         );
+      case "setup":
+        return (
+          <SetupFlowPage
+            checklist={plannerData?.setupChecklist ?? session?.setupChecklist ?? []}
+            onNavigate={navigate}
+          />
+        );
+      case "planner":
+        return (
+          <PlannerPage
+            plannerData={plannerData}
+            plannerBusy={plannerBusy}
+            recurringBillForm={recurringBillForm}
+            recurringBillBusy={recurringBillBusy}
+            editingRecurringBillId={editingRecurringBillId}
+            onRecurringBillChange={updateRecurringBillForm}
+            onRecurringBillSubmit={handleRecurringBillSubmit}
+            onEditRecurringBill={handleEditRecurringBill}
+            onDeleteRecurringBill={handleDeleteRecurringBill}
+            onCancelRecurringBillEdit={resetRecurringBillEditor}
+            ruleForm={householdRuleForm}
+            ruleBusy={householdRuleBusy}
+            editingRuleId={editingHouseholdRuleId}
+            onRuleChange={updateHouseholdRuleForm}
+            onRuleSubmit={handleHouseholdRuleSubmit}
+            onEditRule={handleEditHouseholdRule}
+            onDeleteRule={handleDeleteHouseholdRule}
+            onCancelRuleEdit={resetHouseholdRuleEditor}
+            onNavigate={navigate}
+          />
+        );
       case "calendar":
         return (
           <CalendarPage
@@ -1761,7 +2154,15 @@ export default function App() {
           />
         );
       case "more":
-        return <MorePage onNavigate={navigate} showNotifications showCoach={Boolean(couple)} />;
+        return (
+          <MorePage
+            onNavigate={navigate}
+            showNotifications
+            showCoach={Boolean(couple)}
+            showPlanner={Boolean(couple)}
+            showSetup={Boolean(couple)}
+          />
+        );
       case "notifications":
         return (
           <NotificationsPage
@@ -1835,6 +2236,8 @@ export default function App() {
             dashboardBusy={dashboardBusy}
             coachProfile={coachProfile}
             onNavigateToCoach={() => navigate("coach")}
+            setupChecklist={plannerData?.setupChecklist ?? session?.setupChecklist ?? []}
+            onNavigateToSetup={() => navigate("setup")}
           />
         );
     }
