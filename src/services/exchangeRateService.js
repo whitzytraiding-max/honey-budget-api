@@ -186,17 +186,23 @@ function createExchangeRateService({
       month,
     });
 
-    if (!monthlyRate) {
-      if (requireConfigured) {
-        const error = new Error("Set a monthly MMK exchange rate before using MMK.");
-        error.code = "MMK_MONTHLY_RATE_REQUIRED";
-        throw error;
-      }
-
-      return null;
+    if (monthlyRate) {
+      return monthlyRate;
     }
 
-    return monthlyRate;
+    const fallbackRate = await budgetRepository.getMostRecentCoupleMmkRate({ coupleId });
+
+    if (fallbackRate) {
+      return fallbackRate;
+    }
+
+    if (requireConfigured) {
+      const error = new Error("Set a monthly MMK exchange rate before using MMK.");
+      error.code = "MMK_MONTHLY_RATE_REQUIRED";
+      throw error;
+    }
+
+    return null;
   }
 
   async function getRate({

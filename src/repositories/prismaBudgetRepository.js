@@ -513,6 +513,15 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapCoupleMmkMonthlyRate(rate);
     },
 
+    async getMostRecentCoupleMmkRate({ coupleId }) {
+      const rate = await prisma.coupleMmkMonthlyRate.findFirst({
+        where: { coupleId },
+        orderBy: [{ year: "desc" }, { month: "desc" }],
+      });
+
+      return mapCoupleMmkMonthlyRate(rate);
+    },
+
     async upsertCoupleMmkMonthlyRate({ coupleId, year, month, rateSource, rate }) {
       const record = await prisma.coupleMmkMonthlyRate.upsert({
         where: {
