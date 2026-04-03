@@ -22,6 +22,22 @@ import { ActionButton, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
 
+function getTodayLocalIso() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getCurrentLocalMonthParts() {
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+  };
+}
+
 const REGISTER_FIELDS = {
   name: "",
   email: "",
@@ -52,7 +68,7 @@ const TRANSACTION_FIELDS = {
   currencyCode: "USD",
   type: "one-time",
   paymentMethod: "card",
-  date: new Date().toISOString().slice(0, 10),
+  date: getTodayLocalIso(),
 };
 
 const APP_ROUTES = new Set([
@@ -76,7 +92,7 @@ const SAVINGS_FIELDS = {
   note: "",
   currencyCode: "USD",
   savingsGoalId: "",
-  date: new Date().toISOString().slice(0, 10),
+  date: getTodayLocalIso(),
 };
 const EMPTY_NOTIFICATIONS = {
   incoming: [],
@@ -84,8 +100,8 @@ const EMPTY_NOTIFICATIONS = {
   activity: [],
 };
 const MMK_SETTINGS_FIELDS = {
-  year: new Date().getUTCFullYear(),
-  month: new Date().getUTCMonth() + 1,
+  year: new Date().getFullYear(),
+  month: new Date().getMonth() + 1,
   rateSource: "kbz",
   rate: "",
 };
@@ -107,7 +123,7 @@ const RECURRING_BILL_FIELDS = {
   dayOfMonth: "1",
   notes: "",
   autoCreate: true,
-  startDate: new Date().toISOString().slice(0, 10),
+  startDate: getTodayLocalIso(),
   endDate: "",
 };
 const HOUSEHOLD_RULE_FIELDS = {
@@ -130,22 +146,14 @@ if (IS_PRODUCTION_BUILD && !API_BASE_URL) {
 }
 
 function getCurrentMonthKey() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getCurrentUtcMonthParts() {
-  const now = new Date();
-  return {
-    year: now.getUTCFullYear(),
-    month: now.getUTCMonth() + 1,
-  };
+  const { year, month } = getCurrentLocalMonthParts();
+  return `${year}-${String(month).padStart(2, "0")}`;
 }
 
 function createDefaultMmkRateForm() {
   return {
     ...MMK_SETTINGS_FIELDS,
-    ...getCurrentUtcMonthParts(),
+    ...getCurrentLocalMonthParts(),
   };
 }
 
@@ -238,7 +246,7 @@ function createRecurringBillDraft(bill, fallbackCurrency = "USD") {
     dayOfMonth: String(bill?.dayOfMonth ?? 1),
     notes: String(bill?.notes ?? ""),
     autoCreate: bill?.autoCreate ?? true,
-    startDate: String(bill?.startDate ?? new Date().toISOString().slice(0, 10)),
+    startDate: String(bill?.startDate ?? getTodayLocalIso()),
     endDate: String(bill?.endDate ?? ""),
   };
 }
@@ -461,7 +469,7 @@ export default function App() {
     }
 
     const monthParts =
-      year && month ? { year, month } : getCurrentUtcMonthParts();
+      year && month ? { year, month } : getCurrentLocalMonthParts();
     const data = await apiFetch(
       `/api/mmk-rate?year=${monthParts.year}&month=${monthParts.month}`,
       {
@@ -685,7 +693,7 @@ export default function App() {
       setMmkRateData(null);
       setMmkRateForm({
         ...MMK_SETTINGS_FIELDS,
-        ...getCurrentUtcMonthParts(),
+        ...getCurrentLocalMonthParts(),
       });
     }
 
@@ -728,11 +736,13 @@ export default function App() {
         },
       );
       setInsightData(data);
+      return data;
     } catch (error) {
       setInsightData(null);
       if (!suppressError) {
         setPageError(error.message);
       }
+      return null;
     } finally {
       setInsightsBusy(false);
     }
@@ -1035,6 +1045,19 @@ export default function App() {
 
   function handleMmkRateChange(event) {
     setPageError("");
+    if (event.target.name === "monthKey") {
+      const [yearText, monthText] = String(event.target.value ?? "").split("-");
+      const nextYear = Number.parseInt(yearText, 10);
+      const nextMonth = Number.parseInt(monthText, 10);
+
+      setMmkRateForm((current) => ({
+        ...current,
+        year: Number.isInteger(nextYear) ? nextYear : current.year,
+        month: Number.isInteger(nextMonth) ? nextMonth : current.month,
+      }));
+      return;
+    }
+
     setMmkRateForm((current) => ({
       ...current,
       [event.target.name]: event.target.value,
@@ -1085,7 +1108,7 @@ export default function App() {
     setExpenseForm({
       ...TRANSACTION_FIELDS,
       currencyCode: baseCurrencyCode,
-      date: new Date().toISOString().slice(0, 10),
+      date: getTodayLocalIso(),
     });
   }
 
@@ -1099,7 +1122,7 @@ export default function App() {
       currencyCode: transaction.currencyCode ?? baseCurrencyCode,
       type: transaction.type ?? TRANSACTION_FIELDS.type,
       paymentMethod: transaction.paymentMethod ?? TRANSACTION_FIELDS.paymentMethod,
-      date: transaction.date ?? new Date().toISOString().slice(0, 10),
+      date: transaction.date ?? getTodayLocalIso(),
     });
     navigate("expenses");
   }
@@ -1979,8 +2002,11 @@ export default function App() {
       setCoachProfile(data.profile);
       setCoachProfileForm(createCoachProfileDraft(data.profile));
       await fetchHouseholdData();
-      setInsightData(null);
-      setSuppressNextInsightsError(true);
+      const nextInsights = await loadInsights({ suppressError: true });
+      if (!nextInsights) {
+        setPageError("Your coach answers were saved. Insights are taking a little longer to load.");
+      }
+      setSuppressNextInsightsError(false);
       navigate("insights");
     } catch (error) {
       setPageError(error.message);

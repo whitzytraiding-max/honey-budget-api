@@ -191,6 +191,13 @@ function SettingsPage({
               </p>
 
               <form className="mt-4 grid gap-4" onSubmit={onMmkRateSubmit}>
+                <Input
+                  label="MMK rate month"
+                  name="monthKey"
+                  type="month"
+                  value={`${mmkRateForm.year}-${String(mmkRateForm.month).padStart(2, "0")}`}
+                  onChange={onMmkRateChange}
+                />
                 <Select
                   label={t("settings.mmkRateSource")}
                   name="rateSource"
