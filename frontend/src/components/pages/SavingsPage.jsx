@@ -33,7 +33,7 @@ function SavingsPage({
   return (
     <div className="grid gap-4 xl:grid-cols-[0.92fr_1.08fr] xl:gap-6">
       <div className="space-y-4">
-        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex items-center gap-3">
             <PiggyBank className="h-5 w-5 text-emerald-700" />
             <div>
@@ -42,7 +42,7 @@ function SavingsPage({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="hb-panel-soft rounded-[1.2rem] p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {t("savings.householdTarget")}
@@ -97,7 +97,7 @@ function SavingsPage({
           </div>
         </section>
 
-        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-sky-700" />
             <div>
@@ -171,7 +171,7 @@ function SavingsPage({
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <button
                           className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
                           onClick={() => onEditSavingsGoal(goal)}
@@ -198,7 +198,7 @@ function SavingsPage({
                       />
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between text-sm">
+                    <div className="mt-3 flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                       <span className="font-medium text-emerald-700">
                         {goal.progressPct}% {t("savings.complete")}
                       </span>
@@ -233,7 +233,7 @@ function SavingsPage({
           </div>
         </section>
 
-        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex items-center gap-3">
             <Target className="h-5 w-5 text-slate-700" />
             <div>
@@ -260,7 +260,7 @@ function SavingsPage({
       </div>
 
       <div className="space-y-4">
-        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <h3 className="text-lg font-semibold">{t("savings.addEntry")}</h3>
 
           <form className="mt-4 grid gap-4" onSubmit={onSavingsSubmit}>
@@ -310,7 +310,7 @@ function SavingsPage({
           </form>
         </section>
 
-        <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
+        <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <h3 className="text-lg font-semibold">{t("savings.recent")}</h3>
 
           <div className="mt-4 space-y-3">

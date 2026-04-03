@@ -73,6 +73,12 @@ body {
   overscroll-behavior-y: none;
 }
 
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: max(var(--safe-bottom), 0px);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -84,6 +90,20 @@ body {
 @media (max-width: 640px) {
   html {
     font-size: 15px;
+  }
+
+  .hb-surface-card,
+  .hb-surface-strong {
+    backdrop-filter: blur(14px);
+  }
+
+  .hb-header-panel {
+    border-radius: 1.5rem;
+  }
+
+  .hb-kicker {
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
   }
 }
 

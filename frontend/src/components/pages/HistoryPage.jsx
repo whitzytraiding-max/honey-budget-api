@@ -16,7 +16,7 @@ function HistoryPage({
   const { t } = useLanguage();
 
   return (
-    <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
+    <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[2rem] sm:p-8">
       <div className="flex items-center gap-3">
         <ClipboardList className="h-5 w-5 text-slate-700" />
         <div>
@@ -25,7 +25,7 @@ function HistoryPage({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 xl:grid-cols-[0.32fr_0.68fr]">
+      <div className="mt-5 grid gap-4 xl:grid-cols-[0.32fr_0.68fr]">
         <div className="space-y-4">
           <Input
             label={t("history.month")}
@@ -62,7 +62,7 @@ function HistoryPage({
           </div>
         </div>
 
-        <div className="mt-2 overflow-hidden rounded-3xl border border-sky-100">
+        <div className="mt-2 hidden overflow-hidden rounded-3xl border border-sky-100 sm:block">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-100 text-left text-sm">
               <thead className="hb-table-head">
@@ -141,6 +141,73 @@ function HistoryPage({
               </tbody>
             </table>
           </div>
+        </div>
+
+        <div className="space-y-3 sm:hidden">
+          {transactions.length ? (
+            transactions.map((transaction) => (
+              <article
+                key={transaction.id}
+                className="hb-panel-soft rounded-[1.25rem] border border-sky-100 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900">{transaction.description}</p>
+                    <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                      {transaction.date} · {transaction.userName || t("history.you")}
+                    </p>
+                  </div>
+                  <p className="text-base font-semibold text-slate-900">
+                    {currency(transaction.displayAmount ?? transaction.amount)}
+                  </p>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">{transaction.category}</span>
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">
+                    {transaction.type === "one-time" ? "One-time" : "Recurring"}
+                  </span>
+                  <span className="rounded-full bg-white/95 px-2.5 py-1">
+                    {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
+                  </span>
+                </div>
+                {transaction.currencyCode && transaction.currencyCode !== transaction.displayCurrencyCode ? (
+                  <p className="mt-3 text-xs text-slate-500">
+                    {currency(transaction.amount, {
+                      sourceCurrency: transaction.currencyCode,
+                      convert: false,
+                    })}{" "}
+                    {transaction.currencyCode}
+                  </p>
+                ) : null}
+                {transaction.userId === currentUserId ? (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700 disabled:opacity-70"
+                      disabled={actionBusy}
+                      onClick={() => onEditTransaction(transaction)}
+                      type="button"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      {t("expenses.edit")}
+                    </button>
+                    <button
+                      className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-70"
+                      disabled={actionBusy}
+                      onClick={() => onDeleteTransaction(transaction)}
+                      type="button"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      {t("expenses.delete")}
+                    </button>
+                  </div>
+                ) : null}
+              </article>
+            ))
+          ) : (
+            <div className="hb-panel-soft rounded-[1.25rem] border border-sky-100 px-4 py-6 text-sm text-slate-500">
+              {t("history.empty")}
+            </div>
+          )}
         </div>
       </div>
     </section>

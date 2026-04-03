@@ -42,7 +42,7 @@ function PlannerPage({
 
   return (
     <div className="space-y-4">
-      <section className="hb-surface-card rounded-[1.75rem] p-5 sm:p-6">
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
         <div className="flex items-start gap-3">
           <span className="inline-flex rounded-full bg-white/90 p-2 text-sky-700 shadow-sm">
             <CalendarClock className="h-4 w-4" />
@@ -62,7 +62,7 @@ function PlannerPage({
 
       <div className="grid gap-4 xl:grid-cols-[1fr_0.95fr]">
         <div className="space-y-4">
-          <section className="hb-surface-card rounded-[1.75rem] p-5 sm:p-6">
+          <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
             <div className="flex items-center gap-3">
               <Repeat className="h-5 w-5 text-emerald-700" />
               <div>
@@ -232,7 +232,7 @@ function PlannerPage({
             </div>
           </section>
 
-          <section className="hb-surface-card rounded-[1.75rem] p-5 sm:p-6">
+          <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-amber-700" />
               <div>

@@ -56,16 +56,16 @@ function AppShell({
     route === "more" || ["coach", "notifications", "calendar", "insights", "history", "settings"].includes(route);
 
   return (
-    <div className="min-h-screen bg-transparent px-3 py-4 text-slate-900 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-10">
-        <header className="hb-surface-card hb-header-panel rounded-[1.75rem] p-4 sm:p-6">
+    <div className="min-h-screen bg-transparent px-2.5 py-3 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10">
+        <header className="hb-surface-card hb-header-panel rounded-[1.5rem] p-3.5 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
               <div className="hb-brand-pill inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] sm:text-xs">
                 <img alt="Honey Budget" className="h-4 w-4" src="/icons/brand-mark.svg" />
                 {t("shell.title")}
               </div>
-              <h1 className="mt-3 max-w-4xl text-2xl font-semibold tracking-tight sm:mt-4 sm:text-4xl">
+              <h1 className="mt-3 max-w-4xl text-[1.9rem] font-semibold leading-tight tracking-tight sm:mt-4 sm:text-4xl">
                 {coupleNames || "Shared Money Mode"}
               </h1>
               <p className="mt-1 hidden text-sm leading-6 text-slate-600 sm:block sm:text-base">
@@ -73,15 +73,15 @@ function AppShell({
               </p>
             </div>
 
-            <div className="flex items-stretch gap-3 sm:flex-row sm:items-center">
-              <div className="hb-summary-chip min-w-0 flex-1 rounded-[1.5rem] px-4 py-3 shadow-sm sm:min-w-[220px] sm:flex-none sm:px-5 sm:py-4">
+            <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
+              <div className="hb-summary-chip min-w-0 flex-1 rounded-[1.35rem] px-4 py-3 shadow-sm sm:min-w-[220px] sm:flex-none sm:rounded-[1.5rem] sm:px-5 sm:py-4">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs">
                   {t("home.remaining")}
                 </p>
                 <p className="mt-1 text-xl font-semibold sm:text-2xl">{currency(remainingBudget)}</p>
               </div>
               <button
-                className="hb-button-secondary rounded-[1.25rem] px-4 py-3 text-sm font-medium transition"
+                className="hb-button-secondary rounded-[1.15rem] px-4 py-3 text-sm font-medium transition sm:rounded-[1.25rem]"
                 onClick={onLogout}
                 type="button"
               >
@@ -126,7 +126,7 @@ function AppShell({
         </footer>
       </div>
 
-      <nav className="hb-surface-strong fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-20 rounded-[1.5rem] p-2 md:hidden">
+      <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
         <div className="grid grid-cols-4 gap-1.5">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
@@ -135,7 +135,7 @@ function AppShell({
             return (
               <button
                 key={item.key}
-                className={`flex flex-col items-center justify-center rounded-[1rem] px-1.5 py-2 text-[10px] font-medium transition ${
+                className={`flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium transition ${
                   isActive ? "hb-nav-active" : "text-slate-600"
                 }`}
                 onClick={() => onNavigate(item.key)}

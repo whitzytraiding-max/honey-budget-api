@@ -6,7 +6,7 @@ function Input({ label, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <input
-        className="w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
+        className="w-full rounded-[1rem] border border-sky-100 bg-white/92 px-4 py-3.5 text-base text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl sm:text-[15px]"
         {...props}
       />
     </label>
@@ -18,7 +18,7 @@ function Select({ label, options, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <select
-        className="w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
+        className="w-full rounded-[1rem] border border-sky-100 bg-white/92 px-4 py-3.5 text-base text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl sm:text-[15px]"
         {...props}
       >
         {options.map((option) => (
@@ -36,7 +36,7 @@ function Textarea({ label, ...props }) {
     <label className="block">
       <span className="mb-2 block text-sm font-medium text-slate-700">{label}</span>
       <textarea
-        className="min-h-[120px] w-full rounded-[1.2rem] border border-sky-100 bg-white/92 px-4 py-3 text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl"
+        className="min-h-[120px] w-full rounded-[1rem] border border-sky-100 bg-white/92 px-4 py-3.5 text-base text-slate-900 outline-none transition focus:border-amber-300 focus:ring-4 focus:ring-amber-100 sm:rounded-2xl sm:text-[15px]"
         {...props}
       />
     </label>
@@ -46,7 +46,7 @@ function Textarea({ label, ...props }) {
 function ActionButton({ busy, children, className = "", ...props }) {
   return (
     <button
-      className={`hb-button-primary inline-flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-5 py-3 font-medium transition disabled:cursor-not-allowed disabled:opacity-70 sm:rounded-2xl ${className}`}
+      className={`hb-button-primary inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[1rem] px-5 py-3.5 font-medium transition disabled:cursor-not-allowed disabled:opacity-70 sm:rounded-2xl ${className}`}
       disabled={busy}
       {...props}
     >
@@ -60,11 +60,11 @@ function ToggleGroup({ label, name, value, onChange, options }) {
   return (
     <div>
       <p className="mb-2 text-sm font-medium text-slate-700">{label}</p>
-      <div className="hb-panel-soft grid grid-cols-2 rounded-[1.2rem] p-1 sm:rounded-2xl">
+      <div className="hb-panel-soft grid grid-cols-2 rounded-[1rem] p-1 sm:rounded-2xl">
         {options.map((option) => (
           <label
             key={option.value}
-            className={`cursor-pointer rounded-[0.9rem] px-3 py-3 text-center text-sm font-medium transition sm:rounded-[1rem] ${
+            className={`cursor-pointer rounded-[0.8rem] px-3 py-3 text-center text-sm font-medium transition sm:rounded-[1rem] ${
               value === option.value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"
             }`}
           >

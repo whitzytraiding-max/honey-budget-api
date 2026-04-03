@@ -9,7 +9,7 @@ function SetupFlowPage({ checklist = [], onNavigate }) {
 
   return (
     <div className="space-y-4">
-      <section className="hb-surface-card rounded-[1.75rem] p-5 sm:p-6">
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
         <div className="flex items-start gap-3">
           <span className="inline-flex rounded-full bg-white/90 p-2 text-amber-700 shadow-sm">
             <Sparkles className="h-4 w-4" />
@@ -44,7 +44,7 @@ function SetupFlowPage({ checklist = [], onNavigate }) {
         {checklist.map((item) => (
           <article
             key={item.key}
-            className="hb-surface-card flex flex-col gap-4 rounded-[1.5rem] p-4 sm:flex-row sm:items-center sm:justify-between"
+            className="hb-surface-card flex flex-col gap-4 rounded-[1.35rem] p-4 sm:rounded-[1.5rem] sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="flex items-start gap-3">
               <span

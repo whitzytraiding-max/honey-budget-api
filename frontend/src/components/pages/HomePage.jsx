@@ -58,7 +58,7 @@ function HomePage({
   return (
     <div className="space-y-4 sm:space-y-6">
       {setupRemaining > 0 ? (
-        <section className="hb-panel-soft rounded-[1.5rem] border border-sky-100/80 p-4 shadow-[0_18px_50px_-28px_rgba(21,50,65,0.28)] sm:p-6">
+        <section className="hb-panel-soft rounded-[1.35rem] border border-sky-100/80 p-4 shadow-[0_18px_50px_-28px_rgba(21,50,65,0.28)] sm:rounded-[1.5rem] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span className="inline-flex rounded-full bg-white/90 p-2 text-sky-700 shadow-sm">
@@ -84,7 +84,7 @@ function HomePage({
       ) : null}
 
       {!coachProfile?.completed ? (
-        <section className="hb-panel-highlight rounded-[1.5rem] border border-amber-200/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:p-6">
+        <section className="hb-panel-highlight rounded-[1.35rem] border border-amber-200/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:rounded-[1.5rem] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span className="inline-flex rounded-full bg-white/90 p-2 text-amber-700 shadow-sm">
@@ -103,12 +103,12 @@ function HomePage({
         </section>
       ) : null}
 
-      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:p-6">
-        <div className="hb-hero-panel rounded-[1.4rem] px-4 py-5 text-white sm:px-6 sm:py-6">
+      <section className="hb-surface-card rounded-[1.35rem] p-3.5 sm:rounded-[1.5rem] sm:p-6">
+        <div className="hb-hero-panel rounded-[1.2rem] px-4 py-4 text-white sm:rounded-[1.4rem] sm:px-6 sm:py-6">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
             {t("home.remaining")}
           </p>
-          <p className="hb-stat-emphasis mt-2 text-3xl font-semibold tracking-tight sm:text-6xl">
+          <p className="hb-stat-emphasis mt-2 text-[2.35rem] font-semibold tracking-tight sm:text-6xl">
             {currency(remainingBudget)}
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -141,7 +141,7 @@ function HomePage({
             return (
               <div
                 key={item.key}
-                className="hb-panel-soft rounded-[1.2rem] border border-sky-100/70 p-4 shadow-sm"
+                className="hb-panel-soft rounded-[1.1rem] border border-sky-100/70 p-4 shadow-sm sm:rounded-[1.2rem]"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="hb-kicker">
@@ -159,7 +159,7 @@ function HomePage({
         </div>
       </section>
 
-      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:p-6">
+      <section className="hb-surface-card rounded-[1.35rem] p-4 sm:rounded-[1.5rem] sm:p-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-emerald-700" />
             <div>
