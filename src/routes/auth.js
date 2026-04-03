@@ -1,0 +1,273 @@
+/*
+ * Honey Budget
+ * Copyright (c) 2026 Whitzy. All rights reserved.
+ * Proprietary and confidential. Unauthorized copying is prohibited.
+ */
+import express from "express";
+import { HttpError, asyncHandler, sendData } from "../lib/http.js";
+import { resolveCurrencyCode } from "../services/currencyConversionService.js";
+import {
+  parseMoney,
+  parseDayOfMonth,
+  resolveIncomeAllocation,
+} from "../lib/parsers.js";
+import { sanitizeUser } from "../lib/helpers.js";
+
+export function createAuthRoutes({
+  budgetRepository,
+  authService,
+  emailService,
+  effectiveResetPasswordUrlBase,
+}) {
+  const router = express.Router();
+
+  router.post(
+    "/api/auth/register",
+    asyncHandler(async (request, response) => {
+      const {
+        name,
+        email,
+        password,
+        monthlySalary,
+        incomeCurrencyCode,
+        salaryPaymentMethod,
+        salaryCashAmount,
+        salaryCardAmount,
+        salaryCashAllocationPct,
+        salaryCardAllocationPct,
+        incomeDayOfMonth,
+        monthlySavingsTarget,
+      } = request.body;
+
+      if (!name?.trim()) {
+        throw new HttpError(400, "VALIDATION_ERROR", "name is required.");
+      }
+
+      if (!email?.trim()) {
+        throw new HttpError(400, "VALIDATION_ERROR", "email is required.");
+      }
+
+      if (!password || password.length < 8) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "password must be at least 8 characters.",
+        );
+      }
+
+      const normalizedMonthlySalary = parseMoney(monthlySalary);
+      const hasIncomeAmounts =
+        salaryCashAmount !== undefined || salaryCardAmount !== undefined;
+
+      if (!hasIncomeAmounts && (!Number.isFinite(normalizedMonthlySalary) || normalizedMonthlySalary < 0)) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "monthlySalary must be a non-negative number.",
+        );
+      }
+
+      const incomeAllocation = resolveIncomeAllocation({
+        monthlySalary: normalizedMonthlySalary,
+        salaryPaymentMethod,
+        salaryCashAmount,
+        salaryCardAmount,
+        salaryCashAllocationPct,
+        salaryCardAllocationPct,
+      });
+      if (incomeAllocation.error) {
+        throw new HttpError(400, "VALIDATION_ERROR", incomeAllocation.error);
+      }
+
+      const normalizedIncomeDay = parseDayOfMonth(incomeDayOfMonth) ?? 1;
+      if (normalizedIncomeDay < 1 || normalizedIncomeDay > 28) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "incomeDayOfMonth must be between 1 and 28.",
+        );
+      }
+
+      const normalizedSavingsTarget = parseMoney(monthlySavingsTarget) ?? 0;
+      if (normalizedSavingsTarget < 0) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "monthlySavingsTarget must be zero or greater.",
+        );
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedIncomeCurrencyCode = resolveCurrencyCode(incomeCurrencyCode || "USD");
+      const existingUser = await budgetRepository.getUserAuthByEmail(normalizedEmail);
+      if (existingUser) {
+        throw new HttpError(409, "EMAIL_TAKEN", "An account with this email already exists.");
+      }
+
+      const passwordHash = await authService.hashPassword(password);
+      let user;
+
+      try {
+        user = await budgetRepository.createUser({
+          name: name.trim(),
+          email: normalizedEmail,
+          passwordHash,
+          monthlySalary: incomeAllocation.monthlySalary ?? normalizedMonthlySalary,
+          incomeCurrencyCode: normalizedIncomeCurrencyCode,
+          salaryPaymentMethod: incomeAllocation.salaryPaymentMethod,
+          salaryCashAmount: incomeAllocation.salaryCashAmount,
+          salaryCardAmount: incomeAllocation.salaryCardAmount,
+          salaryCashAllocationPct: incomeAllocation.salaryCashAllocationPct,
+          salaryCardAllocationPct: incomeAllocation.salaryCardAllocationPct,
+          incomeDayOfMonth: normalizedIncomeDay,
+          monthlySavingsTarget: normalizedSavingsTarget,
+        });
+      } catch (error) {
+        const duplicateTargets = Array.isArray(error?.meta?.target)
+          ? error.meta.target
+          : [String(error?.meta?.target ?? "")];
+
+        if (error?.code === "P2002" && duplicateTargets.some((target) => target.includes("email"))) {
+          throw new HttpError(
+            409,
+            "EMAIL_TAKEN",
+            "An account with this email already exists.",
+          );
+        }
+
+        throw error;
+      }
+
+      const accessToken = authService.signAccessToken(user);
+      sendData(response, 201, {
+        user: sanitizeUser(user),
+        accessToken,
+      });
+    }),
+  );
+
+  router.post(
+    "/api/auth/login",
+    asyncHandler(async (request, response) => {
+      const { email, password } = request.body;
+
+      if (!email?.trim() || !password) {
+        throw new HttpError(400, "VALIDATION_ERROR", "email and password are required.");
+      }
+
+      const authUser = await budgetRepository.getUserAuthByEmail(
+        email.trim().toLowerCase(),
+      );
+      if (!authUser) {
+        throw new HttpError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+      }
+
+      const passwordMatches = await authService.verifyPassword(
+        password,
+        authUser.passwordHash,
+      );
+      if (!passwordMatches) {
+        throw new HttpError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
+      }
+
+      const user = sanitizeUser(authUser);
+      const accessToken = authService.signAccessToken(user);
+
+      sendData(response, 200, {
+        user,
+        accessToken,
+      });
+    }),
+  );
+
+  router.post(
+    "/api/auth/forgot-password",
+    asyncHandler(async (request, response) => {
+      const email = request.body?.email?.trim()?.toLowerCase();
+
+      if (!email) {
+        throw new HttpError(400, "VALIDATION_ERROR", "email is required.");
+      }
+
+      const authUser = await budgetRepository.getUserAuthByEmail(email);
+      let previewResetUrl = null;
+
+      if (authUser) {
+        const rawToken = authService.createPasswordResetToken();
+        const tokenHash = authService.hashPasswordResetToken(rawToken);
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        const normalizedBaseUrl = effectiveResetPasswordUrlBase.replace(/\/$/, "");
+        const resetUrl = `${normalizedBaseUrl}/#/reset-password?token=${encodeURIComponent(rawToken)}`;
+
+        await budgetRepository.createPasswordResetToken({
+          userId: authUser.id,
+          tokenHash,
+          expiresAt,
+        });
+
+        const mailResult = emailService
+          ? await emailService.sendPasswordResetEmail({
+              to: authUser.email,
+              name: authUser.name,
+              resetUrl,
+            })
+          : { preview: true, resetUrl };
+
+        if (mailResult.preview) {
+          previewResetUrl = mailResult.resetUrl || resetUrl;
+        }
+      }
+
+      sendData(response, 200, {
+        message: "If that email exists, we sent a password reset link.",
+        previewResetUrl,
+      });
+    }),
+  );
+
+  router.post(
+    "/api/auth/reset-password",
+    asyncHandler(async (request, response) => {
+      const token = request.body?.token?.trim();
+      const password = request.body?.password;
+
+      if (!token) {
+        throw new HttpError(400, "VALIDATION_ERROR", "token is required.");
+      }
+
+      if (!password || password.length < 8) {
+        throw new HttpError(
+          400,
+          "VALIDATION_ERROR",
+          "password must be at least 8 characters.",
+        );
+      }
+
+      const tokenHash = authService.hashPasswordResetToken(token);
+      const resetToken = await budgetRepository.getPasswordResetTokenByHash(tokenHash);
+
+      if (!resetToken || resetToken.usedAt || new Date(resetToken.expiresAt).getTime() < Date.now()) {
+        throw new HttpError(
+          400,
+          "INVALID_RESET_TOKEN",
+          "This password reset link is invalid or has expired.",
+        );
+      }
+
+      const passwordHash = await authService.hashPassword(password);
+      const user = await budgetRepository.resetPasswordWithToken({
+        tokenId: resetToken.id,
+        userId: resetToken.userId,
+        passwordHash,
+      });
+      const accessToken = authService.signAccessToken(user);
+
+      sendData(response, 200, {
+        user,
+        accessToken,
+      });
+    }),
+  );
+
+  return router;
+}
