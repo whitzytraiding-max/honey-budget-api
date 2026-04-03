@@ -457,7 +457,7 @@ export default function App() {
     if (!token || !session?.couple) {
       setMmkRateData(null);
       setMmkRateForm(createDefaultMmkRateForm());
-      return;
+      return null;
     }
 
     const monthParts =
@@ -476,6 +476,7 @@ export default function App() {
       rateSource: data.rate?.rateSource ?? "kbz",
       rate: data.rate?.rate ? String(data.rate.rate) : "",
     });
+    return data;
   }
 
   useEffect(() => {
@@ -1723,6 +1724,28 @@ export default function App() {
     }
 
     try {
+      const mmkInvolved =
+        nextExpenseDraft.currencyCode === "MMK" ||
+        currencyCode === "MMK" ||
+        baseCurrencyCode === "MMK";
+
+      if (mmkInvolved && session?.couple) {
+        const expenseYear = Number(normalizedDate.slice(0, 4));
+        const expenseMonth = Number(normalizedDate.slice(5, 7));
+        const activeRate =
+          mmkRateData?.year === expenseYear && mmkRateData?.month === expenseMonth
+            ? mmkRateData
+            : await loadMmkRate(expenseYear, expenseMonth);
+
+        if (!activeRate?.rate?.rate) {
+          setPageError(
+            `Save an MMK monthly rate for ${String(expenseMonth).padStart(2, "0")}/${expenseYear} before logging MMK-related expenses.`,
+          );
+          setExpenseBusy(false);
+          return;
+        }
+      }
+
       await apiFetch(
         editingTransactionId
           ? `/api/transactions/${editingTransactionId}`
@@ -1955,15 +1978,10 @@ export default function App() {
 
       setCoachProfile(data.profile);
       setCoachProfileForm(createCoachProfileDraft(data.profile));
+      await fetchHouseholdData();
+      setInsightData(null);
       setSuppressNextInsightsError(true);
       navigate("insights");
-
-      fetchHouseholdData().catch((error) => {
-        console.error("Coach profile refresh failed:", error);
-      });
-      loadInsights({ suppressError: true }).catch((error) => {
-        console.error("Coach insights refresh failed:", error);
-      });
     } catch (error) {
       setPageError(error.message);
     } finally {
