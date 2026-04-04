@@ -54,7 +54,7 @@ if (isProduction && !resetPasswordUrlBase) {
 
 const budgetRepository = createPrismaBudgetRepository({ prisma });
 const emailService = createEmailService();
-const exchangeRateService = createExchangeRateService();
+const exchangeRateService = createExchangeRateService({ budgetRepository });
 const insightsService = createInsightsService({
   budgetRepository,
   exchangeRateService,
