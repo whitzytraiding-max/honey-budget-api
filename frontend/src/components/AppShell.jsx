@@ -6,6 +6,7 @@
 import { Bell, Brain, CalendarDays, ClipboardList, Ellipsis, House, Settings2, Wallet } from "lucide-react";
 import { PiggyBank } from "lucide-react";
 import { currency } from "../lib/format.js";
+import { hapticLight } from "../lib/native.js";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 
 const NAV_ITEMS = [
@@ -29,6 +30,10 @@ function AppShell({
   children,
   pageError,
 }) {
+  function handleNavTap(key) {
+    hapticLight();
+    onNavigate(key);
+  }
   const { t } = useLanguage();
   const localizedNavItems = [
     { ...NAV_ITEMS[0], label: t("nav.home") },
@@ -81,7 +86,7 @@ function AppShell({
                 <p className="mt-1 text-xl font-semibold sm:text-2xl">{currency(remainingBudget)}</p>
               </div>
               <button
-                className="hb-button-secondary rounded-[1.15rem] px-4 py-3 text-sm font-medium transition sm:rounded-[1.25rem]"
+                className="hb-button-secondary hidden rounded-[1.15rem] px-4 py-3 text-sm font-medium transition sm:block sm:rounded-[1.25rem]"
                 onClick={onLogout}
                 type="button"
               >
@@ -101,7 +106,7 @@ function AppShell({
                   className={`flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-medium transition ${
                     isActive ? "hb-nav-active" : "hb-nav-idle"
                   }`}
-                  onClick={() => onNavigate(item.key)}
+                  onClick={() => handleNavTap(item.key)}
                   type="button"
                 >
                   <Icon className="h-4 w-4" />
@@ -138,7 +143,7 @@ function AppShell({
                 className={`flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium transition ${
                   isActive ? "hb-nav-active" : "text-slate-600"
                 }`}
-                onClick={() => onNavigate(item.key)}
+                onClick={() => handleNavTap(item.key)}
                 type="button"
               >
                 <Icon className="h-4 w-4" />

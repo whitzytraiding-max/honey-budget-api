@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ClipboardList,
   ListTodo,
+  LogOut,
   Settings2,
   ShieldCheck,
   Sparkles,
@@ -22,7 +23,7 @@ const MORE_ITEMS = [
   { key: "settings", icon: Settings2 },
 ];
 
-function MorePage({ onNavigate, showNotifications, showCoach, showPlanner, showSetup }) {
+function MorePage({ onNavigate, onLogout, showNotifications, showCoach, showPlanner, showSetup }) {
   const { t } = useLanguage();
   const items = MORE_ITEMS.filter((item) => {
     if (item.key === "notifications" && !showNotifications) {
@@ -76,6 +77,19 @@ function MorePage({ onNavigate, showNotifications, showCoach, showPlanner, showS
           );
         })}
       </div>
+
+      {onLogout && (
+        <div className="mt-4 sm:hidden">
+          <button
+            className="hb-button-secondary flex w-full items-center justify-center gap-2 rounded-[1.2rem] px-4 py-4 text-sm font-medium transition"
+            onClick={onLogout}
+            type="button"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        </div>
+      )}
     </section>
   );
 }

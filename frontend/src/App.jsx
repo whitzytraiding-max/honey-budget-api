@@ -20,6 +20,7 @@ import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
 import { ActionButton, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
+import { addBackButtonListener, setStatusBarForTheme } from "./lib/native.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
 
 function getTodayLocalIso() {
@@ -448,6 +449,43 @@ export default function App() {
     mediaQuery.addEventListener("change", handleThemeChange);
     return () => mediaQuery.removeEventListener("change", handleThemeChange);
   }, [theme]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const resolvedTheme =
+      theme === "system" ? (mediaQuery?.matches ? "dark" : "light") : theme;
+    setStatusBarForTheme(resolvedTheme);
+  }, [theme]);
+
+  useEffect(() => {
+    const BACK_STACK = [
+      "home",
+      "expenses",
+      "savings",
+      "more",
+      "notifications",
+      "calendar",
+      "insights",
+      "history",
+      "settings",
+      "planner",
+      "setup",
+      "coach",
+    ];
+    const removeListener = addBackButtonListener(({ canGoBack }) => {
+      if (canGoBack) {
+        window.history.back();
+        return;
+      }
+      const idx = BACK_STACK.indexOf(route);
+      if (idx > 0) {
+        navigate(BACK_STACK[0]);
+      }
+    });
+    return () => {
+      removeListener.then?.((fn) => fn?.());
+    };
+  }, [route]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -2201,6 +2239,7 @@ export default function App() {
         return (
           <MorePage
             onNavigate={navigate}
+            onLogout={handleLogout}
             showNotifications
             showCoach={Boolean(couple)}
             showPlanner={Boolean(couple)}
@@ -2297,7 +2336,9 @@ export default function App() {
       onLogout={handleLogout}
       pageError={pageError}
     >
-      {renderCurrentPage()}
+      <div key={route} className="hb-page-enter">
+        {renderCurrentPage()}
+      </div>
     </AppShell>
   );
 }
