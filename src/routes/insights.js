@@ -7,6 +7,7 @@ import express from "express";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { buildStaticInsightsResponse } from "../lib/helpers.js";
 import { resolvePartnerUser, materializeRecurringBills } from "../lib/builders.js";
+import { buildBudgetSnapshotForUsers } from "../services/dashboardService.js";
 
 export function createInsightsRoutes({
   budgetRepository,
@@ -41,12 +42,46 @@ export function createInsightsRoutes({
           ? await budgetRepository.getCoupleCoachProfile(couple.id)
           : null;
 
+        const resolvedDays = Number.isFinite(days) && days > 0 ? days : 30;
+
+        const now = new Date();
+        const trendMonths = partnerUser
+          ? await Promise.all(
+              [1, 2].map(async (offset) => {
+                const y = now.getUTCMonth() - offset < 0
+                  ? now.getUTCFullYear() - 1
+                  : now.getUTCFullYear();
+                const m = ((now.getUTCMonth() - offset) + 12) % 12;
+                const from = new Date(Date.UTC(y, m, 1));
+                const to = new Date(Date.UTC(y, m + 1, 0));
+                const label = from.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+                const fromDate = from.toISOString().slice(0, 10);
+                const toDate = to.toISOString().slice(0, 10);
+                try {
+                  const snap = await buildBudgetSnapshotForUsers({
+                    budgetRepository,
+                    exchangeRateService,
+                    currentUser: request.user,
+                    partnerUser,
+                    displayCurrency,
+                    fromDate,
+                    toDate,
+                  });
+                  return { label, ...snap };
+                } catch {
+                  return { label };
+                }
+              }),
+            )
+          : [];
+
         const result = await insightsService.getAiInsights({
           currentUser: request.user,
           partnerUser,
-          days: Number.isFinite(days) && days > 0 ? days : 30,
+          days: resolvedDays,
           displayCurrency,
           coachProfile,
+          trendMonths,
         });
 
         sendData(response, 200, {

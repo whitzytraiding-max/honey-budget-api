@@ -178,6 +178,8 @@ async function buildBudgetSnapshotForUsers({
   partnerUser,
   days = 30,
   displayCurrency = null,
+  fromDate = null,
+  toDate = null,
 }) {
   if (!currentUser || !partnerUser) {
     throw new HttpError(404, "COUPLE_NOT_FOUND", "Linked partner not found.");
@@ -186,6 +188,8 @@ async function buildBudgetSnapshotForUsers({
   const transactions = await budgetRepository.listTransactionsForUserIds({
     userIds: [currentUser.id, partnerUser.id],
     days,
+    fromDate,
+    toDate,
   });
   const couple = await budgetRepository.getCoupleForUser(currentUser.id);
   const users = [currentUser, partnerUser];

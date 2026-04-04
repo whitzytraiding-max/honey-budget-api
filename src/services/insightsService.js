@@ -304,12 +304,16 @@ function createFallbackInsights(snapshot, coachProfile = null) {
   };
 }
 
+const INSIGHTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes per couple
+
 function createInsightsService({
   budgetRepository,
   exchangeRateService,
   openaiClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
 }) {
+  const insightsCache = new Map();
+
   return {
     async getAiInsights({
       coupleId = null,
@@ -318,7 +322,13 @@ function createInsightsService({
       days = 30,
       displayCurrency = null,
       coachProfile = null,
+      trendMonths = [],
     }) {
+      const cacheKey = `${coupleId ?? currentUser?.id}:${displayCurrency ?? "default"}`;
+      const cached = insightsCache.get(cacheKey);
+      if (cached && Date.now() - cached.cachedAt < INSIGHTS_CACHE_TTL_MS) {
+        return cached.value;
+      }
       const snapshot =
         currentUser && partnerUser
           ? await buildBudgetSnapshotForUsers({
@@ -355,9 +365,18 @@ function createInsightsService({
       }
 
       try {
+        const trendSummary = trendMonths.map((m) => ({
+          label: m.label,
+          totalSpent: m.summary?.totalSpent ?? 0,
+          cashSpent: m.summary?.cashSpent ?? 0,
+          cardSpent: m.summary?.cardSpent ?? 0,
+          topCategories: (m.topCategories ?? []).slice(0, 3),
+        }));
+
         const promptPayload = {
           ...snapshot,
           coachProfile,
+          trendMonths: trendSummary,
           behaviorFlags: buildBehaviorFlags(snapshot),
           summary: {
             ...snapshot.summary,
@@ -390,7 +409,10 @@ function createInsightsService({
             "Include a fair recurring-bill split recommendation based on the two salaries.",
             "The overview should read like a short coach summary of what matters most this month.",
             "Be specific, concise, non-judgmental, and action-oriented.",
-          ].join(" "),
+            trendSummary.length
+              ? `You have ${trendSummary.length} prior month(s) of trend data in trendMonths. Reference month-over-month changes when they reveal a meaningful pattern (e.g. spending rising in a category, or a positive saving trend). Only mention trends that are genuinely notable.`
+              : "",
+          ].filter(Boolean).join(" "),
           input: [
             {
               role: "user",
@@ -457,13 +479,15 @@ function createInsightsService({
           },
         });
 
-        return {
+        const result = {
           snapshot,
           insights: {
             provider: "openai",
             ...JSON.parse(response.output_text),
           },
         };
+        insightsCache.set(cacheKey, { value: result, cachedAt: Date.now() });
+        return result;
       } catch (error) {
         console.error("OpenAI insights failed:", error);
         return {

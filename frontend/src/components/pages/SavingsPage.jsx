@@ -173,7 +173,7 @@ function SavingsPage({
                       </div>
                     <div className="flex flex-wrap items-center gap-2">
                         <button
-                          className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm"
+                          className="inline-flex items-center gap-1 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm dark:bg-white/10 dark:text-slate-200"
                           onClick={() => onEditSavingsGoal(goal)}
                           type="button"
                         >
@@ -181,7 +181,7 @@ function SavingsPage({
                           {t("expenses.edit")}
                         </button>
                         <button
-                          className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700"
+                          className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
                           onClick={() => onDeleteSavingsGoal(goal)}
                           type="button"
                         >

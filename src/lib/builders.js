@@ -13,6 +13,7 @@ import {
 import { MMK_CURRENCY_CODE } from "../services/exchangeRateService.js";
 import { buildBudgetSnapshot } from "../services/dashboardService.js";
 import { roundRate } from "./parsers.js";
+import { sendPushToUser } from "../services/pushNotificationService.js";
 import {
   isMmkInvolved,
   getPartner,
@@ -602,11 +603,15 @@ export async function createPartnerExpenseNotification({
     )} from ${previousTransaction.category.toLowerCase()}.`;
   }
 
-  return budgetRepository.createActivityNotification({
+  const notification = await budgetRepository.createActivityNotification({
     recipientId: partner.id,
     actorId: actor.id,
     type,
     title,
     body,
   });
+
+  sendPushToUser({ budgetRepository, userId: partner.id, title, body }).catch(() => {});
+
+  return notification;
 }
