@@ -227,7 +227,7 @@ function ExpensesPage({
                         {transaction.userId === currentUserId ? (
                           <div className="inline-flex gap-2">
                             <button
-                              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700"
+                              className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-amber-400/20 dark:text-amber-300"
                               onClick={() => onEditTransaction(transaction)}
                               type="button"
                             >
@@ -235,7 +235,7 @@ function ExpensesPage({
                               {t("expenses.edit")}
                             </button>
                             <button
-                              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700"
+                              className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
                               onClick={() => onDeleteTransaction(transaction)}
                               type="button"
                             >
@@ -287,7 +287,7 @@ function ExpensesPage({
                 {transaction.userId === currentUserId ? (
                   <div className="mt-3 flex gap-2">
                     <button
-                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700"
+                      className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:bg-amber-400/20 dark:text-amber-300"
                       onClick={() => onEditTransaction(transaction)}
                       type="button"
                     >
@@ -295,7 +295,7 @@ function ExpensesPage({
                       {t("expenses.edit")}
                     </button>
                     <button
-                      className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700"
+                      className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 dark:bg-rose-500/20 dark:text-rose-400"
                       onClick={() => onDeleteTransaction(transaction)}
                       type="button"
                     >
