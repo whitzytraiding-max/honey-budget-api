@@ -34,13 +34,19 @@ async function createCurrencyConverter({
     uniqueSources
       .filter((sourceCurrency) => sourceCurrency !== targetCurrency)
       .map(async (sourceCurrency) => {
-        const rate = await exchangeRateService.getRate({
-          from: sourceCurrency,
-          to: targetCurrency,
-          coupleId,
-          date,
-        });
-        rates.set(sourceCurrency, Number(rate.rate ?? 1));
+        try {
+          const rate = await exchangeRateService.getRate({
+            from: sourceCurrency,
+            to: targetCurrency,
+            coupleId,
+            date,
+          });
+          rates.set(sourceCurrency, Number(rate.rate ?? 1));
+        } catch {
+          // Fall back to 1:1 if the external exchange rate API is temporarily unavailable.
+          // This keeps the dashboard loading rather than returning a 500.
+          rates.set(sourceCurrency, 1);
+        }
       }),
   );
 

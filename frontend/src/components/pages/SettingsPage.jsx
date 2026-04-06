@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { Settings2, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
+
+const SETTINGS_TABS = ["profile", "display", "mmk"];
 
 function SettingsPage({
   session,
@@ -22,6 +25,7 @@ function SettingsPage({
   onMmkRateChange,
   onMmkRateSubmit,
 }) {
+  const [activeTab, setActiveTab] = useState("profile");
   const { locale, setLocale, supportedLocales, t } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
   const user = session?.user;
@@ -29,6 +33,12 @@ function SettingsPage({
     session?.couple && session.couple.userOne.id === session.user.id
       ? session.couple.userTwo
       : session?.couple?.userOne;
+
+  const tabLabels = {
+    profile: t("settings.title"),
+    display: t("settings.displayCurrency"),
+    mmk: "MMK Rate",
+  };
 
   return (
     <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
@@ -41,201 +51,230 @@ function SettingsPage({
           </div>
         </div>
 
-        <form className="mt-6 grid gap-4" onSubmit={onIncomeProfileSubmit}>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label={t("settings.cashIncome")}
-              name="salaryCashAmount"
-              type="number"
-              min="0"
-              step="0.01"
-              value={incomeProfileForm.salaryCashAmount}
+        {/* Tab bar */}
+        <div className="hb-panel-soft mt-5 grid grid-cols-3 rounded-2xl p-1">
+          {SETTINGS_TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={`rounded-[0.85rem] px-3 py-2.5 text-sm font-medium transition ${
+                activeTab === tab
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+              onClick={() => setActiveTab(tab)}
+            >
+              {tab === "profile" ? t("settings.title") : tab === "display" ? "Display" : "MMK Rate"}
+            </button>
+          ))}
+        </div>
+
+        {/* Profile tab */}
+        {activeTab === "profile" && (
+          <form className="mt-6 grid gap-4" onSubmit={onIncomeProfileSubmit}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                label={t("settings.cashIncome")}
+                name="salaryCashAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={incomeProfileForm.salaryCashAmount}
+                onChange={onIncomeProfileChange}
+                placeholder="0.00"
+              />
+              <Input
+                label={t("settings.cardIncome")}
+                name="salaryCardAmount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={incomeProfileForm.salaryCardAmount}
+                onChange={onIncomeProfileChange}
+                placeholder="4200.00"
+              />
+            </div>
+
+            <Select
+              label={t("settings.incomeCurrency")}
+              name="incomeCurrencyCode"
+              value={incomeProfileForm.incomeCurrencyCode}
               onChange={onIncomeProfileChange}
-              placeholder="0.00"
+              options={currencyOptions}
             />
+
             <Input
-              label={t("settings.cardIncome")}
-              name="salaryCardAmount"
+              label={t("settings.incomeDayOfMonth")}
+              name="incomeDayOfMonth"
               type="number"
-              min="0"
-              step="0.01"
-              value={incomeProfileForm.salaryCardAmount}
+              min="1"
+              max="28"
+              step="1"
+              value={incomeProfileForm.incomeDayOfMonth}
               onChange={onIncomeProfileChange}
-              placeholder="4200.00"
+              placeholder="1"
             />
-          </div>
 
-          <Select
-            label={t("settings.incomeCurrency")}
-            name="incomeCurrencyCode"
-            value={incomeProfileForm.incomeCurrencyCode}
-            onChange={onIncomeProfileChange}
-            options={currencyOptions}
-          />
-
-          <Input
-            label={t("settings.incomeDayOfMonth")}
-            name="incomeDayOfMonth"
-            type="number"
-            min="1"
-            max="28"
-            step="1"
-            value={incomeProfileForm.incomeDayOfMonth}
-            onChange={onIncomeProfileChange}
-            placeholder="1"
-          />
-
-          <div className="hb-panel-soft rounded-3xl px-4 py-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-              {t("settings.totalMonthlySalary")}
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
-              {currency(Number(incomeProfileForm.salaryCashAmount || 0) + Number(incomeProfileForm.salaryCardAmount || 0), {
-                sourceCurrency: incomeProfileForm.incomeCurrencyCode,
-                convert: false,
-              })}
-            </p>
-          </div>
-
-          <ActionButton busy={incomeProfileBusy} className="sm:w-auto">
-            {t("settings.save")}
-          </ActionButton>
-        </form>
-
-        <div className="mt-6 grid gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
-          <Select
-            label={t("settings.language")}
-            value={locale}
-            onChange={(event) => setLocale(event.target.value)}
-            options={supportedLocales.map((entry) => ({
-              value: entry,
-              label: entry === "en" ? "English" : "Español",
-            }))}
-          />
-          <Select
-            label={t("settings.displayCurrency")}
-            value={currencyCode}
-            onChange={onCurrencyChange}
-            options={currencyOptions}
-          />
-          <Select
-            label={t("settings.referenceCurrency")}
-            value={baseCurrencyCode}
-            onChange={onBaseCurrencyChange}
-            options={currencyOptions}
-          />
-          <Select
-            label={t("settings.theme")}
-            value={theme}
-            onChange={onThemeChange}
-            options={[
-              { value: "system", label: t("settings.systemMode") },
-              { value: "light", label: t("settings.lightMode") },
-              { value: "dark", label: t("settings.darkMode") },
-            ]}
-          />
-        </div>
-        <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {t("settings.exchangeRate")}
-          </p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">
-            {baseCurrencyCode === currencyCode
-              ? t("settings.noConversionNeeded")
-              : exchangeRateLabel || t("settings.loadingRate")}
-          </p>
-          <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
-        </div>
-
-        <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {t("settings.howItWorks")}
-          </p>
-          <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
-            <p>
-              <span className="font-semibold text-slate-900">{t("settings.homeCurrencyLabel")}:</span>{" "}
-              {incomeProfileForm.incomeCurrencyCode} {t("settings.howItWorksLineOne")}
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">{t("settings.displayCurrencyLabel")}:</span>{" "}
-              {currencyCode} {t("settings.howItWorksLineTwo")}
-            </p>
-            <p>
-              <span className="font-semibold text-slate-900">{t("settings.referenceCurrencyLabel")}:</span>{" "}
-              {baseCurrencyCode} {t("settings.referenceCurrencyHelp")}
-            </p>
-            <p>{t("settings.howItWorksLineThree")}</p>
-            <p className="hb-surface-strong rounded-2xl px-3 py-3 text-slate-700">
-              {t("settings.howItWorksPlainEnglish")}
-            </p>
-          </div>
-        </div>
-
-        <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {t("settings.mmkMonthlyRate")}
-          </p>
-          {session?.couple ? (
-            <>
-              <p className="mt-2 text-sm text-slate-600">
-                {t("settings.mmkMonthlyRateHelp")}
+            <div className="hb-panel-soft rounded-3xl px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {t("settings.totalMonthlySalary")}
               </p>
-              <p className="hb-surface-strong mt-3 rounded-2xl px-3 py-3 text-sm text-slate-700">
-                {mmkRateData?.rate
-                  ? `${t("settings.mmkActiveRatePrefix")} 1 USD = ${Number(
-                      mmkRateData.rate.rate,
-                    ).toFixed(2)} MMK · ${String(
-                      mmkRateData.rate.rateSource ?? "custom",
-                    ).toUpperCase()} · ${String(mmkRateData.month).padStart(2, "0")}/${mmkRateData.year}`
-                  : t("settings.mmkMissingRate")}
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {currency(Number(incomeProfileForm.salaryCashAmount || 0) + Number(incomeProfileForm.salaryCardAmount || 0), {
+                  sourceCurrency: incomeProfileForm.incomeCurrencyCode,
+                  convert: false,
+                })}
               </p>
+            </div>
 
-              <form className="mt-4 grid gap-4" onSubmit={onMmkRateSubmit}>
-                <Input
-                  label="MMK rate month"
-                  name="monthKey"
-                  type="month"
-                  value={`${mmkRateForm.year}-${String(mmkRateForm.month).padStart(2, "0")}`}
-                  onChange={onMmkRateChange}
-                />
-                <Select
-                  label={t("settings.mmkRateSource")}
-                  name="rateSource"
-                  value={mmkRateForm.rateSource}
-                  onChange={onMmkRateChange}
-                  options={[
-                    { value: "kbz", label: t("settings.mmkKbzOption") },
-                    { value: "custom", label: t("settings.mmkCustomOption") },
-                  ]}
-                />
-                {mmkRateForm.rateSource === "custom" ? (
-                  <Input
-                    label={t("settings.mmkCustomRateInput")}
-                    name="rate"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={mmkRateForm.rate}
-                    onChange={onMmkRateChange}
-                    placeholder="4500.00"
-                  />
-                ) : (
-                  <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
-                    {t("settings.mmkKbzAutoFetch")}
-                  </div>
-                )}
-                <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
-                  {t("settings.mmkPlainEnglish")}
+            <ActionButton busy={incomeProfileBusy} className="sm:w-auto">
+              {t("settings.save")}
+            </ActionButton>
+          </form>
+        )}
+
+        {/* Display tab */}
+        {activeTab === "display" && (
+          <div className="mt-6 grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Select
+                label={t("settings.language")}
+                value={locale}
+                onChange={(event) => setLocale(event.target.value)}
+                options={supportedLocales.map((entry) => ({
+                  value: entry,
+                  label: entry === "en" ? "English" : "Español",
+                }))}
+              />
+              <Select
+                label={t("settings.displayCurrency")}
+                value={currencyCode}
+                onChange={onCurrencyChange}
+                options={currencyOptions}
+              />
+              <Select
+                label={t("settings.referenceCurrency")}
+                value={baseCurrencyCode}
+                onChange={onBaseCurrencyChange}
+                options={currencyOptions}
+              />
+              <Select
+                label={t("settings.theme")}
+                value={theme}
+                onChange={onThemeChange}
+                options={[
+                  { value: "system", label: t("settings.systemMode") },
+                  { value: "light", label: t("settings.lightMode") },
+                  { value: "dark", label: t("settings.darkMode") },
+                ]}
+              />
+            </div>
+
+            <div className="hb-panel-soft rounded-3xl px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {t("settings.exchangeRate")}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">
+                {baseCurrencyCode === currencyCode
+                  ? t("settings.noConversionNeeded")
+                  : exchangeRateLabel || t("settings.loadingRate")}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">{t("settings.currencyHint")}</p>
+            </div>
+
+            <div className="hb-panel-soft rounded-3xl px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {t("settings.howItWorks")}
+              </p>
+              <div className="mt-3 space-y-2 text-sm leading-6 text-slate-600">
+                <p>
+                  <span className="font-semibold text-slate-900">{t("settings.homeCurrencyLabel")}:</span>{" "}
+                  {incomeProfileForm.incomeCurrencyCode} {t("settings.howItWorksLineOne")}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-900">{t("settings.displayCurrencyLabel")}:</span>{" "}
+                  {currencyCode} {t("settings.howItWorksLineTwo")}
+                </p>
+                <p>
+                  <span className="font-semibold text-slate-900">{t("settings.referenceCurrencyLabel")}:</span>{" "}
+                  {baseCurrencyCode} {t("settings.referenceCurrencyHelp")}
+                </p>
+                <p>{t("settings.howItWorksLineThree")}</p>
+                <p className="hb-surface-strong rounded-2xl px-3 py-3 text-slate-700">
+                  {t("settings.howItWorksPlainEnglish")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MMK Rate tab */}
+        {activeTab === "mmk" && (
+          <div className="mt-6">
+            <p className="text-sm text-slate-600">{t("settings.mmkMonthlyRateHelp")}</p>
+
+            {session?.couple ? (
+              <>
+                <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {t("settings.mmkMonthlyRate")}
+                  </p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    {mmkRateData?.rate
+                      ? `1 USD = ${Number(mmkRateData.rate.rate).toFixed(2)} MMK · ${String(
+                          mmkRateData.rate.rateSource ?? "custom",
+                        ).toUpperCase()} · ${String(mmkRateData.month).padStart(2, "0")}/${mmkRateData.year}`
+                      : t("settings.mmkMissingRate")}
+                  </p>
                 </div>
-                <ActionButton busy={mmkRateBusy} className="sm:w-auto">
-                  {t("settings.saveMmkRate")}
-                </ActionButton>
-              </form>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-slate-600">{t("settings.mmkCoupleRequired")}</p>
-          )}
-        </div>
+
+                <form className="mt-4 grid gap-4" onSubmit={onMmkRateSubmit}>
+                  <Input
+                    label="MMK rate month"
+                    name="monthKey"
+                    type="month"
+                    value={`${mmkRateForm.year}-${String(mmkRateForm.month).padStart(2, "0")}`}
+                    onChange={onMmkRateChange}
+                  />
+                  <Select
+                    label={t("settings.mmkRateSource")}
+                    name="rateSource"
+                    value={mmkRateForm.rateSource}
+                    onChange={onMmkRateChange}
+                    options={[
+                      { value: "kbz", label: t("settings.mmkKbzOption") },
+                      { value: "custom", label: t("settings.mmkCustomOption") },
+                    ]}
+                  />
+                  {mmkRateForm.rateSource === "custom" ? (
+                    <Input
+                      label={t("settings.mmkCustomRateInput")}
+                      name="rate"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={mmkRateForm.rate}
+                      onChange={onMmkRateChange}
+                      placeholder="4500.00"
+                    />
+                  ) : (
+                    <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
+                      {t("settings.mmkKbzAutoFetch")}
+                    </div>
+                  )}
+                  <div className="hb-surface-strong rounded-2xl px-3 py-3 text-sm text-slate-700">
+                    {t("settings.mmkPlainEnglish")}
+                  </div>
+                  <ActionButton busy={mmkRateBusy} className="sm:w-auto">
+                    {t("settings.saveMmkRate")}
+                  </ActionButton>
+                </form>
+              </>
+            ) : (
+              <p className="mt-4 text-sm text-slate-500">{t("settings.mmkCoupleRequired")}</p>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">

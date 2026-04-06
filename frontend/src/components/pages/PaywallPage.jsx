@@ -38,7 +38,7 @@ function PaywallPage({ onSubscribe, onContinueFree, busy }) {
           Get your AI Finance Coach, savings goals, and deep insights — everything you need to actually win with money.
         </p>
 
-        <div className="mt-6 rounded-[1.5rem] bg-gradient-to-br from-amber-50 to-sky-50 border border-amber-100 p-6">
+        <div className="hb-panel-highlight mt-6 rounded-[1.5rem] border border-amber-200/40 p-6">
           <p className="text-4xl font-bold text-slate-900">
             $5
             <span className="text-lg font-medium text-slate-500"> / month</span>

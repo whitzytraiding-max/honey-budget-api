@@ -320,7 +320,9 @@ async function apiFetch(path, options = {}) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || "Request failed.");
+    const err = new Error(data?.error?.message || "Request failed.");
+    err.status = response.status;
+    throw err;
   }
 
   return data.data;
@@ -911,6 +913,7 @@ export default function App() {
     includeNotifications = notificationsLoaded,
     includePlanner = Boolean(route === "planner" || route === "setup" || plannerData),
   } = {}) {
+    setPageError("");
     const refreshTasks = [loadDashboard(), loadSummary()];
 
     if (includeMonth) {
@@ -961,12 +964,16 @@ export default function App() {
     }
 
     refreshDashboardBundle().catch((error) => {
-      setAuthError(postAuthFailureMessage || error.message);
-      clearAuthFeedback();
-      setPageError("");
-      localStorage.removeItem("budget_token");
-      setToken("");
-      resetAuthenticatedState();
+      if (error.status === 401) {
+        setAuthError(postAuthFailureMessage || error.message);
+        clearAuthFeedback();
+        setPageError("");
+        localStorage.removeItem("budget_token");
+        setToken("");
+        resetAuthenticatedState();
+      } else {
+        setPageError("Couldn't connect to the server. Please refresh the page.");
+      }
     });
   }, [token]);
 
@@ -2132,6 +2139,17 @@ export default function App() {
   }
 
   function renderCurrentPage() {
+    if (!session) {
+      return (
+        <div className="mt-16 flex flex-col items-center gap-3 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-amber-400" />
+          <p className="text-sm text-slate-500">
+            {pageError ? "See the error above." : "Connecting to server…"}
+          </p>
+        </div>
+      );
+    }
+
     if (
       !couple &&
       !soloMode &&
@@ -2386,6 +2404,8 @@ export default function App() {
       showNotifications
       onLogout={handleLogout}
       pageError={pageError}
+      onDismissError={() => setPageError("")}
+      onRetryLoad={!session ? () => refreshDashboardBundle().catch((error) => setPageError(error.message)) : undefined}
     >
       <div key={route} className="hb-page-enter">
         {renderCurrentPage()}

@@ -29,6 +29,8 @@ function AppShell({
   onLogout,
   children,
   pageError,
+  onDismissError,
+  onRetryLoad,
 }) {
   function handleNavTap(key) {
     hapticLight();
@@ -118,8 +120,28 @@ function AppShell({
         </header>
 
         {pageError ? (
-          <div className="mt-4 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
-            {pageError}
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-[1.5rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            <span>{pageError}</span>
+            <div className="flex shrink-0 items-center gap-2">
+              {onRetryLoad ? (
+                <button
+                  className="rounded-lg bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-200"
+                  onClick={onRetryLoad}
+                  type="button"
+                >
+                  Retry
+                </button>
+              ) : null}
+              {onDismissError ? (
+                <button
+                  className="rounded-lg bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 transition hover:bg-rose-200"
+                  onClick={onDismissError}
+                  type="button"
+                >
+                  Dismiss
+                </button>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
