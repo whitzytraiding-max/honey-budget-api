@@ -156,6 +156,18 @@ html[data-theme="dark"] .bg-amber-50 {
   background-color: rgba(30, 41, 59, 0.9) !important;
 }
 
+html[data-theme="dark"] .bg-rose-50 {
+  background-color: rgba(55, 8, 14, 0.88) !important;
+}
+
+html[data-theme="dark"] .bg-rose-100 {
+  background-color: rgba(80, 12, 20, 0.9) !important;
+}
+
+html[data-theme="dark"] .border-rose-200 {
+  border-color: rgba(190, 50, 65, 0.45) !important;
+}
+
 html[data-theme="dark"] .bg-slate-900,
 html[data-theme="dark"] .bg-slate-800,
 html[data-theme="dark"] .bg-slate-700 {

@@ -113,10 +113,18 @@ export function createCoupleRoutes({ budgetRepository, requireAuth }) {
     "/api/notifications",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const [inviteNotifications, activityNotifications] = await Promise.all([
-        budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
-        budgetRepository.listActivityNotificationsForUser(request.user.id),
-      ]);
+      let inviteNotifications;
+      let activityNotifications;
+
+      try {
+        [inviteNotifications, activityNotifications] = await Promise.all([
+          budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
+          budgetRepository.listActivityNotificationsForUser(request.user.id),
+        ]);
+      } catch (error) {
+        console.error("[/api/notifications] Repository error for user", request.user.id, ":", error);
+        throw error;
+      }
 
       sendData(response, 200, {
         ...inviteNotifications,

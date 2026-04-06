@@ -897,9 +897,9 @@ export default function App() {
       setNotificationsData(data);
       setNotificationsLoaded(true);
     } catch (error) {
+      console.error("Notifications load failed:", error);
       setNotificationsData(createEmptyNotificationsState());
       setNotificationsLoaded(false);
-      setPageError(error.message);
     } finally {
       setNotificationsBusy(false);
     }
@@ -983,9 +983,7 @@ export default function App() {
     }
 
     if (route === "notifications" && !notificationsBusy && !notificationsLoaded) {
-      loadNotifications().catch((error) => {
-        setPageError(error.message);
-      });
+      loadNotifications().catch(() => {});
     }
 
     if (!session?.couple) {
