@@ -181,18 +181,18 @@ async function buildBudgetSnapshotForUsers({
   fromDate = null,
   toDate = null,
 }) {
-  if (!currentUser || !partnerUser) {
-    throw new HttpError(404, "COUPLE_NOT_FOUND", "Linked partner not found.");
+  if (!currentUser) {
+    throw new HttpError(404, "COUPLE_NOT_FOUND", "User not found.");
   }
 
+  const users = [currentUser, partnerUser].filter(Boolean);
   const transactions = await budgetRepository.listTransactionsForUserIds({
-    userIds: [currentUser.id, partnerUser.id],
+    userIds: users.map((user) => user.id),
     days,
     fromDate,
     toDate,
   });
-  const couple = await budgetRepository.getCoupleForUser(currentUser.id);
-  const users = [currentUser, partnerUser];
+  const couple = partnerUser ? await budgetRepository.getCoupleForUser(currentUser.id) : null;
   const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
   const converter = await createCurrencyConverter({
     exchangeRateService,

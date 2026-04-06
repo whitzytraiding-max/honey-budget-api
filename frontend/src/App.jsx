@@ -327,6 +327,7 @@ async function apiFetch(path, options = {}) {
 export default function App() {
   const { locale } = useLanguage();
   const [token, setToken] = useState(() => localStorage.getItem("budget_token") || "");
+  const [soloMode, setSoloMode] = useState(() => localStorage.getItem("budget_solo_mode") === "true");
   const [hashLocation, setHashLocation] = useState(() => getHashLocation());
   const [authMode, setAuthMode] = useState("register");
   const [registerForm, setRegisterForm] = useState(REGISTER_FIELDS);
@@ -859,7 +860,7 @@ export default function App() {
   }
 
   async function loadPlanner() {
-    if (!session?.couple) {
+    if (!session?.couple && !soloMode) {
       setPlannerData(null);
       return;
     }
@@ -935,12 +936,13 @@ export default function App() {
 
   async function refreshDashboardBundle() {
     const me = await fetchHouseholdData();
+    const isSolo = !me.couple && soloMode;
 
-    if (me.couple) {
+    if (me.couple || isSolo) {
       await refreshBudgetViews({
         includeMonth: false,
         includeInsights: false,
-        includeSavings: false,
+        includeSavings: isSolo ? false : false,
         includeNotifications: false,
       });
     } else {
@@ -2111,9 +2113,21 @@ export default function App() {
     exchangeRate,
   });
 
+  function enableSoloMode() {
+    localStorage.setItem("budget_solo_mode", "true");
+    setSoloMode(true);
+    refreshBudgetViews({
+      includeMonth: false,
+      includeInsights: false,
+      includeSavings: false,
+      includeNotifications: false,
+    }).catch(() => {});
+  }
+
   function renderCurrentPage() {
     if (
       !couple &&
+      !soloMode &&
       route !== "settings" &&
       route !== "more" &&
       route !== "notifications" &&
@@ -2121,26 +2135,35 @@ export default function App() {
     ) {
       return (
         <EmptyState
-          title="Invite your partner to unlock the shared dashboard"
-          body="Send an invite to your partner's email. They will need to accept it from Notifications before your accounts are linked."
+          title="Link a partner or use solo"
+          body="Send an invite to your partner's email to share your dashboard, or continue using the app on your own."
           action={
-            <form
-              className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
-              onSubmit={handleLinkPartner}
-            >
-              <input
-                className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="partner@example.com"
-                type="email"
-                value={partnerEmail}
-                onChange={(event) => setPartnerEmail(event.target.value)}
-              />
-              <ActionButton busy={linkBusy} className="sm:w-auto">
-                Send invite
-              </ActionButton>
-            </form>
+            <div className="mx-auto mt-6 flex max-w-md flex-col gap-4">
+              <form
+                className="flex flex-col gap-3 sm:flex-row"
+                onSubmit={handleLinkPartner}
+              >
+                <input
+                  className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="partner@example.com"
+                  type="email"
+                  value={partnerEmail}
+                  onChange={(event) => setPartnerEmail(event.target.value)}
+                />
+                <ActionButton busy={linkBusy} className="sm:w-auto">
+                  Send invite
+                </ActionButton>
+              </form>
+              <button
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                type="button"
+                onClick={enableSoloMode}
+              >
+                Continue without a partner
+              </button>
+            </div>
           }
         />
       );
@@ -2242,8 +2265,8 @@ export default function App() {
             onLogout={handleLogout}
             showNotifications
             showCoach={Boolean(couple)}
-            showPlanner={Boolean(couple)}
-            showSetup={Boolean(couple)}
+            showPlanner={Boolean(couple) || soloMode}
+            showSetup={Boolean(couple) || soloMode}
           />
         );
       case "notifications":

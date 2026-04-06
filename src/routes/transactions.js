@@ -12,7 +12,7 @@ import {
   roundCurrency,
 } from "../services/currencyConversionService.js";
 import { MMK_CURRENCY_CODE } from "../services/exchangeRateService.js";
-import { buildBudgetSnapshot } from "../services/dashboardService.js";
+import { buildBudgetSnapshot, buildBudgetSnapshotForUsers } from "../services/dashboardService.js";
 import { normalizeTransactionPayload, validateYearMonth, roundRate } from "../lib/parsers.js";
 import {
   sanitizeUser,
@@ -41,11 +41,21 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
 
       if (!couple) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "The authenticated user is not linked to a couple yet.",
-        );
+        const partnerUser = null;
+        const snapshot = await buildBudgetSnapshotForUsers({
+          budgetRepository,
+          exchangeRateService,
+          currentUser: request.user,
+          partnerUser,
+          days: Number.isFinite(days) && days > 0 ? days : 30,
+          displayCurrency,
+        });
+        return sendData(response, 200, {
+          couple: null,
+          currentUser: sanitizeUser(request.user),
+          partner: null,
+          dashboard: snapshot,
+        });
       }
 
       await materializeRecurringBills({
@@ -109,14 +119,6 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
     requireAuth,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
-      if (!couple) {
-        throw new HttpError(
-          409,
-          "COUPLE_REQUIRED",
-          "Link a couple before adding shared expenses.",
-        );
-      }
-
       const normalizedTransaction = normalizeTransactionPayload(request.body);
       const sourceCurrencyCode =
         normalizedTransaction.currencyCode ??
@@ -127,7 +129,7 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
       });
       const exchangeSnapshot = await buildMmkTransactionSnapshot({
         exchangeRateService,
-        coupleId: couple.id,
+        coupleId: couple?.id ?? null,
         amount: normalizedTransaction.amount,
         sourceCurrencyCode,
         targetCurrencyCode: displayCurrencyCode,
@@ -148,7 +150,7 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
 
       sendData(response, 201, {
         transaction,
-        coupleId: couple.id,
+        coupleId: couple?.id ?? null,
         notification,
       });
     }),
@@ -301,36 +303,38 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
       });
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
 
-      if (!couple) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "The authenticated user is not linked to a couple yet.",
-        );
-      }
-
       if (month && !validateYearMonth(month)) {
         throw new HttpError(400, "VALIDATION_ERROR", "month must use YYYY-MM.");
       }
 
-      await materializeRecurringBills({
-        budgetRepository,
-        exchangeRateService,
-        couple,
-        throughDate: new Date().toISOString().slice(0, 10),
-      });
+      if (couple) {
+        await materializeRecurringBills({
+          budgetRepository,
+          exchangeRateService,
+          couple,
+          throughDate: new Date().toISOString().slice(0, 10),
+        });
+      }
 
       const monthWindow = month ? getCalendarMonthWindow(month) : null;
-      const transactions = await budgetRepository.listCoupleTransactions({
-        coupleId: couple.id,
-        days: Number.isFinite(days) && days > 0 ? days : 30,
-        fromDate: monthWindow?.from,
-        toDate: monthWindow?.to,
-      });
+      const resolvedDays = Number.isFinite(days) && days > 0 ? days : 30;
+      const transactions = couple
+        ? await budgetRepository.listCoupleTransactions({
+            coupleId: couple.id,
+            days: resolvedDays,
+            fromDate: monthWindow?.from,
+            toDate: monthWindow?.to,
+          })
+        : await budgetRepository.listTransactionsForUserIds({
+            userIds: [request.user.id],
+            days: resolvedDays,
+            fromDate: monthWindow?.from,
+            toDate: monthWindow?.to,
+          });
       const converter = await createCurrencyConverter({
         exchangeRateService,
         displayCurrency,
-        coupleId: couple.id,
+        coupleId: couple?.id ?? null,
         date: monthWindow?.from ?? new Date().toISOString().slice(0, 10),
         sourceCurrencies: transactions.map((transaction) => transaction.currencyCode),
       });

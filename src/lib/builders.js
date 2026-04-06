@@ -199,11 +199,7 @@ export async function resolvePartnerUser({ budgetRepository, user }) {
 
   const couple = await budgetRepository.getCoupleForUser(user.id);
   if (!couple) {
-    throw new HttpError(
-      404,
-      "COUPLE_NOT_FOUND",
-      "The authenticated user is not linked to a couple yet.",
-    );
+    return null;
   }
 
   return getPartner(couple, user.id);
@@ -217,9 +213,10 @@ export async function buildMonthlySummary({
   month = null,
   displayCurrency = null,
 }) {
+  const activeUsers = [currentUser, partnerUser].filter(Boolean);
   const budgetWindow = month
     ? getCalendarMonthWindow(month)
-    : getBudgetWindowForUsers([currentUser, partnerUser]);
+    : getBudgetWindowForUsers(activeUsers);
 
   if (!budgetWindow) {
     throw new HttpError(400, "VALIDATION_ERROR", "month must use YYYY-MM.");
@@ -227,7 +224,7 @@ export async function buildMonthlySummary({
 
   const { from, to, end, days, daysRemaining, label, anchorDay } = budgetWindow;
   const transactions = await budgetRepository.listTransactionsForUserIds({
-    userIds: [currentUser.id, partnerUser.id],
+    userIds: activeUsers.map((user) => user.id),
     days: Math.max(days, 120),
     fromDate: from,
     toDate: to,
@@ -237,31 +234,29 @@ export async function buildMonthlySummary({
     currentUser,
     partnerUser,
   });
-  const couple =
-    currentUser && partnerUser
-      ? await budgetRepository.getCoupleForUser(currentUser.id)
-      : null;
+  const couple = partnerUser
+    ? await budgetRepository.getCoupleForUser(currentUser.id)
+    : null;
   const converter = await createCurrencyConverter({
     exchangeRateService,
     displayCurrency: resolvedDisplayCurrency,
     coupleId: couple?.id ?? null,
     date: from,
     sourceCurrencies: [
-      currentUser.incomeCurrencyCode,
-      partnerUser.incomeCurrencyCode,
+      ...activeUsers.map((user) => user.incomeCurrencyCode),
       ...transactions.map((transaction) => transaction.currencyCode),
     ],
   });
   const monthlyTransactions = transactions.filter(
     (transaction) => transaction.date >= from && transaction.date <= to,
   );
-  const householdIncome = [currentUser, partnerUser].reduce((sum, user) => {
+  const householdIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.monthlySalary ?? 0, user.incomeCurrencyCode);
   }, 0);
-  const cashIncome = [currentUser, partnerUser].reduce((sum, user) => {
+  const cashIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.salaryCashAmount ?? 0, user.incomeCurrencyCode);
   }, 0);
-  const cardIncome = [currentUser, partnerUser].reduce((sum, user) => {
+  const cardIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.salaryCardAmount ?? 0, user.incomeCurrencyCode);
   }, 0);
   const totalExpenses = monthlyTransactions.reduce(
