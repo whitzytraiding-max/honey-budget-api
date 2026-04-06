@@ -7,7 +7,7 @@ import express from "express";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolveCurrencyCode } from "../services/currencyConversionService.js";
 import { parseMoney, validateIsoDate } from "../lib/parsers.js";
-import { resolvePartnerUser, buildSavingsSummary } from "../lib/builders.js";
+import { buildSavingsSummary } from "../lib/builders.js";
 
 export function createSavingsRoutes({ budgetRepository, exchangeRateService, requireAuth }) {
   const router = express.Router();
@@ -45,10 +45,6 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
     "/api/savings/goal",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const partnerUser = await resolvePartnerUser({
-        budgetRepository,
-        user: request.user,
-      });
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const title = String(request.body?.title ?? "").trim();
       const targetAmount = parseMoney(request.body?.targetAmount);
@@ -57,37 +53,22 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
         request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
       );
 
-      if (!couple || !partnerUser) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "Link both partners before setting a shared savings goal.",
-        );
-      }
-
       if (!title) {
         throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
       }
 
       if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
-        throw new HttpError(
-          400,
-          "VALIDATION_ERROR",
-          "targetAmount must be a positive number.",
-        );
+        throw new HttpError(400, "VALIDATION_ERROR", "targetAmount must be a positive number.");
       }
 
       if (targetDate && !validateIsoDate(targetDate)) {
         throw new HttpError(400, "VALIDATION_ERROR", "targetDate must use YYYY-MM-DD.");
       }
 
-      const goal = await budgetRepository.createSavingsGoalForCouple({
-        coupleId: couple.id,
-        title,
-        targetAmount,
-        currencyCode,
-        targetDate: targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null,
-      });
+      const parsedDate = targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null;
+      const goal = couple
+        ? await budgetRepository.createSavingsGoalForCouple({ coupleId: couple.id, title, targetAmount, currencyCode, targetDate: parsedDate })
+        : await budgetRepository.createSavingsGoalForUser({ userId: request.user.id, title, targetAmount, currencyCode, targetDate: parsedDate });
 
       sendData(response, 200, { goal });
     }),
@@ -97,10 +78,6 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
     "/api/savings/goal/:goalId",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const partnerUser = await resolvePartnerUser({
-        budgetRepository,
-        user: request.user,
-      });
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const goalId = Number.parseInt(request.params.goalId, 10);
       const title = String(request.body?.title ?? "").trim();
@@ -114,38 +91,22 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
         throw new HttpError(400, "VALIDATION_ERROR", "goalId must be an integer.");
       }
 
-      if (!couple || !partnerUser) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "Link both partners before editing a shared savings goal.",
-        );
-      }
-
       if (!title) {
         throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
       }
 
       if (!Number.isFinite(targetAmount) || targetAmount <= 0) {
-        throw new HttpError(
-          400,
-          "VALIDATION_ERROR",
-          "targetAmount must be a positive number.",
-        );
+        throw new HttpError(400, "VALIDATION_ERROR", "targetAmount must be a positive number.");
       }
 
       if (targetDate && !validateIsoDate(targetDate)) {
         throw new HttpError(400, "VALIDATION_ERROR", "targetDate must use YYYY-MM-DD.");
       }
 
-      const goal = await budgetRepository.updateSavingsGoalForCouple({
-        goalId,
-        coupleId: couple.id,
-        title,
-        targetAmount,
-        currencyCode,
-        targetDate: targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null,
-      });
+      const parsedDate = targetDate ? new Date(`${targetDate}T00:00:00.000Z`) : null;
+      const goal = couple
+        ? await budgetRepository.updateSavingsGoalForCouple({ goalId, coupleId: couple.id, title, targetAmount, currencyCode, targetDate: parsedDate })
+        : await budgetRepository.updateSavingsGoalForUser({ goalId, userId: request.user.id, title, targetAmount, currencyCode, targetDate: parsedDate });
 
       sendData(response, 200, { goal });
     }),
@@ -155,10 +116,6 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
     "/api/savings/goal/:goalId",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const partnerUser = await resolvePartnerUser({
-        budgetRepository,
-        user: request.user,
-      });
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const goalId = Number.parseInt(request.params.goalId, 10);
 
@@ -166,18 +123,9 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
         throw new HttpError(400, "VALIDATION_ERROR", "goalId must be an integer.");
       }
 
-      if (!couple || !partnerUser) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "Link both partners before removing a shared savings goal.",
-        );
-      }
-
-      const goal = await budgetRepository.deleteSavingsGoalForCouple({
-        goalId,
-        coupleId: couple.id,
-      });
+      const goal = couple
+        ? await budgetRepository.deleteSavingsGoalForCouple({ goalId, coupleId: couple.id })
+        : await budgetRepository.deleteSavingsGoalForUser({ goalId, userId: request.user.id });
 
       sendData(response, 200, { goal });
     }),
@@ -211,42 +159,29 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
         throw new HttpError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD.");
       }
 
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
       if (savingsGoalId !== null) {
         if (!Number.isInteger(savingsGoalId)) {
-          throw new HttpError(
-            400,
-            "VALIDATION_ERROR",
-            "savingsGoalId must be an integer when provided.",
-          );
+          throw new HttpError(400, "VALIDATION_ERROR", "savingsGoalId must be an integer when provided.");
         }
 
-        const couple = await budgetRepository.getCoupleForUser(request.user.id);
-        if (!couple) {
-          throw new HttpError(
-            404,
-            "COUPLE_NOT_FOUND",
-            "Link both partners before assigning savings to a shared goal.",
-          );
-        }
+        const goals = couple
+          ? await budgetRepository.listSavingsGoalsForCouple(couple.id)
+          : await budgetRepository.listSavingsGoalsForUser(request.user.id);
 
-        const goals = await budgetRepository.listSavingsGoalsForCouple(couple.id);
         if (!goals.some((goal) => goal.id === savingsGoalId)) {
-          throw new HttpError(
-            404,
-            "SAVINGS_GOAL_NOT_FOUND",
-            "Selected savings goal was not found for this couple.",
-          );
+          throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Selected savings goal was not found.");
         }
       }
 
       let resolvedSavingsGoalId = savingsGoalId;
       if (resolvedSavingsGoalId === null) {
-        const couple = await budgetRepository.getCoupleForUser(request.user.id);
-        if (couple) {
-          const goals = await budgetRepository.listSavingsGoalsForCouple(couple.id);
-          if (goals.length === 1) {
-            resolvedSavingsGoalId = goals[0].id;
-          }
+        const goals = couple
+          ? await budgetRepository.listSavingsGoalsForCouple(couple.id)
+          : await budgetRepository.listSavingsGoalsForUser(request.user.id);
+        if (goals.length === 1) {
+          resolvedSavingsGoalId = goals[0].id;
         }
       }
 

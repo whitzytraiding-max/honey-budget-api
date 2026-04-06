@@ -1530,6 +1530,62 @@ function createPrismaBudgetRepository({ prisma }) {
       return goals.map(mapSavingsGoal);
     },
 
+    async listSavingsGoalsForUser(userId) {
+      const goals = await prisma.savingsGoal.findMany({
+        where: {
+          userId,
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return goals.map(mapSavingsGoal);
+    },
+
+    async createSavingsGoalForUser({ userId, title, targetAmount, currencyCode = "USD", targetDate }) {
+      const goal = await prisma.savingsGoal.create({
+        data: {
+          userId,
+          title,
+          targetAmount,
+          currencyCode,
+          targetDate,
+        },
+      });
+
+      return mapSavingsGoal(goal);
+    },
+
+    async updateSavingsGoalForUser({ goalId, userId, title, targetAmount, currencyCode = "USD", targetDate }) {
+      const existing = await prisma.savingsGoal.findFirst({
+        where: { id: goalId, userId },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      const goal = await prisma.savingsGoal.update({
+        where: { id: goalId },
+        data: { title, targetAmount, currencyCode, targetDate },
+      });
+
+      return mapSavingsGoal(goal);
+    },
+
+    async deleteSavingsGoalForUser({ goalId, userId }) {
+      const existing = await prisma.savingsGoal.findFirst({
+        where: { id: goalId, userId },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "SAVINGS_GOAL_NOT_FOUND", "Savings goal not found.");
+      }
+
+      const goal = await prisma.savingsGoal.delete({ where: { id: goalId } });
+
+      return mapSavingsGoal(goal);
+    },
+
     async createSavingsGoalForCouple({
       coupleId,
       title,

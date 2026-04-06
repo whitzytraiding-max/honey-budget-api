@@ -352,7 +352,9 @@ export async function buildSavingsSummary({
     partnerUser && currentUser
       ? await budgetRepository.getCoupleForUser(currentUser.id)
       : null;
-  const goals = couple ? await budgetRepository.listSavingsGoalsForCouple(couple.id) : [];
+  const goals = couple
+    ? await budgetRepository.listSavingsGoalsForCouple(couple.id)
+    : await budgetRepository.listSavingsGoalsForUser(currentUser.id);
   const entries = await budgetRepository.listSavingsEntriesForUserIds({
     userIds: users.map((user) => user.id),
     days: 3650,
