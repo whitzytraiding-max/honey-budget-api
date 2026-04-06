@@ -499,6 +499,31 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapCoupleCoachProfile(profile);
     },
 
+    async getUserCoachProfile(userId) {
+      const profile = await prisma.coupleCoachProfile.findUnique({
+        where: { userId },
+      });
+      return mapCoupleCoachProfile(profile);
+    },
+
+    async upsertUserCoachProfile({
+      userId,
+      primaryGoal,
+      goalHorizon,
+      biggestMoneyStress,
+      hardestCategory,
+      conflictTrigger,
+      coachingFocus,
+      notes = "",
+    }) {
+      const profile = await prisma.coupleCoachProfile.upsert({
+        where: { userId },
+        update: { primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes },
+        create: { userId, primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes },
+      });
+      return mapCoupleCoachProfile(profile);
+    },
+
     async getCoupleMmkMonthlyRate({ coupleId, year, month }) {
       const rate = await prisma.coupleMmkMonthlyRate.findUnique({
         where: {

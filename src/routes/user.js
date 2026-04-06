@@ -24,7 +24,7 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const coachProfile = couple
         ? await budgetRepository.getCoupleCoachProfile(couple.id)
-        : null;
+        : await budgetRepository.getUserCoachProfile(request.user.id);
       const partnerUser = couple ? getPartner(couple, request.user.id) : null;
       const [inviteNotifications, activityNotifications] = await Promise.all([
         budgetRepository.listPendingCoupleInvitesForUser(request.user.id),
@@ -72,16 +72,9 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     requireAuth,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
-
-      if (!couple) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "Link both partners before opening the coach setup.",
-        );
-      }
-
-      const profile = await budgetRepository.getCoupleCoachProfile(couple.id);
+      const profile = couple
+        ? await budgetRepository.getCoupleCoachProfile(couple.id)
+        : await budgetRepository.getUserCoachProfile(request.user.id);
       sendData(response, 200, { profile });
     }),
   );
@@ -91,20 +84,15 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     requireAuth,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
-
-      if (!couple) {
-        throw new HttpError(
-          404,
-          "COUPLE_NOT_FOUND",
-          "Link both partners before saving the coach setup.",
-        );
-      }
-
-      const profile = await budgetRepository.upsertCoupleCoachProfile({
-        coupleId: couple.id,
-        ...normalizeCoachProfilePayload(request.body),
-      });
-
+      const profile = couple
+        ? await budgetRepository.upsertCoupleCoachProfile({
+            coupleId: couple.id,
+            ...normalizeCoachProfilePayload(request.body),
+          })
+        : await budgetRepository.upsertUserCoachProfile({
+            userId: request.user.id,
+            ...normalizeCoachProfilePayload(request.body),
+          });
       sendData(response, 200, { profile });
     }),
   );

@@ -8,6 +8,8 @@ function HomePage({
   dashboard,
   dashboardBusy,
   coachProfile,
+  soloMode = false,
+  couple = null,
   setupChecklist = [],
   onNavigateToCoach,
   onNavigateToSetup,
@@ -65,25 +67,24 @@ function HomePage({
                 <Sparkles className="h-4 w-4" />
               </span>
               <div>
-                <p className="hb-kicker">Household setup</p>
+                <p className="hb-kicker">{soloMode ? t("setup.personalLabel") : t("setup.householdLabel")}</p>
                 <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">
-                  Finish the shared setup
+                  {soloMode ? t("setup.personalTitle") : t("setup.sharedTitle")}
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-                  {setupRemaining} step{setupRemaining === 1 ? "" : "s"} still need attention.
-                  Add recurring bills, savings goals, and your coach answers so the app can act
-                  more like a shared planner and less like a blank tracker.
+                  {setupRemaining} step{setupRemaining === 1 ? "" : "s"} still need attention.{" "}
+                  {soloMode ? t("setup.personalBody") : t("setup.sharedBody")}
                 </p>
               </div>
             </div>
             <ActionButton className="sm:w-auto sm:min-w-[220px]" onClick={onNavigateToSetup} type="button">
-              Open setup checklist
+              {t("setup.openChecklist")}
             </ActionButton>
           </div>
         </section>
       ) : null}
 
-      {!coachProfile?.completed ? (
+      {!coachProfile?.completed && (couple || soloMode) ? (
         <section className="hb-panel-highlight rounded-[1.35rem] border border-amber-200/80 p-4 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] sm:rounded-[1.5rem] sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
@@ -91,9 +92,13 @@ function HomePage({
                 <Sparkles className="h-4 w-4" />
               </span>
               <div>
-                <p className="hb-kicker">Couples finance coach</p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">{t("coach.homeTitle")}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{t("coach.homeBody")}</p>
+                <p className="hb-kicker">{soloMode ? t("coach.soloLabel") : t("coach.couplesLabel")}</p>
+                <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">
+                  {soloMode ? t("coach.soloHomeTitle") : t("coach.homeTitle")}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
+                  {soloMode ? t("coach.soloHomeBody") : t("coach.homeBody")}
+                </p>
               </div>
             </div>
             <ActionButton className="sm:w-auto sm:min-w-[220px]" onClick={onNavigateToCoach} type="button">

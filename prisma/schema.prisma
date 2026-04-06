@@ -36,6 +36,7 @@ model User {
   recurringBills      RecurringBill[]
   savingsGoals        SavingsGoal[]
   pushDevices         PushDevice[]
+  coachProfile        CoupleCoachProfile?
   partner             User?         @relation("UserPartner", fields: [partnerId], references: [id])
   partneredBy         User?         @relation("UserPartner")
   coupleAsUserOne     Couple[]      @relation("CoupleUserOne")
@@ -91,7 +92,8 @@ model CoupleMmkMonthlyRate {
 
 model CoupleCoachProfile {
   id                 Int      @id @default(autoincrement())
-  coupleId           Int      @unique @map("couple_id")
+  coupleId           Int?     @unique @map("couple_id")
+  userId             Int?     @unique @map("user_id")
   primaryGoal        String   @map("primary_goal")
   goalHorizon        String   @map("goal_horizon")
   biggestMoneyStress String   @map("biggest_money_stress")
@@ -101,7 +103,8 @@ model CoupleCoachProfile {
   notes              String?  @map("notes")
   createdAt          DateTime @default(now()) @map("created_at")
   updatedAt          DateTime @updatedAt @map("updated_at")
-  couple             Couple   @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  couple             Couple?  @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  user               User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("couple_coach_profiles")
 }

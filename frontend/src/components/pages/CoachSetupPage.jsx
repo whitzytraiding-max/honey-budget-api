@@ -27,7 +27,7 @@ const STRESS_OPTIONS = [
   { value: "Debt pressure", label: "Debt pressure" },
   { value: "Cash flow between paydays", label: "Cash flow between paydays" },
   { value: "Unexpected expenses", label: "Unexpected expenses" },
-  { value: "One of us spending more than expected", label: "One of us spending more than expected" },
+  { value: "One of us spending more than expected", label: "One of us spending more than expected", couplesOnly: true },
 ];
 
 const CATEGORY_OPTIONS = [
@@ -45,43 +45,62 @@ const CATEGORY_OPTIONS = [
 const CONFLICT_OPTIONS = [
   { value: "", label: "Choose one" },
   { value: "Surprise purchases", label: "Surprise purchases" },
-  { value: "One person feels like they carry more", label: "One person feels like they carry more" },
-  { value: "We do not check in before bigger spending", label: "We do not check in before bigger spending" },
-  { value: "We have different priorities", label: "We have different priorities" },
+  { value: "One person feels like they carry more", label: "One person feels like they carry more", couplesOnly: true },
+  { value: "We do not check in before bigger spending", label: "We do not check in before bigger spending", couplesOnly: true },
+  { value: "We have different priorities", label: "We have different priorities", couplesOnly: true },
   { value: "Cash disappears too easily", label: "Cash disappears too easily" },
+  { value: "I spend impulsively", label: "I spend impulsively" },
+  { value: "I avoid checking my finances", label: "I avoid checking my finances" },
 ];
 
 const FOCUS_OPTIONS = [
   { value: "", label: "Choose one" },
-  { value: "Help us spend less in weak categories", label: "Help us spend less in weak categories" },
-  { value: "Help us save consistently", label: "Help us save consistently" },
-  { value: "Help us reduce money arguments", label: "Help us reduce money arguments" },
-  { value: "Help us pay off debt faster", label: "Help us pay off debt faster" },
-  { value: "Help us stick to weekly limits", label: "Help us stick to weekly limits" },
+  { value: "Help us spend less in weak categories", label: "Help us spend less in weak categories", couplesOnly: true },
+  { value: "Help me spend less in weak categories", label: "Help me spend less in weak categories", soloOnly: true },
+  { value: "Help us save consistently", label: "Help us save consistently", couplesOnly: true },
+  { value: "Help me save consistently", label: "Help me save consistently", soloOnly: true },
+  { value: "Help us reduce money arguments", label: "Help us reduce money arguments", couplesOnly: true },
+  { value: "Help us pay off debt faster", label: "Help us pay off debt faster", couplesOnly: true },
+  { value: "Help me pay off debt faster", label: "Help me pay off debt faster", soloOnly: true },
+  { value: "Help us stick to weekly limits", label: "Help us stick to weekly limits", couplesOnly: true },
+  { value: "Help me stick to a budget", label: "Help me stick to a budget", soloOnly: true },
+  { value: "Help me build better money habits", label: "Help me build better money habits", soloOnly: true },
 ];
 
-function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed }) {
+function filterOptions(options, soloMode) {
+  return options.filter((opt) => {
+    if (soloMode && opt.couplesOnly) return false;
+    if (!soloMode && opt.soloOnly) return false;
+    return true;
+  });
+}
+
+function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed, soloMode = false }) {
   const { t } = useLanguage();
+
+  const stressOptions = filterOptions(STRESS_OPTIONS, soloMode);
+  const conflictOptions = filterOptions(CONFLICT_OPTIONS, soloMode);
+  const focusOptions = filterOptions(FOCUS_OPTIONS, soloMode);
 
   return (
     <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
       <div className="flex items-center gap-3">
         <Sparkles className="h-5 w-5 text-amber-600" />
         <div>
-          <h2 className="text-2xl font-semibold">{t("coach.title")}</h2>
-          <p className="text-sm text-slate-600">{t("coach.subtitle")}</p>
+          <h2 className="text-2xl font-semibold">{soloMode ? t("coach.soloTitle") : t("coach.title")}</h2>
+          <p className="text-sm text-slate-600">{soloMode ? t("coach.soloSubtitle") : t("coach.subtitle")}</p>
         </div>
       </div>
 
       <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4 text-sm leading-6 text-amber-900">
         <p className="font-semibold">{t("coach.whyTitle")}</p>
-        <p className="mt-1">{t("coach.whyBody")}</p>
+        <p className="mt-1">{soloMode ? t("coach.soloWhyBody") : t("coach.whyBody")}</p>
       </div>
 
       <form className="mt-6 grid gap-4" onSubmit={onSubmit}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Select
-            label={t("coach.primaryGoal")}
+            label={soloMode ? t("coach.soloPrimaryGoal") : t("coach.primaryGoal")}
             name="primaryGoal"
             value={coachProfileForm.primaryGoal}
             onChange={onChange}
@@ -99,7 +118,7 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed 
             name="biggestMoneyStress"
             value={coachProfileForm.biggestMoneyStress}
             onChange={onChange}
-            options={STRESS_OPTIONS}
+            options={stressOptions}
           />
           <Select
             label={t("coach.hardestCategory")}
@@ -109,18 +128,18 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed 
             options={CATEGORY_OPTIONS}
           />
           <Select
-            label={t("coach.conflictTrigger")}
+            label={soloMode ? t("coach.soloConflictTrigger") : t("coach.conflictTrigger")}
             name="conflictTrigger"
             value={coachProfileForm.conflictTrigger}
             onChange={onChange}
-            options={CONFLICT_OPTIONS}
+            options={conflictOptions}
           />
           <Select
             label={t("coach.coachingFocus")}
             name="coachingFocus"
             value={coachProfileForm.coachingFocus}
             onChange={onChange}
-            options={FOCUS_OPTIONS}
+            options={focusOptions}
           />
         </div>
 
@@ -129,7 +148,7 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed 
           name="notes"
           value={coachProfileForm.notes}
           onChange={onChange}
-          placeholder={t("coach.notesPlaceholder")}
+          placeholder={soloMode ? t("coach.soloNotesPlaceholder") : t("coach.notesPlaceholder")}
         />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -986,7 +986,7 @@ export default function App() {
       loadNotifications().catch(() => {});
     }
 
-    if (!session?.couple) {
+    if (!session?.couple && !soloMode) {
       return;
     }
 
@@ -2116,7 +2116,9 @@ export default function App() {
   const coupleNames = couple
     ? `${couple.userOne.name} + ${couple.userTwo.name}`
     : session?.user?.name;
-  const coachRequired = Boolean(couple) && !coachProfile?.completed;
+  // Coach setup is required for couples (always) and for solo users who have opted in via the home card.
+  // We only gate the insights route behind coach completion, not the coach page itself.
+  const coachRequired = !coachProfile?.completed && (Boolean(couple) || soloMode);
 
   setCurrencyConversionPreferences({
     displayCurrency: currencyCode,
@@ -2220,6 +2222,7 @@ export default function App() {
               onSubmit={handleCoachProfileSubmit}
               busy={coachProfileBusy}
               completed={Boolean(coachProfile?.completed)}
+              soloMode={soloMode}
             />
           );
         }
@@ -2385,6 +2388,8 @@ export default function App() {
             dashboard={dashboard}
             dashboardBusy={dashboardBusy}
             coachProfile={coachProfile}
+            soloMode={soloMode}
+            couple={couple}
             onNavigateToCoach={() => navigate("coach")}
             setupChecklist={plannerData?.setupChecklist ?? session?.setupChecklist ?? []}
             onNavigateToSetup={() => navigate("setup")}
