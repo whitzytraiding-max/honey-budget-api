@@ -18,6 +18,7 @@ import PlannerPage from "./components/pages/PlannerPage.jsx";
 import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
+import PaywallPage from "./components/pages/PaywallPage.jsx";
 import { ActionButton, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { addBackButtonListener, setStatusBarForTheme } from "./lib/native.js";
@@ -85,6 +86,7 @@ const APP_ROUTES = new Set([
   "insights",
   "history",
   "settings",
+  "paywall",
   "reset-password",
 ]);
 
@@ -2042,6 +2044,10 @@ export default function App() {
       setCoachProfile(data.profile);
       setCoachProfileForm(createCoachProfileDraft(data.profile));
       await fetchHouseholdData();
+      if (!isPro) {
+        navigate("paywall");
+        return;
+      }
       const nextInsights = await loadInsights({ suppressError: true });
       if (!nextInsights) {
         setPageError("Your coach answers were saved. Insights are taking a little longer to load.");
@@ -2091,6 +2097,7 @@ export default function App() {
   }
 
   const couple = session?.couple || dashboardData?.couple;
+  const isPro = session?.isPro ?? false;
   const dashboard = dashboardData?.dashboard;
   const insights = insightData?.insights;
   const transactions = dashboard?.transactions ?? [];
@@ -2200,6 +2207,14 @@ export default function App() {
             />
           );
         }
+        if (!isPro) {
+          return (
+            <PaywallPage
+              onSubscribe={() => navigate("paywall")}
+              onContinueFree={() => navigate("home")}
+            />
+          );
+        }
         return (
           <InsightsPage
             insightsBusy={insightsBusy}
@@ -2296,6 +2311,8 @@ export default function App() {
             onCancelSavingsGoalEdit={resetSavingsGoalEditor}
             savingsBusy={savingsBusy}
             savingsTargetBusy={savingsTargetBusy}
+            isPro={isPro}
+            onUpgrade={() => navigate("paywall")}
           />
         );
       case "history":
@@ -2331,6 +2348,17 @@ export default function App() {
             onBaseCurrencyChange={handleBaseCurrencyChange}
             onMmkRateChange={handleMmkRateChange}
             onMmkRateSubmit={handleMmkRateSubmit}
+          />
+        );
+      case "paywall":
+        return (
+          <PaywallPage
+            onSubscribe={() => {
+              // IAP integration goes here (Apple/Google)
+              // For now, navigate back to insights
+              navigate("insights");
+            }}
+            onContinueFree={() => navigate("home")}
           />
         );
       case "home":

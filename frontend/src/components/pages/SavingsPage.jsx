@@ -1,4 +1,4 @@
-import { Pencil, PiggyBank, Target, Trash2 } from "lucide-react";
+import { Crown, Pencil, PiggyBank, Target, Trash2 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
@@ -20,6 +20,8 @@ function SavingsPage({
   onCancelSavingsGoalEdit,
   savingsBusy,
   savingsTargetBusy,
+  isPro = false,
+  onUpgrade,
 }) {
   const { t, locale } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
@@ -106,6 +108,22 @@ function SavingsPage({
             </div>
           </div>
 
+          {!isPro ? (
+            <div className="mt-4 rounded-[1.2rem] border border-amber-100 bg-amber-50 p-5 text-center">
+              <Crown className="mx-auto h-6 w-6 text-amber-500" />
+              <p className="mt-2 font-semibold text-slate-900">Pro feature</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Set savings goals and track progress with a Pro subscription.
+              </p>
+              <button
+                className="mt-4 rounded-[1rem] bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-600"
+                onClick={onUpgrade}
+                type="button"
+              >
+                Upgrade to Pro — $5/month
+              </button>
+            </div>
+          ) : (
           <div className="mt-4 space-y-4">
             <form className="hb-panel-soft space-y-4 rounded-[1.2rem] border border-sky-100 p-4" onSubmit={onSavingsGoalSubmit}>
               <Input
@@ -231,6 +249,7 @@ function SavingsPage({
               )}
             </div>
           </div>
+          )}
         </section>
 
         <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">

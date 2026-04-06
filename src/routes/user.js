@@ -35,10 +35,21 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
             budgetRepository.listRecurringBillsForCouple(couple.id),
             budgetRepository.listSavingsGoalsForCouple(couple.id),
           ])
-        : [[], []];
+        : [[], await budgetRepository.listSavingsGoalsForUser(request.user.id)];
+
+      const now = new Date();
+      const userIsPro =
+        request.user.subscriptionStatus === "pro" &&
+        (!request.user.subscriptionExpiresAt || new Date(request.user.subscriptionExpiresAt) > now);
+      const partnerIsPro = partnerUser
+        ? partnerUser.subscriptionStatus === "pro" &&
+          (!partnerUser.subscriptionExpiresAt || new Date(partnerUser.subscriptionExpiresAt) > now)
+        : false;
+      const isPro = userIsPro || partnerIsPro;
 
       sendData(response, 200, {
         user: sanitizeUser(request.user),
+        isPro,
         couple,
         coachProfile,
         setupChecklist: buildSetupChecklist({

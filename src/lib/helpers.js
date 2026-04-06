@@ -22,6 +22,9 @@ export function sanitizeUser(user) {
         salaryCardAllocationPct: Number(user.salaryCardAllocationPct ?? 100),
         incomeDayOfMonth: Number(user.incomeDayOfMonth ?? 1),
         monthlySavingsTarget: Number(user.monthlySavingsTarget ?? 0),
+        subscriptionStatus: user.subscriptionStatus ?? "free",
+        subscriptionExpiresAt: user.subscriptionExpiresAt ?? null,
+        subscriptionProvider: user.subscriptionProvider ?? null,
         createdAt: user.createdAt,
       }
     : null;

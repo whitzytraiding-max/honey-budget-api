@@ -21,6 +21,9 @@ model User {
   incomeDayOfMonth    Int           @default(1) @map("income_day_of_month")
   monthlySavingsTarget Decimal      @default(0) @db.Decimal(12, 2) @map("monthly_savings_target")
   partnerId           Int?          @unique @map("partner_id")
+  subscriptionStatus  String        @default("free") @map("subscription_status")
+  subscriptionExpiresAt DateTime?   @map("subscription_expires_at")
+  subscriptionProvider String?      @map("subscription_provider")
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
   transactions        Transaction[]
