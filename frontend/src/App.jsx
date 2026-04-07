@@ -2120,6 +2120,11 @@ export default function App() {
   // We only gate the insights route behind coach completion, not the coach page itself.
   const coachRequired = !coachProfile?.completed && (Boolean(couple) || soloMode);
 
+  const rawChecklist = plannerData?.setupChecklist ?? session?.setupChecklist ?? [];
+  const setupChecklist = soloMode
+    ? rawChecklist.filter((item) => item.key !== "partner")
+    : rawChecklist;
+
   setCurrencyConversionPreferences({
     displayCurrency: currencyCode,
     baseCurrency: baseCurrencyCode,
@@ -2254,7 +2259,7 @@ export default function App() {
       case "setup":
         return (
           <SetupFlowPage
-            checklist={plannerData?.setupChecklist ?? session?.setupChecklist ?? []}
+            checklist={setupChecklist}
             onNavigate={navigate}
           />
         );
@@ -2351,6 +2356,7 @@ export default function App() {
         return (
           <SettingsPage
             session={session}
+            soloMode={soloMode}
             incomeProfileForm={incomeProfileForm}
             onIncomeProfileChange={updateIncomeProfileForm}
             onIncomeProfileSubmit={handleIncomeProfileSubmit}
@@ -2391,7 +2397,7 @@ export default function App() {
             soloMode={soloMode}
             couple={couple}
             onNavigateToCoach={() => navigate("coach")}
-            setupChecklist={plannerData?.setupChecklist ?? session?.setupChecklist ?? []}
+            setupChecklist={setupChecklist}
             onNavigateToSetup={() => navigate("setup")}
           />
         );

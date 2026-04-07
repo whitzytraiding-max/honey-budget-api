@@ -8,6 +8,7 @@ const SETTINGS_TABS = ["profile", "display", "mmk"];
 
 function SettingsPage({
   session,
+  soloMode = false,
   incomeProfileForm,
   onIncomeProfileChange,
   onIncomeProfileSubmit,
@@ -213,7 +214,7 @@ function SettingsPage({
           <div className="mt-6">
             <p className="text-sm text-slate-600">{t("settings.mmkMonthlyRateHelp")}</p>
 
-            {session?.couple ? (
+            {session?.couple || soloMode ? (
               <>
                 <div className="hb-panel-soft mt-4 rounded-3xl px-4 py-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

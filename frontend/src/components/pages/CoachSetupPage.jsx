@@ -9,7 +9,7 @@ const GOAL_OPTIONS = [
   { value: "Save for a home", label: "Save for a home" },
   { value: "Save for travel", label: "Save for travel" },
   { value: "Feel more stable month to month", label: "Feel more stable month to month" },
-  { value: "Stop fighting about money", label: "Stop fighting about money" },
+  { value: "Stop fighting about money", label: "Stop fighting about money", couplesOnly: true },
 ];
 
 const HORIZON_OPTIONS = [

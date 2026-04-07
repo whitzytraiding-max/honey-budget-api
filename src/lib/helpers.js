@@ -421,24 +421,32 @@ export function buildSetupChecklist({
   recurringBills,
   goals,
 }) {
+  const hasPartner = Boolean(partnerUser);
+
+  const incomeComplete = hasPartner
+    ? Boolean(
+        currentUser?.monthlySalary > 0 &&
+          partnerUser?.monthlySalary > 0 &&
+          currentUser?.incomeDayOfMonth &&
+          partnerUser?.incomeDayOfMonth,
+      )
+    : Boolean(currentUser?.monthlySalary > 0 && currentUser?.incomeDayOfMonth);
+
   return [
     {
       key: "partner",
       title: "Link your partner",
       description: "Connect both accounts so the app can act like one shared household.",
-      completed: Boolean(partnerUser),
+      completed: hasPartner,
       route: "settings",
     },
     {
       key: "income",
-      title: "Set both income profiles",
-      description: "Make sure income, split, and income day are saved for both partners.",
-      completed: Boolean(
-        currentUser?.monthlySalary > 0 &&
-          partnerUser?.monthlySalary > 0 &&
-          currentUser?.incomeDayOfMonth &&
-          partnerUser?.incomeDayOfMonth,
-      ),
+      title: hasPartner ? "Set both income profiles" : "Set your income profile",
+      description: hasPartner
+        ? "Make sure income, split, and income day are saved for both partners."
+        : "Make sure your income, split, and income day are saved.",
+      completed: incomeComplete,
       route: "settings",
     },
     {
@@ -457,8 +465,10 @@ export function buildSetupChecklist({
     },
     {
       key: "coach",
-      title: "Finish the couples coach questionnaire",
-      description: "Tell Honey Budget where you want help and where tension usually starts.",
+      title: hasPartner ? "Finish the couples coach questionnaire" : "Finish your personal coach questionnaire",
+      description: hasPartner
+        ? "Tell Honey Budget where you want help and where tension usually starts."
+        : "Tell Honey Budget where you want help and what habits trip you up.",
       completed: Boolean(coachProfile?.completed),
       route: "coach",
     },

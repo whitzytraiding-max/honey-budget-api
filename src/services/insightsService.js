@@ -300,11 +300,11 @@ function createFallbackInsights(snapshot, coachProfile = null) {
       explanation: `${snapshot.fairSplit[0].name} should cover ${snapshot.fairSplit[0].sharePct}% of recurring bills and ${snapshot.fairSplit[1].name} should cover ${snapshot.fairSplit[1].sharePct}% based on monthly income.`,
       recurringBillSplit: snapshot.fairSplit,
     },
-    tips: tips.slice(0, 3),
+    tips: tips.slice(0, 2),
   };
 }
 
-const INSIGHTS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes per couple
+const INSIGHTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours per user/couple
 
 function createInsightsService({
   budgetRepository,
@@ -394,24 +394,19 @@ function createInsightsService({
             "Base every insight on real categories, patterns, totals, and partner behavior in the data.",
             "Use the couple's questionnaire answers when they are present so the coaching lines up with their actual goals and weak spots.",
             "Focus on spending habits, savings opportunities, and reducing financial conflict.",
-            "Return exactly three actionable coaching insights.",
-            "Each insight must be specific, personal, and immediately usable this week.",
-            "At least one insight must directly reference the cash versus card spending mix.",
-            "At least one insight must mention a real category, purchase pattern, or named person from the data.",
-            "If one person is clearly driving spending, say so gently and specifically without shaming them.",
-            "Do not tell the couple to 'slow down' on fixed essential recurring costs like rent, housing, mortgage, insurance, utilities, taxes, or childcare unless the data shows those costs are unusually variable or avoidable.",
-            "Keep fixed essential recurring bills out of the three headline tips whenever possible.",
-            "Reserve the three headline tips for flexible categories, discretionary behavior, one-time purchases, or spending habits the couple can realistically change.",
-            "Include at least one insight that lowers conflict by making expectations clearer between partners.",
+            "Return exactly two coaching insights.",
+            "Insight 1 (daily): A single, immediately actionable tip for this week based on current spending patterns. Title it starting with 'This week:'. Make it specific and usable today.",
+            "Insight 2 (monthly): A reflective insight comparing this month to last month's data (use trendMonths if available). Celebrate a win or flag a worsening trend. Title it starting with 'This month:'. Give one concrete rule to carry into the rest of the month.",
+            "Each insight must be specific, personal, and grounded in real data from the snapshot.",
+            "At least one insight must directly reference the cash versus card spending mix or a specific named category.",
+            "Do not tell users to slow down on fixed essential recurring costs like rent, housing, mortgage, insurance, utilities, taxes, or childcare unless the data shows those are unusually variable.",
             "If coachProfile is present, tie at least one tip directly to the stated goal, stress point, or hardest spending category.",
-            "Use a supportive, calm, specific tone.",
-            "Do not give generic filler like 'save more', 'communicate better', or 'make a budget'.",
-            "Include a fair recurring-bill split recommendation based on the two salaries.",
-            "The overview should read like a short coach summary of what matters most this month.",
-            "Be specific, concise, non-judgmental, and action-oriented.",
+            "Use a supportive, calm, specific tone. No generic filler like 'save more' or 'make a budget'.",
+            "Include a fair recurring-bill split recommendation based on income.",
+            "The overview should read like a short coach summary of what matters most right now.",
             trendSummary.length
-              ? `You have ${trendSummary.length} prior month(s) of trend data in trendMonths. Reference month-over-month changes when they reveal a meaningful pattern (e.g. spending rising in a category, or a positive saving trend). Only mention trends that are genuinely notable.`
-              : "",
+              ? `You have ${trendSummary.length} prior month(s) of trend data in trendMonths. Use this for the monthly insight to compare patterns month-over-month.`
+              : "No prior month trend data is available — base the monthly insight on current month patterns only.",
           ].filter(Boolean).join(" "),
           input: [
             {
@@ -459,8 +454,8 @@ function createInsightsService({
                   },
                   tips: {
                     type: "array",
-                    minItems: 3,
-                    maxItems: 3,
+                    minItems: 2,
+                    maxItems: 2,
                     items: {
                       type: "object",
                       additionalProperties: false,
