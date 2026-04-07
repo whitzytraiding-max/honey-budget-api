@@ -1,6 +1,7 @@
 import { Clock3, ReceiptText, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getRemainingTone } from "../../lib/format.js";
+import { MoneyCat } from "../MoneyCat.jsx";
 import { ActionButton, ProgressBar } from "../ui.jsx";
 
 function HomePage({
@@ -110,27 +111,32 @@ function HomePage({
 
       <section className="hb-surface-card rounded-[1.35rem] p-3.5 sm:rounded-[1.5rem] sm:p-6">
         <div className="hb-hero-panel rounded-[1.2rem] px-4 py-4 text-white sm:rounded-[1.4rem] sm:px-6 sm:py-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
-            {t("home.remaining")}
-          </p>
-          <p className="hb-stat-emphasis mt-2 text-[2.35rem] font-semibold tracking-tight sm:text-6xl">
-            {currency(remainingBudget)}
-          </p>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <div
-              className="hb-brand-pill inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs"
-            >
-              {t("shell.totalHouseholdIncome")}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
+                {t("home.remaining")}
+              </p>
+              <p className="hb-stat-emphasis mt-2 text-[2.35rem] font-semibold tracking-tight sm:text-6xl">
+                {currency(remainingBudget)}
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <div
+                  className="hb-brand-pill inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs"
+                >
+                  {t("shell.totalHouseholdIncome")}
+                </div>
+                <p className="text-lg font-semibold text-white/90 sm:text-xl">
+                  {currency(householdIncome)}
+                </p>
+              </div>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
+                {summaryData
+                  ? `${currency(summaryData.totalExpenses)} spent in ${summaryData.period.label}.`
+                  : "Calculating your current budget window."}
+              </p>
             </div>
-            <p className="text-lg font-semibold text-white/90 sm:text-xl">
-              {currency(householdIncome)}
-            </p>
+            <MoneyCat remainingPct={summaryData?.remainingPct ?? 50} size={84} />
           </div>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
-            {summaryData
-              ? `${currency(summaryData.totalExpenses)} spent in ${summaryData.period.label}.`
-              : "Calculating your current budget window."}
-          </p>
         </div>
 
         <div className="hb-progress-track mt-4 h-3 overflow-hidden rounded-full shadow-inner">
