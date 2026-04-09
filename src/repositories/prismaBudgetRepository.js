@@ -1685,6 +1685,79 @@ function createPrismaBudgetRepository({ prisma }) {
 
       return mapSavingsGoal(goal);
     },
+
+    // Coupon methods
+    async findCouponByCode(code) {
+      return prisma.couponCode.findUnique({ where: { code } });
+    },
+
+    async findCouponRedemption(userId, couponCodeId) {
+      return prisma.couponRedemption.findUnique({
+        where: { userId_couponCodeId: { userId, couponCodeId } },
+      });
+    },
+
+    async redeemCoupon({ userId, couponId, expiresAt }) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+
+      // Don't downgrade an existing permanent pro subscription
+      const currentlyPermanentPro =
+        user.subscriptionStatus === "pro" && user.subscriptionExpiresAt === null;
+      if (currentlyPermanentPro && expiresAt !== null) {
+        await prisma.couponRedemption.create({ data: { userId, couponCodeId: couponId } });
+        await prisma.couponCode.update({ where: { id: couponId }, data: { usedCount: { increment: 1 } } });
+        return;
+      }
+
+      // Don't overwrite a timed subscription that expires later than the coupon
+      const currentExpiry = user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt) : null;
+      if (
+        user.subscriptionStatus === "pro" &&
+        expiresAt !== null &&
+        currentExpiry !== null &&
+        currentExpiry > expiresAt
+      ) {
+        await prisma.couponRedemption.create({ data: { userId, couponCodeId: couponId } });
+        await prisma.couponCode.update({ where: { id: couponId }, data: { usedCount: { increment: 1 } } });
+        return;
+      }
+
+      await prisma.$transaction([
+        prisma.couponRedemption.create({ data: { userId, couponCodeId: couponId } }),
+        prisma.couponCode.update({
+          where: { id: couponId },
+          data: { usedCount: { increment: 1 } },
+        }),
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            subscriptionStatus: "pro",
+            subscriptionExpiresAt: expiresAt,
+            subscriptionProvider: "coupon",
+          },
+        }),
+      ]);
+    },
+
+    async listCoupons() {
+      return prisma.couponCode.findMany({
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { redemptions: true } } },
+      });
+    },
+
+    async createCoupon({ code, type, durationDays, maxUses, note }) {
+      return prisma.couponCode.create({
+        data: { code, type, durationDays, maxUses, note },
+      });
+    },
+
+    async deactivateCoupon(code) {
+      await prisma.couponCode.update({
+        where: { code },
+        data: { isActive: false },
+      });
+    },
   };
 }
 

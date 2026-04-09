@@ -1335,6 +1335,16 @@ export default function App() {
     }
   }
 
+  async function handleRedeemCoupon(code) {
+    const data = await apiFetch("/api/coupons/redeem", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+    // Refresh session so isPro updates immediately
+    await refreshDashboardBundle().catch(() => {});
+    return data;
+  }
+
   async function handleRegister(event) {
     event.preventDefault();
     setAuthBusy(true);
@@ -2417,6 +2427,8 @@ export default function App() {
             onBaseCurrencyChange={handleBaseCurrencyChange}
             onMmkRateChange={handleMmkRateChange}
             onMmkRateSubmit={handleMmkRateSubmit}
+            onRedeemCoupon={handleRedeemCoupon}
+            isPro={isPro}
           />
         );
       case "paywall":

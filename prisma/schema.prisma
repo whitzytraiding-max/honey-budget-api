@@ -41,6 +41,7 @@ model User {
   partneredBy         User?         @relation("UserPartner")
   coupleAsUserOne     Couple[]      @relation("CoupleUserOne")
   coupleAsUserTwo     Couple[]      @relation("CoupleUserTwo")
+  couponRedemptions   CouponRedemption[]
 
   @@map("users")
 }
@@ -261,4 +262,31 @@ model HouseholdRule {
 
   @@index([coupleId, isActive, createdAt])
   @@map("household_rules")
+}
+
+model CouponCode {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique
+  type         String   // "permanent" | "days"
+  durationDays Int?     @map("duration_days")
+  maxUses      Int?     @map("max_uses")
+  usedCount    Int      @default(0) @map("used_count")
+  isActive     Boolean  @default(true) @map("is_active")
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  redemptions  CouponRedemption[]
+
+  @@map("coupon_codes")
+}
+
+model CouponRedemption {
+  id           Int        @id @default(autoincrement())
+  userId       Int        @map("user_id")
+  couponCodeId Int        @map("coupon_code_id")
+  redeemedAt   DateTime   @default(now()) @map("redeemed_at")
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon       CouponCode @relation(fields: [couponCodeId], references: [id])
+
+  @@unique([userId, couponCodeId])
+  @@map("coupon_redemptions")
 }
