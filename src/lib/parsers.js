@@ -259,6 +259,14 @@ export function normalizeCoachProfilePayload(payload) {
     );
   }
 
+  const rawBudget = payload?.monthlyBudgetTarget;
+  const monthlyBudgetTarget = rawBudget !== "" && rawBudget != null ? Number(rawBudget) : null;
+  const paySchedule = String(payload?.paySchedule ?? "").trim() || null;
+  const rawAllowance = payload?.personalAllowance;
+  const personalAllowance = rawAllowance !== "" && rawAllowance != null ? Number(rawAllowance) : null;
+  const rawDebt = payload?.totalDebtAmount;
+  const totalDebtAmount = rawDebt !== "" && rawDebt != null ? Number(rawDebt) : null;
+
   return {
     primaryGoal,
     goalHorizon,
@@ -267,6 +275,10 @@ export function normalizeCoachProfilePayload(payload) {
     conflictTrigger,
     coachingFocus,
     notes,
+    monthlyBudgetTarget,
+    paySchedule,
+    personalAllowance,
+    totalDebtAmount,
   };
 }
 

@@ -251,6 +251,10 @@ function createCoachProfileDraft(profile) {
     conflictTrigger: String(profile?.conflictTrigger ?? ""),
     coachingFocus: String(profile?.coachingFocus ?? ""),
     notes: String(profile?.notes ?? ""),
+    monthlyBudgetTarget: profile?.monthlyBudgetTarget != null ? String(profile.monthlyBudgetTarget) : "",
+    paySchedule: String(profile?.paySchedule ?? ""),
+    personalAllowance: profile?.personalAllowance != null ? String(profile.personalAllowance) : "",
+    totalDebtAmount: profile?.totalDebtAmount != null ? String(profile.totalDebtAmount) : "",
   };
 }
 
@@ -1336,6 +1340,18 @@ export default function App() {
     }
   }
 
+  async function handleCoachChat(message) {
+    const data = await apiFetch("/api/coach/chat", {
+      method: "POST",
+      headers: authHeaders,
+      body: JSON.stringify({
+        message,
+        displayCurrency: currencyCode,
+      }),
+    });
+    return data.reply;
+  }
+
   async function handleRedeemCoupon(code) {
     const data = await apiFetch("/api/coupons/redeem", {
       method: "POST",
@@ -2302,6 +2318,7 @@ export default function App() {
             insightsBusy={insightsBusy}
             insights={insights}
             dashboard={dashboard}
+            onChatMessage={handleCoachChat}
           />
         );
       case "coach":

@@ -269,6 +269,10 @@ function mapCoupleCoachProfile(profile) {
     conflictTrigger: profile.conflictTrigger,
     coachingFocus: profile.coachingFocus,
     notes: profile.notes ?? "",
+    monthlyBudgetTarget: profile.monthlyBudgetTarget != null ? Number(profile.monthlyBudgetTarget) : null,
+    paySchedule: profile.paySchedule ?? null,
+    personalAllowance: profile.personalAllowance != null ? Number(profile.personalAllowance) : null,
+    totalDebtAmount: profile.totalDebtAmount != null ? Number(profile.totalDebtAmount) : null,
     completed: Boolean(
       profile.primaryGoal &&
         profile.goalHorizon &&
@@ -489,7 +493,17 @@ function createPrismaBudgetRepository({ prisma }) {
       conflictTrigger,
       coachingFocus,
       notes = "",
+      monthlyBudgetTarget = null,
+      paySchedule = null,
+      personalAllowance = null,
+      totalDebtAmount = null,
     }) {
+      const extra = {
+        monthlyBudgetTarget: monthlyBudgetTarget !== "" && monthlyBudgetTarget != null ? Number(monthlyBudgetTarget) : null,
+        paySchedule: paySchedule || null,
+        personalAllowance: personalAllowance !== "" && personalAllowance != null ? Number(personalAllowance) : null,
+        totalDebtAmount: totalDebtAmount !== "" && totalDebtAmount != null ? Number(totalDebtAmount) : null,
+      };
       const profile = await prisma.coupleCoachProfile.upsert({
         where: {
           coupleId,
@@ -502,6 +516,7 @@ function createPrismaBudgetRepository({ prisma }) {
           conflictTrigger,
           coachingFocus,
           notes,
+          ...extra,
         },
         create: {
           coupleId,
@@ -512,6 +527,7 @@ function createPrismaBudgetRepository({ prisma }) {
           conflictTrigger,
           coachingFocus,
           notes,
+          ...extra,
         },
       });
 
@@ -534,11 +550,21 @@ function createPrismaBudgetRepository({ prisma }) {
       conflictTrigger,
       coachingFocus,
       notes = "",
+      monthlyBudgetTarget = null,
+      paySchedule = null,
+      personalAllowance = null,
+      totalDebtAmount = null,
     }) {
+      const extra = {
+        monthlyBudgetTarget: monthlyBudgetTarget !== "" && monthlyBudgetTarget != null ? Number(monthlyBudgetTarget) : null,
+        paySchedule: paySchedule || null,
+        personalAllowance: personalAllowance !== "" && personalAllowance != null ? Number(personalAllowance) : null,
+        totalDebtAmount: totalDebtAmount !== "" && totalDebtAmount != null ? Number(totalDebtAmount) : null,
+      };
       const profile = await prisma.coupleCoachProfile.upsert({
         where: { userId },
-        update: { primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes },
-        create: { userId, primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes },
+        update: { primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes, ...extra },
+        create: { userId, primaryGoal, goalHorizon, biggestMoneyStress, hardestCategory, conflictTrigger, coachingFocus, notes, ...extra },
       });
       return mapCoupleCoachProfile(profile);
     },

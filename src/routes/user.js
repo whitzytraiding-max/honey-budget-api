@@ -93,6 +93,10 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
             userId: request.user.id,
             ...normalizeCoachProfilePayload(request.body),
           });
+      // Clear insights cache so the next load regenerates with the new profile
+      if (couple) {
+        budgetRepository.setInsightsCache(couple.id, null).catch(() => {});
+      }
       sendData(response, 200, { profile });
     }),
   );

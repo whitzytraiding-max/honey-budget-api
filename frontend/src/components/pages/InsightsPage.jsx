@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Brain, TrendingUp, Wallet } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Brain, Send, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
 
@@ -78,9 +78,104 @@ function InsightsLoader() {
   );
 }
 
-const INSIGHT_EMOJIS = ["🌿", "💳", "✨"];
+const INSIGHT_EMOJIS = ["🌿", "💳", "🎯"];
 
-function InsightsPage({ insightsBusy, insights, dashboard }) {
+const CHAT_SUGGESTIONS = [
+  "How do we cut our food spending?",
+  "Are we on track with our savings goal?",
+  "Why is our remaining budget low this month?",
+  "Which of us is spending more right now?",
+];
+
+function CoachChat({ onSendMessage }) {
+  const [message, setMessage] = useState("");
+  const [reply, setReply] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const inputRef = useRef(null);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const text = message.trim();
+    if (!text || busy) return;
+    setBusy(true);
+    setReply(null);
+    setError(null);
+    try {
+      const result = await onSendMessage(text);
+      setReply(result);
+      setMessage("");
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setBusy(false);
+      inputRef.current?.focus();
+    }
+  }
+
+  return (
+    <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
+      <div className="flex items-center gap-3">
+        <Sparkles className="h-5 w-5 text-amber-500" />
+        <div>
+          <h2 className="text-2xl font-semibold">Ask your coach</h2>
+          <p className="text-sm text-slate-600">Ask anything about your finances and get a personalised answer.</p>
+        </div>
+      </div>
+
+      {/* Suggestion chips */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {CHAT_SUGGESTIONS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            className="hb-panel-soft rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:text-slate-900"
+            onClick={() => { setMessage(s); inputRef.current?.focus(); }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+
+      <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
+        <input
+          ref={inputRef}
+          className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+          placeholder="e.g. How do we save faster?"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          disabled={busy}
+          maxLength={500}
+        />
+        <button
+          type="submit"
+          disabled={busy || !message.trim()}
+          className="flex shrink-0 items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-white transition hover:bg-sky-700 disabled:opacity-40"
+          aria-label="Send"
+        >
+          {busy ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </button>
+      </form>
+
+      {/* Reply */}
+      {reply && (
+        <div className="mt-4 rounded-3xl border border-sky-100 bg-sky-50 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">Coach reply</p>
+          <p className="mt-2 text-sm leading-6 text-slate-800">{reply}</p>
+        </div>
+      )}
+      {error && (
+        <p className="mt-3 text-sm text-rose-600">{error}</p>
+      )}
+    </section>
+  );
+}
+
+function InsightsPage({ insightsBusy, insights, dashboard, onChatMessage }) {
   const { t } = useLanguage();
   const summary = dashboard?.summary;
 
@@ -103,7 +198,18 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
               <p className="hb-surface-strong rounded-3xl px-4 py-3 text-sm leading-6 text-slate-700">
                 {insights.overview}
               </p>
-              <ul className="mt-5 space-y-3">
+
+              {/* Win of the month */}
+              {insights.win && (
+                <div className="mt-4 rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-4 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                    ✅ {insights.win.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-emerald-900">{insights.win.body}</p>
+                </div>
+              )}
+
+              <ul className="mt-4 space-y-3">
                 {insights.tips.map((tip, index) => (
                   <li
                     key={tip.title}
@@ -213,6 +319,8 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
           </div>
         </section>
       </div>
+
+      {onChatMessage && <CoachChat onSendMessage={onChatMessage} />}
     </div>
   );
 }

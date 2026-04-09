@@ -1,6 +1,14 @@
 import { Sparkles } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
-import { ActionButton, Select, Textarea } from "../ui.jsx";
+import { ActionButton, Input, Select, Textarea } from "../ui.jsx";
+
+const PAY_SCHEDULE_OPTIONS = [
+  { value: "", label: "Choose one" },
+  { value: "monthly", label: "Monthly (once a month)" },
+  { value: "twice-monthly", label: "Twice a month" },
+  { value: "bi-weekly", label: "Every two weeks" },
+  { value: "weekly", label: "Weekly" },
+];
 
 const GOAL_OPTIONS = [
   { value: "", label: "Choose one" },
@@ -140,6 +148,46 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed,
             value={coachProfileForm.coachingFocus}
             onChange={onChange}
             options={focusOptions}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Input
+            label="Monthly budget target"
+            name="monthlyBudgetTarget"
+            type="number"
+            min="0"
+            step="0.01"
+            value={coachProfileForm.monthlyBudgetTarget}
+            onChange={onChange}
+            placeholder="e.g. 3000.00"
+          />
+          <Select
+            label="Pay schedule"
+            name="paySchedule"
+            value={coachProfileForm.paySchedule}
+            onChange={onChange}
+            options={PAY_SCHEDULE_OPTIONS}
+          />
+          <Input
+            label={soloMode ? "Personal spending allowance" : "Personal allowance per person"}
+            name="personalAllowance"
+            type="number"
+            min="0"
+            step="0.01"
+            value={coachProfileForm.personalAllowance}
+            onChange={onChange}
+            placeholder="e.g. 200.00"
+          />
+          <Input
+            label="Total debt to pay off (optional)"
+            name="totalDebtAmount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={coachProfileForm.totalDebtAmount}
+            onChange={onChange}
+            placeholder="e.g. 5000.00"
           />
         </div>
 

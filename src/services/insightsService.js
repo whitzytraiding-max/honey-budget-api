@@ -345,6 +345,7 @@ function createInsightsService({
       days = 30,
       displayCurrency = null,
       coachProfile = null,
+      savingsGoals = [],
       trendMonths = [],
       snapshot: prebuiltSnapshot = null,
     }) {
@@ -425,6 +426,14 @@ function createInsightsService({
             description, category, type, amount: displayAmount ?? amount, paymentMethod,
           }));
 
+        const savingsGoalsSummary = savingsGoals.map((g) => ({
+          title: g.title,
+          targetAmount: g.targetAmount,
+          currentAmount: g.currentAmount,
+          targetDate: g.targetDate,
+          progressPct: g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0,
+        }));
+
         const promptPayload = {
           period: snapshot.period,
           summary: { ...snapshot.summary, cashSpent: cashTotal, cardSpent: cardTotal },
@@ -433,6 +442,7 @@ function createInsightsService({
           users: snapshot.users?.map(({ id, name, spending }) => ({ id, name, spending })),
           transactions: topTransactions,
           coachProfile,
+          savingsGoals: savingsGoalsSummary,
           trendMonths: trendSummary,
           behaviorFlags: buildBehaviorFlags(snapshot),
           displayCurrencyCode: snapshot.displayCurrencyCode,
@@ -441,25 +451,25 @@ function createInsightsService({
         const response = await openaiClient.responses.create({
           model,
           instructions: [
-            "You are Honey Budget's Couples Finance Coach.",
-            "Use only the provided data.",
-            "Act like a supportive money coach for a real couple, not a generic budgeting bot.",
-            "Base every insight on real categories, patterns, totals, and partner behavior in the data.",
-            "Use the couple's questionnaire answers when they are present so the coaching lines up with their actual goals and weak spots.",
-            "Focus on spending habits, savings opportunities, and reducing financial conflict.",
-            "Return exactly two coaching insights.",
-            "Insight 1 (daily): A single, immediately actionable tip for this week based on current spending patterns. Title it starting with 'This week:'. Make it specific and usable today.",
-            "Insight 2 (monthly): A reflective insight comparing this month to last month's data (use trendMonths if available). Celebrate a win or flag a worsening trend. Title it starting with 'This month:'. Give one concrete rule to carry into the rest of the month.",
-            "Each insight must be specific, personal, and grounded in real data from the snapshot.",
-            "At least one insight must directly reference the cash versus card spending mix or a specific named category.",
-            "Do not tell users to slow down on fixed essential recurring costs like rent, housing, mortgage, insurance, utilities, taxes, or childcare unless the data shows those are unusually variable.",
-            "If coachProfile is present, tie at least one tip directly to the stated goal, stress point, or hardest spending category.",
-            "Use a supportive, calm, specific tone. No generic filler like 'save more' or 'make a budget'.",
-            "Include a fair recurring-bill split recommendation based on income.",
-            "The overview should read like a short coach summary of what matters most right now.",
+            "You are Honey Budget's personal Couples Finance Coach.",
+            "Use only the data provided — never invent numbers.",
+            "Write like a supportive, direct money coach for a real couple. Specific, warm, never generic.",
+            "Base every insight on real categories, patterns, totals, and partner behaviour visible in the data.",
+            "If coachProfile is present, tie advice directly to the stated goal, pay schedule, budget target, debt, and hardest category.",
+            "If savingsGoals are present, reference progress toward them — celebrate milestones or flag if they are falling behind.",
+            "Return exactly three coaching tips and one win.",
+            "Tip 1 (this week): One immediately actionable thing they can do today. Title starts with 'This week:'.",
+            "Tip 2 (this month): Compare this month to trendMonths if available — flag a worsening trend or give a rule to carry into the rest of the month. Title starts with 'This month:'.",
+            "Tip 3 (goal focus): One tip tied directly to their stated primary goal or a savings goal. If totalDebtAmount is set, make this about debt payoff strategy. Title starts with 'Your goal:'.",
+            "Win: Something they genuinely did well this period — a category that improved, a goal making progress, lower cash spending, etc. Must be specific to their data. Title starts with 'Win:'.",
+            "Each tip must name a real category, amount, or person from the data. No filler.",
+            "Do not criticise fixed essential costs (rent, mortgage, insurance, utilities, childcare, taxes).",
+            "Use a calm, specific, encouraging tone. Never say 'make a budget' or 'spend less' without specifics.",
+            "Include a fair recurring-bill split based on income.",
+            "The overview should be 2-3 sentences: what the data shows, what matters most right now.",
             trendSummary.length
-              ? `You have ${trendSummary.length} prior month(s) of trend data in trendMonths. Use this for the monthly insight to compare patterns month-over-month.`
-              : "No prior month trend data is available — base the monthly insight on current month patterns only.",
+              ? `You have ${trendSummary.length} prior month(s) of trend data. Use it for Tip 2 to compare month-over-month.`
+              : "No prior month data — base Tip 2 on current month patterns only.",
           ].filter(Boolean).join(" "),
           input: [
             {
@@ -507,8 +517,8 @@ function createInsightsService({
                   },
                   tips: {
                     type: "array",
-                    minItems: 2,
-                    maxItems: 2,
+                    minItems: 3,
+                    maxItems: 3,
                     items: {
                       type: "object",
                       additionalProperties: false,
@@ -520,8 +530,17 @@ function createInsightsService({
                       required: ["title", "action", "reason"],
                     },
                   },
+                  win: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      title: { type: "string" },
+                      body: { type: "string" },
+                    },
+                    required: ["title", "body"],
+                  },
                 },
-                required: ["overview", "fairSplit", "tips"],
+                required: ["overview", "fairSplit", "tips", "win"],
               },
             },
           },
@@ -548,7 +567,69 @@ function createInsightsService({
       }
     }
 
-  return { getAiInsights };
+  async function chat({ message, snapshot, coachProfile, savingsGoals = [], currentUser, partnerUser }) {
+    if (!openaiClient) {
+      return "The AI coach isn't available right now. Check your spending data in the meantime and try again later.";
+    }
+
+    const cashTotal = Number(snapshot.summary.cashSpent ?? 0);
+    const cardTotal = Number(snapshot.summary.cardSpent ?? 0);
+    const topTransactions = [...snapshot.transactions]
+      .sort((a, b) => (b.displayAmount ?? b.amount ?? 0) - (a.displayAmount ?? a.amount ?? 0))
+      .slice(0, 20)
+      .map(({ description, category, type, displayAmount, amount, paymentMethod }) => ({
+        description, category, type, amount: displayAmount ?? amount, paymentMethod,
+      }));
+
+    const context = {
+      period: snapshot.period,
+      summary: { ...snapshot.summary, cashSpent: cashTotal, cardSpent: cardTotal },
+      topCategories: snapshot.topCategories,
+      fairSplit: snapshot.fairSplit,
+      users: snapshot.users?.map(({ id, name, spending }) => ({ id, name, spending })),
+      transactions: topTransactions,
+      coachProfile,
+      savingsGoals: savingsGoals.map((g) => ({
+        title: g.title,
+        targetAmount: g.targetAmount,
+        currentAmount: g.currentAmount,
+        targetDate: g.targetDate,
+        progressPct: g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0,
+      })),
+      displayCurrencyCode: snapshot.displayCurrencyCode,
+    };
+
+    try {
+      const response = await openaiClient.responses.create({
+        model,
+        instructions: [
+          "You are Honey Budget's personal Couples Finance Coach.",
+          "Answer the user's question using only the financial data provided in the context.",
+          "Be specific — reference real numbers, categories, and names from the data.",
+          "Keep your answer under 120 words. Be direct and actionable.",
+          "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
+          "Never make up data. If the answer isn't in the context, say so honestly.",
+        ].join(" "),
+        input: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "input_text",
+                text: `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`,
+              },
+            ],
+          },
+        ],
+      });
+      return response.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
+    } catch (error) {
+      console.error("Coach chat failed:", error);
+      return "Something went wrong. Please try again in a moment.";
+    }
+  }
+
+  return { getAiInsights, chat };
 }
 
 function createOpenAIClient() {

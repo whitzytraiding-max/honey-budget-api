@@ -38,8 +38,14 @@ export function createInsightsRoutes({
         ]);
         // Don't await — this is a background side-effect, not needed for the response
         materializeRecurringBills({ budgetRepository, exchangeRateService, couple, throughDate }).catch(() => {});
+        let savingsGoals = [];
         if (couple) {
-          coachProfile = await budgetRepository.getCoupleCoachProfile(couple.id);
+          [coachProfile, savingsGoals] = await Promise.all([
+            budgetRepository.getCoupleCoachProfile(couple.id),
+            budgetRepository.listSavingsGoalsForCouple(couple.id).catch(() => []),
+          ]);
+        } else {
+          savingsGoals = await budgetRepository.listSavingsGoalsForUser(request.user.id).catch(() => []);
         }
 
         // Build main snapshot + trend months all in parallel
@@ -84,6 +90,7 @@ export function createInsightsRoutes({
           days: resolvedDays,
           displayCurrency,
           coachProfile,
+          savingsGoals,
           trendMonths: trendResults,
           snapshot: mainSnapshot,
         });

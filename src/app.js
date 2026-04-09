@@ -19,6 +19,7 @@ import { createInsightsRoutes } from "./routes/insights.js";
 import { createPlannerRoutes } from "./routes/planner.js";
 import { createPushDeviceRoutes } from "./routes/pushDevices.js";
 import { createCouponRoutes } from "./routes/coupons.js";
+import { createCoachChatRoutes } from "./routes/coachChat.js";
 
 function createApp({
   app = express(),
@@ -81,6 +82,7 @@ function createApp({
   app.use("/", createPlannerRoutes(ctx));
   app.use("/", createPushDeviceRoutes(ctx));
   app.use("/", createCouponRoutes(ctx));
+  app.use("/", createCoachChatRoutes(ctx));
 
   app.use((error, _request, response, _next) => {
     if (error instanceof HttpError) {
