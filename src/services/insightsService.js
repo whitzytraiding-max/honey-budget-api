@@ -600,29 +600,28 @@ function createInsightsService({
     };
 
     try {
-      const response = await openaiClient.responses.create({
+      const response = await openaiClient.chat.completions.create({
         model,
-        instructions: [
-          "You are Honey Budget's personal Couples Finance Coach.",
-          "Answer the user's question using only the financial data provided in the context.",
-          "Be specific — reference real numbers, categories, and names from the data.",
-          "Keep your answer under 120 words. Be direct and actionable.",
-          "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
-          "Never make up data. If the answer isn't in the context, say so honestly.",
-        ].join(" "),
-        input: [
+        max_tokens: 200,
+        messages: [
+          {
+            role: "system",
+            content: [
+              "You are Honey Budget's personal Couples Finance Coach.",
+              "Answer the user's question using only the financial data provided.",
+              "Be specific — reference real numbers, categories, and names from the data.",
+              "Keep your answer under 120 words. Be direct and actionable.",
+              "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
+              "Never make up data. If the answer isn't in the context, say so honestly.",
+            ].join(" "),
+          },
           {
             role: "user",
-            content: [
-              {
-                type: "input_text",
-                text: `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`,
-              },
-            ],
+            content: `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`,
           },
         ],
       });
-      return response.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
+      return response.choices[0]?.message?.content?.trim() ?? "I couldn't generate a response. Please try again.";
     } catch (error) {
       console.error("Coach chat failed:", error);
       return "Something went wrong. Please try again in a moment.";
