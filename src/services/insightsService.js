@@ -521,9 +521,6 @@ function createInsightsService({
     }
 
   async function chat({ message, snapshot, coachProfile, savingsGoals = [], currentUser, partnerUser }) {
-    if (!useAI) {
-      return "The AI coach isn't connected yet. Your financial data is all here — head to Settings to check the coach setup.";
-    }
 
     const cashTotal = Number(snapshot.summary.cashSpent ?? 0);
     const cardTotal = Number(snapshot.summary.cardSpent ?? 0);
@@ -563,6 +560,10 @@ function createInsightsService({
 
     const userMessage = `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`;
 
+    if (!useAI) {
+      return heuristicChat(message, context);
+    }
+
     try {
       if (useAnthropic) {
         const msg = await anthropicClient.messages.create({
@@ -583,11 +584,91 @@ function createInsightsService({
       }
     } catch (error) {
       console.error("Coach chat failed:", error?.message ?? error);
-      return "Something went wrong. Please try again in a moment.";
+      return heuristicChat(message, context);
     }
   }
 
   return { getAiInsights, chat };
+}
+
+function heuristicChat(message, context) {
+  const q = message.toLowerCase();
+  const summary = context.summary ?? {};
+  const categories = context.topCategories ?? [];
+  const users = context.users ?? [];
+  const goals = context.savingsGoals ?? [];
+  const fairSplit = context.fairSplit ?? [];
+  const currency = context.displayCurrencyCode ?? "USD";
+
+  function fmt(n) {
+    return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(n ?? 0));
+  }
+
+  // "who is spending more"
+  if (q.includes("who") && (q.includes("spend") || q.includes("more"))) {
+    if (users.length >= 2) {
+      const sorted = [...users].sort((a, b) => (b.spending?.totalSpent ?? 0) - (a.spending?.totalSpent ?? 0));
+      const top = sorted[0];
+      const pct = summary.totalSpent > 0 ? Math.round((top.spending?.totalSpent / summary.totalSpent) * 100) : 0;
+      return `${top.name} is driving more of the spending right now — ${fmt(top.spending?.totalSpent)} which is about ${pct}% of your combined total this period.`;
+    }
+    return "Link your partner to compare individual spending.";
+  }
+
+  // "savings goal" / "on track"
+  if (q.includes("saving") || q.includes("goal") || q.includes("on track")) {
+    if (goals.length) {
+      const lines = goals.map((g) => `${g.title}: ${fmt(g.currentAmount)} of ${fmt(g.targetAmount)} (${g.progressPct}%)`);
+      return `Here's where your savings goals stand:\n${lines.join("\n")}${goals.some((g) => g.progressPct < 30) ? "\nSome goals need attention — consider moving a small fixed amount across on payday." : "\nYou're making progress — keep the momentum going."}`;
+    }
+    return "No savings goals set yet. Add one in the Savings section and your coach will track progress here.";
+  }
+
+  // "food" / "dining" / "groceries" / "cut"
+  if (q.includes("food") || q.includes("dining") || q.includes("grocer") || q.includes("eat") || q.includes("restaurant")) {
+    const food = categories.find((c) => /dining|food|grocer|restaurant/i.test(c.category));
+    if (food) {
+      const cut = fmt(food.amount * 0.2);
+      return `${food.category} is at ${fmt(food.amount)} — ${food.sharePct}% of your total spend. Trimming 20% would save about ${cut}. Try a weekly meal-plan and one less takeaway night to get there.`;
+    }
+    return "No significant food spending recorded yet this period.";
+  }
+
+  // "budget low" / "remaining" / "why"
+  if (q.includes("budget") || q.includes("remaining") || q.includes("low") || q.includes("why")) {
+    const top = categories[0];
+    const cashNote = summary.cashSharePct >= 40 ? ` Cash spending is also high at ${summary.cashSharePct}% — that's the hardest to track.` : "";
+    if (top) {
+      return `Your biggest spend this period is ${top.category} at ${fmt(top.amount)} (${top.sharePct}% of total).${cashNote} That's the clearest place to look first.`;
+    }
+    return `Total spent this period: ${fmt(summary.totalSpent)}. Add more expenses for a clearer breakdown.`;
+  }
+
+  // "split" / "fair" / "bills"
+  if (q.includes("split") || q.includes("fair") || q.includes("bill")) {
+    if (fairSplit.length >= 2) {
+      return `Based on your income, a fair split is: ${fairSplit[0].name} covers ${fairSplit[0].sharePct}% of shared bills and ${fairSplit[1].name} covers ${fairSplit[1].sharePct}%. You can adjust this in Settings if your income changes.`;
+    }
+    return "Link both partners and save your income amounts to get a personalised fair-split calculation.";
+  }
+
+  // "cash" / "card"
+  if (q.includes("cash") || q.includes("card")) {
+    return `Cash spending is ${fmt(summary.cashSpent)} (${summary.cashSharePct}%) and card spending is ${fmt(summary.cardSpent)} (${summary.cardSharePct}%) this period. ${summary.cashSharePct > 40 ? "High cash use makes it harder to track where money goes — consider moving more to card." : "Good card discipline — keeps your spending visible."}`;
+  }
+
+  // "debt"
+  if (q.includes("debt") || q.includes("loan") || q.includes("repay")) {
+    const debtCat = categories.find((c) => /debt|loan|repay|credit/i.test(c.category));
+    if (debtCat) {
+      return `You've put ${fmt(debtCat.amount)} toward debt this period. To pay it off faster, try the avalanche method: pay minimums on everything, then throw any extra cash at the highest-interest debt first.`;
+    }
+    return "No debt payments recorded this period. If you have debt, log it as an expense category so your coach can track it.";
+  }
+
+  // generic fallback
+  const top = categories[0];
+  return `This period you've spent ${fmt(summary.totalSpent)} total — ${fmt(summary.cashSpent)} cash and ${fmt(summary.cardSpent)} by card.${top ? ` Your biggest category is ${top.category} at ${fmt(top.amount)}.` : ""} Ask me something more specific and I'll give you a more targeted answer.`;
 }
 
 function createOpenAIClient() {
