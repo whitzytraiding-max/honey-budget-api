@@ -60,18 +60,20 @@ model PasswordResetToken {
 }
 
 model Couple {
-  id        Int      @id @default(autoincrement())
-  userOneId Int      @unique @map("user_one_id")
-  userTwoId Int      @unique @map("user_two_id")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  userOne   User     @relation("CoupleUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
-  userTwo   User     @relation("CoupleUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
-  coachProfile CoupleCoachProfile?
-  mmkMonthlyRates CoupleMmkMonthlyRate[]
-  savingsGoals SavingsGoal[]
-  recurringBills RecurringBill[]
-  householdRules HouseholdRule[]
+  id                Int       @id @default(autoincrement())
+  userOneId         Int       @unique @map("user_one_id")
+  userTwoId         Int       @unique @map("user_two_id")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  insightsCacheJson String?   @map("insights_cache_json") @db.Text
+  insightsCachedAt  DateTime? @map("insights_cached_at")
+  userOne           User      @relation("CoupleUserOne", fields: [userOneId], references: [id], onDelete: Cascade)
+  userTwo           User      @relation("CoupleUserTwo", fields: [userTwoId], references: [id], onDelete: Cascade)
+  coachProfile      CoupleCoachProfile?
+  mmkMonthlyRates   CoupleMmkMonthlyRate[]
+  savingsGoals      SavingsGoal[]
+  recurringBills    RecurringBill[]
+  householdRules    HouseholdRule[]
 
   @@map("couples")
 }

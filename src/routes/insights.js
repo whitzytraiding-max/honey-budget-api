@@ -30,18 +30,17 @@ export function createInsightsRoutes({
         const resolvedDays = Number.isFinite(days) && days > 0 ? days : 30;
         const throughDate = new Date().toISOString().slice(0, 10);
 
-        // Fetch partner + couple in parallel
-        [partnerUser] = await Promise.all([
+        // Fetch partner + couple in parallel; materialize recurring bills fire-and-forget
+        let couple = null;
+        [partnerUser, couple] = await Promise.all([
           resolvePartnerUser({ budgetRepository, user: request.user }),
-          budgetRepository.getCoupleForUser(request.user.id).then((couple) =>
-            Promise.all([
-              materializeRecurringBills({ budgetRepository, exchangeRateService, couple, throughDate }),
-              couple
-                ? budgetRepository.getCoupleCoachProfile(couple.id).then((p) => { coachProfile = p; })
-                : Promise.resolve(),
-            ])
-          ),
+          budgetRepository.getCoupleForUser(request.user.id),
         ]);
+        // Don't await — this is a background side-effect, not needed for the response
+        materializeRecurringBills({ budgetRepository, exchangeRateService, couple, throughDate }).catch(() => {});
+        if (couple) {
+          coachProfile = await budgetRepository.getCoupleCoachProfile(couple.id);
+        }
 
         // Build main snapshot + trend months all in parallel
         const now = new Date();
@@ -81,6 +80,7 @@ export function createInsightsRoutes({
         const result = await insightsService.getAiInsights({
           currentUser: request.user,
           partnerUser,
+          coupleId: couple?.id ?? null,
           days: resolvedDays,
           displayCurrency,
           coachProfile,

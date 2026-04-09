@@ -304,7 +304,8 @@ function createFallbackInsights(snapshot, coachProfile = null) {
   };
 }
 
-const INSIGHTS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours per user/couple
+const FRESH_TTL_MS = 12 * 60 * 60 * 1000;  // serve from cache if < 12h old
+const STALE_TTL_MS = 48 * 60 * 60 * 1000;  // background-refresh if 12-48h old; re-fetch if older
 
 function createInsightsService({
   budgetRepository,
@@ -312,10 +313,32 @@ function createInsightsService({
   openaiClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
 }) {
-  const insightsCache = new Map();
+  // In-memory layer for same-process requests (avoids repeated DB reads)
+  const memCache = new Map();
 
-  return {
-    async getAiInsights({
+  async function fetchDbCache(coupleId) {
+    if (!coupleId) return null;
+    try {
+      const row = await budgetRepository.getInsightsCache(coupleId);
+      if (!row) return null;
+      return { value: JSON.parse(row.json), cachedAt: new Date(row.cachedAt).getTime() };
+    } catch {
+      return null;
+    }
+  }
+
+  async function saveCache(coupleId, cacheKey, value) {
+    memCache.set(cacheKey, { value, cachedAt: Date.now() });
+    if (coupleId) {
+      try {
+        await budgetRepository.setInsightsCache(coupleId, JSON.stringify(value));
+      } catch (err) {
+        console.error("Failed to persist insights cache:", err);
+      }
+    }
+  }
+
+  async function getAiInsights({
       coupleId = null,
       currentUser = null,
       partnerUser = null,
@@ -326,10 +349,31 @@ function createInsightsService({
       snapshot: prebuiltSnapshot = null,
     }) {
       const cacheKey = `${coupleId ?? currentUser?.id}:${displayCurrency ?? "default"}`;
-      const cached = insightsCache.get(cacheKey);
-      if (cached && Date.now() - cached.cachedAt < INSIGHTS_CACHE_TTL_MS) {
-        return cached.value;
+      const now = Date.now();
+
+      // 1. Check in-memory cache first (fastest)
+      const mem = memCache.get(cacheKey);
+      if (mem && now - mem.cachedAt < FRESH_TTL_MS) return mem.value;
+
+      // 2. Check DB cache (survives server restarts)
+      const db = mem ?? await fetchDbCache(coupleId);
+      if (db && now - db.cachedAt < FRESH_TTL_MS) {
+        memCache.set(cacheKey, db);
+        return db.value;
       }
+      // 3. Stale-while-revalidate: if cache is stale (12-48h), return it now and refresh in background
+      if (db && now - db.cachedAt < STALE_TTL_MS) {
+        memCache.set(cacheKey, db);
+        // Kick off background refresh without blocking the response
+        setImmediate(() => {
+          // Clear mem cache entry so the background call actually fetches fresh data
+          memCache.delete(cacheKey);
+          getAiInsights({ coupleId, currentUser, partnerUser, days, displayCurrency, coachProfile, trendMonths, snapshot: prebuiltSnapshot })
+            .catch(() => {});
+        });
+        return db.value;
+      }
+
       const snapshot = prebuiltSnapshot ??
         (currentUser && partnerUser
           ? await buildBudgetSnapshotForUsers({
@@ -490,17 +534,21 @@ function createInsightsService({
             ...JSON.parse(response.output_text),
           },
         };
-        insightsCache.set(cacheKey, { value: result, cachedAt: Date.now() });
+        await saveCache(coupleId, cacheKey, result);
         return result;
       } catch (error) {
         console.error("OpenAI insights failed:", error);
-        return {
+        const fallback = {
           snapshot,
           insights: createFallbackInsights(snapshot, coachProfile),
         };
+        // Cache fallback too so repeated errors don't keep hammering OpenAI
+        await saveCache(coupleId, cacheKey, fallback);
+        return fallback;
       }
-    },
-  };
+    }
+
+  return { getAiInsights };
 }
 
 function createOpenAIClient() {

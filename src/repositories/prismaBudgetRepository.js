@@ -464,6 +464,22 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapCoupleCoachProfile(profile);
     },
 
+    async getInsightsCache(coupleId) {
+      const row = await prisma.couple.findUnique({
+        where: { id: coupleId },
+        select: { insightsCacheJson: true, insightsCachedAt: true },
+      });
+      if (!row?.insightsCacheJson) return null;
+      return { json: row.insightsCacheJson, cachedAt: row.insightsCachedAt };
+    },
+
+    async setInsightsCache(coupleId, json) {
+      await prisma.couple.update({
+        where: { id: coupleId },
+        data: { insightsCacheJson: json, insightsCachedAt: new Date() },
+      });
+    },
+
     async upsertCoupleCoachProfile({
       coupleId,
       primaryGoal,
