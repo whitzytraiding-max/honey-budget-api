@@ -323,13 +323,14 @@ async function apiFetch(path, options = {}) {
     );
   }
 
+  const { headers: optHeaders, ...restOptions } = options;
   const requestUrl = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
   const response = await fetch(requestUrl, {
     headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
+      ...(optHeaders || {}),
     },
-    ...options,
+    ...restOptions,
   });
 
   const data = await response.json().catch(() => ({}));
