@@ -1,7 +1,82 @@
+import { useEffect, useState } from "react";
 import { Brain, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
-import { InsightSkeleton } from "../ui.jsx";
+
+const CALC_STEPS = [
+  "Pulling your transaction history…",
+  "Analysing cash vs. card habits…",
+  "Reviewing your top spending categories…",
+  "Comparing this month to last month…",
+  "Calculating your fair bill split…",
+  "Identifying savings opportunities…",
+  "Building your personalised coaching tips…",
+];
+
+function InsightsLoader() {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [dots, setDots] = useState(1);
+
+  useEffect(() => {
+    const stepTimer = setInterval(() => {
+      setStepIndex((i) => (i + 1) % CALC_STEPS.length);
+    }, 1800);
+    const dotTimer = setInterval(() => {
+      setDots((d) => (d % 3) + 1);
+    }, 500);
+    return () => {
+      clearInterval(stepTimer);
+      clearInterval(dotTimer);
+    };
+  }, []);
+
+  // Progress bar: cycles through steps, shows fake linear fill
+  const progress = Math.round(((stepIndex + 1) / CALC_STEPS.length) * 100);
+
+  return (
+    <div className="flex flex-col items-center gap-6 py-8 text-center">
+      {/* Animated brain */}
+      <div className="relative flex items-center justify-center">
+        <div className="absolute h-20 w-20 animate-ping rounded-full bg-sky-200/40" />
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-blue-200 shadow-lg">
+          <Brain className="h-8 w-8 text-[#17385d]" />
+        </div>
+      </div>
+
+      {/* Status message */}
+      <div className="min-h-[2.5rem]">
+        <p className="text-sm font-medium text-slate-700">
+          {CALC_STEPS[stepIndex].replace("…", "")}{".".repeat(dots)}
+        </p>
+      </div>
+
+      {/* Progress bar */}
+      <div className="w-full max-w-xs">
+        <div className="hb-progress-track h-2 overflow-hidden rounded-full shadow-inner">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-sky-400 to-blue-500 transition-all duration-700"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-slate-400">
+          Your AI coach is reviewing your finances
+        </p>
+      </div>
+
+      {/* Shimmer cards */}
+      <div className="w-full space-y-3 pt-2">
+        {[1, 2].map((i) => (
+          <div key={i} className="hb-panel-soft animate-pulse rounded-3xl px-4 py-5">
+            <div className="h-3.5 w-2/5 rounded-full bg-slate-200" />
+            <div className="mt-3 h-3 w-full rounded-full bg-slate-200" />
+            <div className="mt-2 h-3 w-4/5 rounded-full bg-slate-200" />
+            <div className="mt-2 h-3 w-3/5 rounded-full bg-slate-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const INSIGHT_EMOJIS = ["🌿", "💳", "✨"];
 
@@ -22,7 +97,7 @@ function InsightsPage({ insightsBusy, insights, dashboard }) {
 
         <div className="mt-6">
           {insightsBusy || !insights ? (
-            <InsightSkeleton />
+            <InsightsLoader />
           ) : (
             <>
               <p className="hb-surface-strong rounded-3xl px-4 py-3 text-sm leading-6 text-slate-700">
