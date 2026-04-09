@@ -623,8 +623,8 @@ function createInsightsService({
       });
       return response.choices[0]?.message?.content?.trim() ?? "I couldn't generate a response. Please try again.";
     } catch (error) {
-      console.error("Coach chat failed:", error);
-      return "Something went wrong. Please try again in a moment.";
+      console.error("Coach chat failed:", error?.status, error?.message, error?.code, JSON.stringify(error?.error ?? {}));
+      return `Coach error: ${error?.status ?? "unknown"} — ${error?.message ?? String(error)}`;
     }
   }
 
