@@ -1338,6 +1338,7 @@ export default function App() {
   async function handleRedeemCoupon(code) {
     const data = await apiFetch("/api/coupons/redeem", {
       method: "POST",
+      headers: authHeaders,
       body: JSON.stringify({ code }),
     });
     // Refresh session so isPro updates immediately
