@@ -48,6 +48,9 @@ function mapUser(user) {
     incomeDayOfMonth: Number(user.incomeDayOfMonth ?? 1),
     monthlySavingsTarget: toNumber(user.monthlySavingsTarget ?? 0),
     partnerId: user.partnerId ?? null,
+    subscriptionStatus: user.subscriptionStatus ?? "free",
+    subscriptionExpiresAt: user.subscriptionExpiresAt?.toISOString?.() ?? user.subscriptionExpiresAt ?? null,
+    subscriptionProvider: user.subscriptionProvider ?? null,
     createdAt: user.createdAt?.toISOString?.() ?? user.createdAt,
   };
 }
