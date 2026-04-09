@@ -106,7 +106,12 @@ function CoachChat({ onSendMessage }) {
       setReply(result);
       setMessage("");
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      const msg = err.message || "";
+      setError(
+        msg.toLowerCase().includes("fetch")
+          ? "Couldn't reach the coach right now — check your connection and try again."
+          : msg || "Something went wrong. Please try again."
+      );
     } finally {
       setBusy(false);
       inputRef.current?.focus();
