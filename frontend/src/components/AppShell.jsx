@@ -9,7 +9,6 @@ import {
   Brain,
   CalendarDays,
   ClipboardList,
-  Ellipsis,
   House,
   ListTodo,
   Menu,
@@ -78,13 +77,7 @@ function AppShell({
   const mobileNavItems = [
     { key: "home", label: t("nav.home"), icon: House },
     { key: "expenses", label: t("nav.expenses"), icon: Wallet },
-    { key: "savings", label: t("nav.savings"), icon: PiggyBank },
-    { key: "more", label: t("nav.more"), icon: Ellipsis },
   ];
-
-  const isMoreRoute =
-    route === "more" ||
-    ["coach", "notifications", "calendar", "insights", "history", "settings", "planner", "setup"].includes(route);
 
   return (
     <div className="min-h-screen bg-transparent px-2.5 py-3 text-slate-900 sm:px-6 lg:px-8">
@@ -179,10 +172,10 @@ function AppShell({
 
       {/* Mobile bottom nav */}
       <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = item.key === "more" ? isMoreRoute : route === item.key;
+            const isActive = route === item.key;
 
             return (
               <button
@@ -198,6 +191,14 @@ function AppShell({
               </button>
             );
           })}
+          <button
+            className="flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium text-slate-600 transition"
+            onClick={() => setSidebarOpen(true)}
+            type="button"
+          >
+            <Menu className="h-4 w-4" />
+            <span className="mt-1">Menu</span>
+          </button>
         </div>
       </nav>
     </div>
