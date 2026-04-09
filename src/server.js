@@ -20,8 +20,12 @@ const port = Number(process.env.PORT || 4000);
 const defaultCorsOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "capacitor://localhost",
   "http://localhost",
+  "https://localhost",
+];
+// Always allowed — these origins can only come from our own Capacitor app
+const capacitorOrigins = [
+  "capacitor://localhost",
   "https://localhost",
 ];
 const configuredCorsOrigins = (process.env.CORS_ORIGINS || "")
@@ -35,8 +39,8 @@ if (isProduction && configuredCorsOrigins.length === 0) {
 
 const allowedCorsOrigins = new Set(
   isProduction
-    ? configuredCorsOrigins
-    : configuredCorsOrigins.concat(defaultCorsOrigins),
+    ? [...configuredCorsOrigins, ...capacitorOrigins]
+    : [...configuredCorsOrigins, ...defaultCorsOrigins, ...capacitorOrigins],
 );
 const jwtSecret = process.env.JWT_SECRET || "";
 const resetPasswordUrlBase =
