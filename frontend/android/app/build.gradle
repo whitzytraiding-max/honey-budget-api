@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.couplesbudget.app"
+    namespace = "com.whitzy.honeybudget"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.couplesbudget.app"
+        applicationId "com.whitzy.honeybudget"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
