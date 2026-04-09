@@ -142,7 +142,7 @@ const translations = {
       baseCurrency: "Home currency",
       referenceCurrency: "Rate comparison currency",
       referenceCurrencyLabel: "Rate comparison",
-      referenceCurrencyHelp: "only controls the one-line exchange-rate example shown here. If you are unsure, keep it the same as your income currency.",
+      referenceCurrencyHelp: "used for the exchange rate example below. If you are unsure, keep it the same as your income currency.",
       displayCurrency: "Display currency",
       incomeCurrency: "Income currency",
       exchangeRate: "Exchange rate",
@@ -176,7 +176,7 @@ const translations = {
       howItWorksLineThree:
         "If you spend in another currency, choose that currency in the form and Honey Budget will convert the totals into your display currency for you.",
       howItWorksPlainEnglish:
-        "Dummy-proof version: enter salary in the currency you actually get paid in, enter each expense in the currency you actually spent in, and let the app convert the totals for display.",
+        "In short: enter your salary in the currency you get paid in, enter each expense in the currency you spent in, and Honey Budget handles the rest.",
       theme: "Theme",
       systemMode: "System",
       lightMode: "Light",

@@ -176,7 +176,7 @@ function HomePage({
             <div>
               <p className="hb-kicker">Shared balance</p>
               <h2 className="mt-1 text-lg font-semibold sm:text-2xl">{t("home.incomeFairSplit")}</h2>
-              <p className="text-sm text-slate-600">Shared bill ratios stay synced with the saved income mix.</p>
+              <p className="text-sm text-slate-600">Shared expenses are split based on your saved income amounts.</p>
             </div>
           </div>
 

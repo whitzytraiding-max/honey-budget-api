@@ -20,9 +20,7 @@ function SetupFlowPage({ checklist = [], onNavigate }) {
               Get your household fully ready
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              This is the clean setup order for the shared app: link both partners, save income,
-              add recurring bills, set goals, and finish the coach questionnaire so insights have
-              something real to work with.
+              Complete these steps to get your household fully set up — link your partner, save your income, add bills, set savings goals, and personalise your experience.
             </p>
           </div>
         </div>

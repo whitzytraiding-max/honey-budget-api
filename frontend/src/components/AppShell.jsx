@@ -110,7 +110,7 @@ function AppShell({
                   {t("shell.title")}
                 </div>
                 <h1 className="mt-3 max-w-4xl text-[1.9rem] font-semibold leading-tight tracking-tight sm:mt-4 sm:text-4xl">
-                  {coupleNames || "Shared Money Mode"}
+                  {coupleNames || "Your Household"}
                 </h1>
                 <p className="mt-1 hidden text-sm leading-6 text-slate-600 sm:block sm:text-base">
                   {t("shell.subtitle")}

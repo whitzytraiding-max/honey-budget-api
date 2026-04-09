@@ -94,9 +94,6 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
               More — {hiddenCount} hidden item{hiddenCount !== 1 ? "s" : ""}
             </button>
           )}
-          <p className="px-2 text-[11px] leading-5 text-slate-400">
-            Hover an item then tap <EyeOff className="inline h-3 w-3" /> to hide it — it moves to More.
-          </p>
         </div>
       </aside>
     </>

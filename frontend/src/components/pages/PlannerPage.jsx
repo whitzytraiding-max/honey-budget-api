@@ -53,8 +53,7 @@ function PlannerPage({
               Upcoming bills, rules, and shared pressure points
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-              This is the first planner pass: recurring bills auto-create monthly, your shared
-              money rules live here, and the couple gets one place to see what needs a quick check-in.
+              Recurring bills, shared money rules, and potential friction points — all in one place so nothing catches you off guard.
             </p>
           </div>
         </div>
@@ -238,7 +237,7 @@ function PlannerPage({
               <div>
                 <h3 className="text-lg font-semibold">Shared money rules</h3>
                 <p className="text-sm text-slate-600">
-                  Keep the rules simple and visible so arguments do not start from surprises.
+                  Set clear expectations so both partners stay on the same page.
                 </p>
               </div>
             </div>
@@ -397,8 +396,7 @@ function PlannerPage({
               <div>
                 <h3 className="text-lg font-semibold">Current risk areas</h3>
                 <p className="text-sm text-slate-600">
-                  The first version of the conflict center flags the places most likely to create
-                  tension this month.
+                  Areas that tend to cause tension — flagged early so you can get ahead of them.
                 </p>
               </div>
             </div>
