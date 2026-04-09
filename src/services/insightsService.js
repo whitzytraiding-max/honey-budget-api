@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { buildBudgetSnapshot, buildBudgetSnapshotForUsers } from "./dashboardService.js";
 
 function roundCurrency(value) {
@@ -311,8 +312,13 @@ function createInsightsService({
   budgetRepository,
   exchangeRateService,
   openaiClient,
+  anthropicClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
+  anthropicModel = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
 }) {
+  // Prefer Anthropic if available, fall back to OpenAI
+  const useAnthropic = Boolean(anthropicClient);
+  const useAI = useAnthropic || Boolean(openaiClient);
   // In-memory layer for same-process requests (avoids repeated DB reads)
   const memCache = new Map();
 
@@ -403,7 +409,7 @@ function createInsightsService({
         };
       }
 
-      if (!openaiClient) {
+      if (!useAI) {
         return {
           snapshot,
           insights: createFallbackInsights(snapshot, coachProfile),
@@ -448,128 +454,75 @@ function createInsightsService({
           displayCurrencyCode: snapshot.displayCurrencyCode,
         };
 
-        const response = await openaiClient.responses.create({
-          model,
-          instructions: [
-            "You are Honey Budget's personal Couples Finance Coach.",
-            "Use only the data provided — never invent numbers.",
-            "Write like a supportive, direct money coach for a real couple. Specific, warm, never generic.",
-            "Base every insight on real categories, patterns, totals, and partner behaviour visible in the data.",
-            "If coachProfile is present, tie advice directly to the stated goal, pay schedule, budget target, debt, and hardest category.",
-            "If savingsGoals are present, reference progress toward them — celebrate milestones or flag if they are falling behind.",
-            "Return exactly three coaching tips and one win.",
-            "Tip 1 (this week): One immediately actionable thing they can do today. Title starts with 'This week:'.",
-            "Tip 2 (this month): Compare this month to trendMonths if available — flag a worsening trend or give a rule to carry into the rest of the month. Title starts with 'This month:'.",
-            "Tip 3 (goal focus): One tip tied directly to their stated primary goal or a savings goal. If totalDebtAmount is set, make this about debt payoff strategy. Title starts with 'Your goal:'.",
-            "Win: Something they genuinely did well this period — a category that improved, a goal making progress, lower cash spending, etc. Must be specific to their data. Title starts with 'Win:'.",
-            "Each tip must name a real category, amount, or person from the data. No filler.",
-            "Do not criticise fixed essential costs (rent, mortgage, insurance, utilities, childcare, taxes).",
-            "Use a calm, specific, encouraging tone. Never say 'make a budget' or 'spend less' without specifics.",
-            "Include a fair recurring-bill split based on income.",
-            "The overview should be 2-3 sentences: what the data shows, what matters most right now.",
-            trendSummary.length
-              ? `You have ${trendSummary.length} prior month(s) of trend data. Use it for Tip 2 to compare month-over-month.`
-              : "No prior month data — base Tip 2 on current month patterns only.",
-          ].filter(Boolean).join(" "),
-          input: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "input_text",
-                  text: `Couples budget snapshot:\n${JSON.stringify(promptPayload)}`,
-                },
-              ],
-            },
-          ],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "couples_budget_insights",
-              strict: true,
-              schema: {
-                type: "object",
-                additionalProperties: false,
-                properties: {
-                  overview: { type: "string" },
-                  fairSplit: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                      explanation: { type: "string" },
-                      recurringBillSplit: {
-                        type: "array",
-                        minItems: 2,
-                        maxItems: 2,
-                        items: {
-                          type: "object",
-                          additionalProperties: false,
-                          properties: {
-                            userId: { type: "integer" },
-                            name: { type: "string" },
-                            sharePct: { type: "number" },
-                          },
-                          required: ["userId", "name", "sharePct"],
-                        },
-                      },
-                    },
-                    required: ["explanation", "recurringBillSplit"],
-                  },
-                  tips: {
-                    type: "array",
-                    minItems: 3,
-                    maxItems: 3,
-                    items: {
-                      type: "object",
-                      additionalProperties: false,
-                      properties: {
-                        title: { type: "string" },
-                        action: { type: "string" },
-                        reason: { type: "string" },
-                      },
-                      required: ["title", "action", "reason"],
-                    },
-                  },
-                  win: {
-                    type: "object",
-                    additionalProperties: false,
-                    properties: {
-                      title: { type: "string" },
-                      body: { type: "string" },
-                    },
-                    required: ["title", "body"],
-                  },
-                },
-                required: ["overview", "fairSplit", "tips", "win"],
-              },
-            },
-          },
-        });
+        const systemPrompt = [
+          "You are Honey Budget's personal Couples Finance Coach.",
+          "Use only the data provided — never invent numbers.",
+          "Write like a supportive, direct money coach for a real couple. Specific, warm, never generic.",
+          "Base every insight on real categories, patterns, totals, and partner behaviour visible in the data.",
+          "If coachProfile is present, tie advice directly to the stated goal, pay schedule, budget target, debt, and hardest category.",
+          "If savingsGoals are present, reference progress toward them — celebrate milestones or flag if they are falling behind.",
+          "Return exactly three coaching tips and one win.",
+          "Tip 1 (this week): One immediately actionable thing they can do today. Title starts with 'This week:'.",
+          "Tip 2 (this month): Compare this month to trendMonths if available — flag a worsening trend or give a rule to carry into the rest of the month. Title starts with 'This month:'.",
+          "Tip 3 (goal focus): One tip tied directly to their stated primary goal or a savings goal. If totalDebtAmount is set, make this about debt payoff strategy. Title starts with 'Your goal:'.",
+          "Win: Something they genuinely did well this period — a category that improved, a goal making progress, lower cash spending, etc. Must be specific to their data. Title starts with 'Win:'.",
+          "Each tip must name a real category, amount, or person from the data. No filler.",
+          "Do not criticise fixed essential costs (rent, mortgage, insurance, utilities, childcare, taxes).",
+          "Use a calm, specific, encouraging tone. Never say 'make a budget' or 'spend less' without specifics.",
+          "Include a fair recurring-bill split based on income.",
+          "The overview should be 2-3 sentences: what the data shows, what matters most right now.",
+          trendSummary.length
+            ? `You have ${trendSummary.length} prior month(s) of trend data. Use it for Tip 2 to compare month-over-month.`
+            : "No prior month data — base Tip 2 on current month patterns only.",
+          'Respond with only a JSON object matching this exact shape: {"overview":"...","fairSplit":{"explanation":"...","recurringBillSplit":[{"userId":1,"name":"...","sharePct":50},{"userId":2,"name":"...","sharePct":50}]},"tips":[{"title":"...","action":"...","reason":"..."},{"title":"...","action":"...","reason":"..."},{"title":"...","action":"...","reason":"..."}],"win":{"title":"...","body":"..."}}',
+        ].filter(Boolean).join(" ");
+
+        let rawJson;
+        if (useAnthropic) {
+          const msg = await anthropicClient.messages.create({
+            model: anthropicModel,
+            max_tokens: 1024,
+            system: systemPrompt,
+            messages: [{ role: "user", content: `Couples budget snapshot:\n${JSON.stringify(promptPayload)}` }],
+          });
+          rawJson = msg.content[0]?.text ?? "";
+        } else {
+          const msg = await openaiClient.responses.create({
+            model,
+            instructions: systemPrompt,
+            input: [{ role: "user", content: [{ type: "input_text", text: `Couples budget snapshot:\n${JSON.stringify(promptPayload)}` }] }],
+            text: { format: { type: "text" } },
+          });
+          rawJson = msg.output_text ?? "";
+        }
+
+        // Extract JSON from the response (handle potential markdown fences)
+        const jsonMatch = rawJson.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No JSON in AI response");
 
         const result = {
           snapshot,
           insights: {
-            provider: "openai",
-            ...JSON.parse(response.output_text),
+            provider: useAnthropic ? "anthropic" : "openai",
+            ...JSON.parse(jsonMatch[0]),
           },
         };
         await saveCache(coupleId, cacheKey, result);
         return result;
       } catch (error) {
-        console.error("OpenAI insights failed:", error);
+        console.error("AI insights failed:", error?.message ?? error);
         const fallback = {
           snapshot,
           insights: createFallbackInsights(snapshot, coachProfile),
         };
-        // Cache fallback too so repeated errors don't keep hammering OpenAI
         await saveCache(coupleId, cacheKey, fallback);
         return fallback;
       }
     }
 
   async function chat({ message, snapshot, coachProfile, savingsGoals = [], currentUser, partnerUser }) {
-    if (!openaiClient) {
-      return "The AI coach isn't available right now. Check your spending data in the meantime and try again later.";
+    if (!useAI) {
+      return "The AI coach isn't connected yet. Your financial data is all here — head to Settings to check the coach setup.";
     }
 
     const cashTotal = Number(snapshot.summary.cashSpent ?? 0);
@@ -599,35 +552,38 @@ function createInsightsService({
       displayCurrencyCode: snapshot.displayCurrencyCode,
     };
 
+    const systemPrompt = [
+      "You are Honey Budget's personal Couples Finance Coach.",
+      "Answer the user's question using only the financial data provided.",
+      "Be specific — reference real numbers, categories, and names from the data.",
+      "Keep your answer under 120 words. Be direct and actionable.",
+      "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
+      "Never make up data. If the answer isn't in the context, say so honestly.",
+    ].join(" ");
+
+    const userMessage = `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`;
+
     try {
-      const systemPrompt = [
-        "You are Honey Budget's personal Couples Finance Coach.",
-        "Answer the user's question using only the financial data provided.",
-        "Be specific — reference real numbers, categories, and names from the data.",
-        "Keep your answer under 120 words. Be direct and actionable.",
-        "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
-        "Never make up data. If the answer isn't in the context, say so honestly.",
-      ].join(" ");
-
-      const userMessage = `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`;
-
-      const response = await openaiClient.responses.create({
-        model,
-        instructions: systemPrompt,
-        input: [
-          {
-            role: "user",
-            content: [{ type: "input_text", text: userMessage }],
-          },
-        ],
-        text: { format: { type: "text" } },
-      });
-
-      return response.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
+      if (useAnthropic) {
+        const msg = await anthropicClient.messages.create({
+          model: anthropicModel,
+          max_tokens: 300,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userMessage }],
+        });
+        return msg.content[0]?.text?.trim() ?? "I couldn't generate a response. Please try again.";
+      } else {
+        const msg = await openaiClient.responses.create({
+          model,
+          instructions: systemPrompt,
+          input: [{ role: "user", content: [{ type: "input_text", text: userMessage }] }],
+          text: { format: { type: "text" } },
+        });
+        return msg.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
+      }
     } catch (error) {
-      const detail = error?.message ?? String(error);
-      console.error("Coach chat failed:", detail);
-      return `Something went wrong: ${detail}`;
+      console.error("Coach chat failed:", error?.message ?? error);
+      return "Something went wrong. Please try again in a moment.";
     }
   }
 
@@ -636,12 +592,14 @@ function createInsightsService({
 
 function createOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
-
-  if (!apiKey || apiKey === "your_openai_api_key") {
-    return null;
-  }
-
+  if (!apiKey || apiKey === "your_openai_api_key") return null;
   return new OpenAI({ apiKey });
 }
 
-export { createInsightsService, createOpenAIClient, createFallbackInsights };
+function createAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+  if (!apiKey) return null;
+  return new Anthropic({ apiKey });
+}
+
+export { createInsightsService, createOpenAIClient, createAnthropicClient, createFallbackInsights };
