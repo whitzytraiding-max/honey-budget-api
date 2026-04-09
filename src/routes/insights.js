@@ -27,53 +27,56 @@ export function createInsightsRoutes({
       try {
         const days = Number(request.query.days ?? 30);
         const displayCurrency = request.query.displayCurrency?.trim();
-        partnerUser = await resolvePartnerUser({
-          budgetRepository,
-          user: request.user,
-        });
-        const couple = await budgetRepository.getCoupleForUser(request.user.id);
-        await materializeRecurringBills({
-          budgetRepository,
-          exchangeRateService,
-          couple,
-          throughDate: new Date().toISOString().slice(0, 10),
-        });
-        coachProfile = couple
-          ? await budgetRepository.getCoupleCoachProfile(couple.id)
-          : null;
-
         const resolvedDays = Number.isFinite(days) && days > 0 ? days : 30;
+        const throughDate = new Date().toISOString().slice(0, 10);
 
+        // Fetch partner + couple in parallel
+        [partnerUser] = await Promise.all([
+          resolvePartnerUser({ budgetRepository, user: request.user }),
+          budgetRepository.getCoupleForUser(request.user.id).then((couple) =>
+            Promise.all([
+              materializeRecurringBills({ budgetRepository, exchangeRateService, couple, throughDate }),
+              couple
+                ? budgetRepository.getCoupleCoachProfile(couple.id).then((p) => { coachProfile = p; })
+                : Promise.resolve(),
+            ])
+          ),
+        ]);
+
+        // Build main snapshot + trend months all in parallel
         const now = new Date();
-        const trendMonths = partnerUser
-          ? await Promise.all(
-              [1, 2].map(async (offset) => {
-                const y = now.getUTCMonth() - offset < 0
-                  ? now.getUTCFullYear() - 1
-                  : now.getUTCFullYear();
-                const m = ((now.getUTCMonth() - offset) + 12) % 12;
-                const from = new Date(Date.UTC(y, m, 1));
-                const to = new Date(Date.UTC(y, m + 1, 0));
-                const label = from.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
-                const fromDate = from.toISOString().slice(0, 10);
-                const toDate = to.toISOString().slice(0, 10);
-                try {
-                  const snap = await buildBudgetSnapshotForUsers({
-                    budgetRepository,
-                    exchangeRateService,
-                    currentUser: request.user,
-                    partnerUser,
-                    displayCurrency,
-                    fromDate,
-                    toDate,
-                  });
-                  return { label, ...snap };
-                } catch {
-                  return { label };
-                }
-              }),
-            )
-          : [];
+        const trendOffsets = partnerUser ? [1, 2] : [];
+        const [mainSnapshot, ...trendResults] = await Promise.all([
+          buildBudgetSnapshotForUsers({
+            budgetRepository,
+            exchangeRateService,
+            currentUser: request.user,
+            partnerUser,
+            days: resolvedDays,
+            displayCurrency,
+          }),
+          ...trendOffsets.map(async (offset) => {
+            const y = now.getUTCMonth() - offset < 0 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+            const m = ((now.getUTCMonth() - offset) + 12) % 12;
+            const from = new Date(Date.UTC(y, m, 1));
+            const to = new Date(Date.UTC(y, m + 1, 0));
+            const label = from.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+            try {
+              const snap = await buildBudgetSnapshotForUsers({
+                budgetRepository,
+                exchangeRateService,
+                currentUser: request.user,
+                partnerUser,
+                displayCurrency,
+                fromDate: from.toISOString().slice(0, 10),
+                toDate: to.toISOString().slice(0, 10),
+              });
+              return { label, ...snap };
+            } catch {
+              return { label };
+            }
+          }),
+        ]);
 
         const result = await insightsService.getAiInsights({
           currentUser: request.user,
@@ -81,7 +84,8 @@ export function createInsightsRoutes({
           days: resolvedDays,
           displayCurrency,
           coachProfile,
-          trendMonths,
+          trendMonths: trendResults,
+          snapshot: mainSnapshot,
         });
 
         sendData(response, 200, {

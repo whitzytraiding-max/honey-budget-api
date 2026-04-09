@@ -323,14 +323,15 @@ function createInsightsService({
       displayCurrency = null,
       coachProfile = null,
       trendMonths = [],
+      snapshot: prebuiltSnapshot = null,
     }) {
       const cacheKey = `${coupleId ?? currentUser?.id}:${displayCurrency ?? "default"}`;
       const cached = insightsCache.get(cacheKey);
       if (cached && Date.now() - cached.cachedAt < INSIGHTS_CACHE_TTL_MS) {
         return cached.value;
       }
-      const snapshot =
-        currentUser && partnerUser
+      const snapshot = prebuiltSnapshot ??
+        (currentUser && partnerUser
           ? await buildBudgetSnapshotForUsers({
               budgetRepository,
               exchangeRateService,
@@ -345,7 +346,7 @@ function createInsightsService({
               coupleId,
               days,
               displayCurrency,
-            });
+            }));
 
       const cashTotal = Number(snapshot.summary.cashSpent ?? 0);
       const cardTotal = Number(snapshot.summary.cardSpent ?? 0);
@@ -373,16 +374,24 @@ function createInsightsService({
           topCategories: (m.topCategories ?? []).slice(0, 3),
         }));
 
+        const topTransactions = [...snapshot.transactions]
+          .sort((a, b) => (b.displayAmount ?? b.amount ?? 0) - (a.displayAmount ?? a.amount ?? 0))
+          .slice(0, 25)
+          .map(({ description, category, type, displayAmount, amount, paymentMethod }) => ({
+            description, category, type, amount: displayAmount ?? amount, paymentMethod,
+          }));
+
         const promptPayload = {
-          ...snapshot,
+          period: snapshot.period,
+          summary: { ...snapshot.summary, cashSpent: cashTotal, cardSpent: cardTotal },
+          topCategories: snapshot.topCategories,
+          fairSplit: snapshot.fairSplit,
+          users: snapshot.users?.map(({ id, name, spending }) => ({ id, name, spending })),
+          transactions: topTransactions,
           coachProfile,
           trendMonths: trendSummary,
           behaviorFlags: buildBehaviorFlags(snapshot),
-          summary: {
-            ...snapshot.summary,
-            cashSpent: cashTotal,
-            cardSpent: cardTotal,
-          },
+          displayCurrencyCode: snapshot.displayCurrencyCode,
         };
 
         const response = await openaiClient.responses.create({
@@ -414,7 +423,7 @@ function createInsightsService({
               content: [
                 {
                   type: "input_text",
-                  text: `Couples budget snapshot:\n${JSON.stringify(promptPayload, null, 2)}`,
+                  text: `Couples budget snapshot:\n${JSON.stringify(promptPayload)}`,
                 },
               ],
             },
