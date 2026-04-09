@@ -600,31 +600,34 @@ function createInsightsService({
     };
 
     try {
-      const response = await openaiClient.chat.completions.create({
+      const systemPrompt = [
+        "You are Honey Budget's personal Couples Finance Coach.",
+        "Answer the user's question using only the financial data provided.",
+        "Be specific — reference real numbers, categories, and names from the data.",
+        "Keep your answer under 120 words. Be direct and actionable.",
+        "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
+        "Never make up data. If the answer isn't in the context, say so honestly.",
+      ].join(" ");
+
+      const userMessage = `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`;
+
+      const response = await openaiClient.responses.create({
         model,
-        max_tokens: 200,
-        messages: [
-          {
-            role: "system",
-            content: [
-              "You are Honey Budget's personal Couples Finance Coach.",
-              "Answer the user's question using only the financial data provided.",
-              "Be specific — reference real numbers, categories, and names from the data.",
-              "Keep your answer under 120 words. Be direct and actionable.",
-              "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
-              "Never make up data. If the answer isn't in the context, say so honestly.",
-            ].join(" "),
-          },
+        instructions: systemPrompt,
+        input: [
           {
             role: "user",
-            content: `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`,
+            content: [{ type: "input_text", text: userMessage }],
           },
         ],
+        text: { format: { type: "text" } },
       });
-      return response.choices[0]?.message?.content?.trim() ?? "I couldn't generate a response. Please try again.";
+
+      return response.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
     } catch (error) {
-      console.error("Coach chat failed:", error?.status, error?.message, error?.code, JSON.stringify(error?.error ?? {}));
-      return `Coach error: ${error?.status ?? "unknown"} — ${error?.message ?? String(error)}`;
+      const detail = error?.message ?? String(error);
+      console.error("Coach chat failed:", detail);
+      return `Something went wrong: ${detail}`;
     }
   }
 
