@@ -1,49 +1,8 @@
-import {
-  Bell,
-  Brain,
-  CalendarDays,
-  ChevronRight,
-  ClipboardList,
-  ListTodo,
-  LogOut,
-  Settings2,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { Eye, LogOut, Menu } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 
-const MORE_ITEMS = [
-  { key: "setup", icon: ListTodo },
-  { key: "planner", icon: ShieldCheck },
-  { key: "coach", icon: Sparkles },
-  { key: "notifications", icon: Bell },
-  { key: "calendar", icon: CalendarDays },
-  { key: "insights", icon: Brain },
-  { key: "history", icon: ClipboardList },
-  { key: "settings", icon: Settings2 },
-];
-
-function MorePage({ onNavigate, onLogout, showNotifications, showCoach, showPlanner, showSetup }) {
+function MorePage({ onNavigate, onLogout, items, onUnhideItem }) {
   const { t } = useLanguage();
-  const items = MORE_ITEMS.filter((item) => {
-    if (item.key === "notifications" && !showNotifications) {
-      return false;
-    }
-
-    if (item.key === "coach" && !showCoach) {
-      return false;
-    }
-
-    if (item.key === "planner" && !showPlanner) {
-      return false;
-    }
-
-    if (item.key === "setup" && !showSetup) {
-      return false;
-    }
-
-    return true;
-  });
 
   return (
     <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
@@ -52,31 +11,52 @@ function MorePage({ onNavigate, onLogout, showNotifications, showCoach, showPlan
         <p className="mt-1 text-sm text-slate-600">{t("more.subtitle")}</p>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {items.map((item) => {
-          const Icon = item.icon;
+      {items.length === 0 ? (
+        <div className="mt-6 flex flex-col items-center gap-3 py-8 text-center">
+          <Menu className="h-8 w-8 text-slate-300" />
+          <p className="text-sm text-slate-500">
+            All features are visible in the sidebar.
+          </p>
+          <p className="text-xs text-slate-400">
+            Open the sidebar and tap the eye icon on any item to move it here.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {items.map((item) => {
+            const Icon = item.icon;
 
-          return (
-            <button
-              key={item.key}
-              className="hb-panel-soft flex w-full items-start justify-between rounded-[1.2rem] border border-sky-100 px-4 py-4 text-left transition"
-              onClick={() => onNavigate(item.key)}
-              type="button"
-            >
-              <div className="flex min-w-0 items-start gap-3">
-                <span className="inline-flex shrink-0 rounded-full bg-white/95 p-2 text-slate-700 shadow-sm">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-900">{t(`more.${item.key}`)}</p>
-                  <p className="text-sm text-slate-600">{t(`more.${item.key}Body`)}</p>
-                </div>
+            return (
+              <div
+                key={item.key}
+                className="hb-panel-soft flex w-full items-center justify-between rounded-[1.2rem] border border-sky-100 px-4 py-4 transition"
+              >
+                <button
+                  className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                  onClick={() => onNavigate(item.key)}
+                  type="button"
+                >
+                  <span className="inline-flex shrink-0 rounded-full bg-white/95 p-2 text-slate-700 shadow-sm">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-slate-900">{t(`more.${item.key}`)}</p>
+                    <p className="text-sm text-slate-600">{t(`more.${item.key}Body`)}</p>
+                  </div>
+                </button>
+                <button
+                  className="ml-3 shrink-0 rounded-xl p-2 text-slate-400 transition hover:text-emerald-600"
+                  onClick={() => onUnhideItem(item.key)}
+                  title="Move back to sidebar"
+                  type="button"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
               </div>
-              <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
-            </button>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {onLogout && (
         <div className="mt-4 sm:hidden">

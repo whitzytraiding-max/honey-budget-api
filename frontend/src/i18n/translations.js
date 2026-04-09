@@ -9,6 +9,9 @@ const translations = {
       calendar: "Calendar",
       insights: "Insights",
       history: "History",
+      planner: "Planner",
+      coach: "Coach",
+      setup: "Setup",
       settings: "Settings",
     },
     auth: {
@@ -333,6 +336,9 @@ const translations = {
       calendar: "Calendario",
       insights: "Ideas",
       history: "Historial",
+      planner: "Planificador",
+      coach: "Coach",
+      setup: "Configuración",
       settings: "Ajustes",
     },
     auth: {

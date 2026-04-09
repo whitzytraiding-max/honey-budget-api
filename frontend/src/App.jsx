@@ -4,6 +4,7 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { useEffect, useMemo, useState } from "react";
+import { Bell, Brain, CalendarDays, ClipboardList, House, ListTodo, PiggyBank, Settings2, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import AppShell from "./components/AppShell.jsx";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CoachSetupPage from "./components/pages/CoachSetupPage.jsx";
@@ -72,6 +73,20 @@ const TRANSACTION_FIELDS = {
   paymentMethod: "card",
   date: getTodayLocalIso(),
 };
+
+const ALL_NAV_ITEMS = [
+  { key: "home", icon: House },
+  { key: "expenses", icon: Wallet },
+  { key: "savings", icon: PiggyBank },
+  { key: "notifications", icon: Bell },
+  { key: "insights", icon: Brain },
+  { key: "calendar", icon: CalendarDays },
+  { key: "history", icon: ClipboardList },
+  { key: "planner", icon: ShieldCheck },
+  { key: "coach", icon: Sparkles },
+  { key: "setup", icon: ListTodo },
+  { key: "settings", icon: Settings2 },
+];
 
 const APP_ROUTES = new Set([
   "home",
@@ -399,6 +414,13 @@ export default function App() {
   const [mmkRateData, setMmkRateData] = useState(null);
   const [mmkRateForm, setMmkRateForm] = useState(createDefaultMmkRateForm);
   const [mmkRateBusy, setMmkRateBusy] = useState(false);
+  const [hiddenNavItems, setHiddenNavItems] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem("hb-hidden-nav") || "[]"));
+    } catch {
+      return new Set();
+    }
+  });
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
     return new URLSearchParams(hashLocation.query).get("token")?.trim() || "";
@@ -1066,6 +1088,19 @@ export default function App() {
   function navigate(routeKey) {
     setHashLocation({ route: routeKey, query: "" });
     setRouteHash(routeKey);
+  }
+
+  function toggleHideNavItem(key) {
+    setHiddenNavItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      localStorage.setItem("hb-hidden-nav", JSON.stringify([...next]));
+      return next;
+    });
   }
 
   function updateAuthMode(nextMode) {
@@ -2103,6 +2138,17 @@ export default function App() {
 
   const couple = session?.couple || dashboardData?.couple;
   const isPro = session?.isPro ?? false;
+  const showCoach = Boolean(couple);
+  const showPlanner = Boolean(couple) || soloMode;
+  const showSetup = Boolean(couple) || soloMode;
+  const availableNavItems = ALL_NAV_ITEMS.filter((item) => {
+    if (item.key === "notifications") return true;
+    if (item.key === "coach") return showCoach;
+    if (item.key === "planner") return showPlanner;
+    if (item.key === "setup") return showSetup;
+    return true;
+  });
+  const moreNavItems = availableNavItems.filter((item) => hiddenNavItems.has(item.key));
   const dashboard = dashboardData?.dashboard;
   const insights = insightData?.insights;
   const transactions = dashboard?.transactions ?? [];
@@ -2302,10 +2348,8 @@ export default function App() {
           <MorePage
             onNavigate={navigate}
             onLogout={handleLogout}
-            showNotifications
-            showCoach={Boolean(couple)}
-            showPlanner={Boolean(couple) || soloMode}
-            showSetup={Boolean(couple) || soloMode}
+            items={moreNavItems}
+            onUnhideItem={toggleHideNavItem}
           />
         );
       case "notifications":
@@ -2411,6 +2455,11 @@ export default function App() {
       coupleNames={coupleNames}
       remainingBudget={remainingBudget}
       showNotifications
+      showCoach={showCoach}
+      showPlanner={showPlanner}
+      showSetup={showSetup}
+      hiddenNavItems={hiddenNavItems}
+      onHideNavItem={toggleHideNavItem}
       onLogout={handleLogout}
       pageError={pageError}
       onDismissError={() => setPageError("")}
