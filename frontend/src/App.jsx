@@ -787,17 +787,29 @@ export default function App() {
     setDashboardBusy(true);
     setPageError("");
 
+    const url = `/api/dashboard?displayCurrency=${encodeURIComponent(currencyCode)}`;
+    const opts = { headers: authHeaders };
+
     try {
-      const data = await apiFetch(
-        `/api/dashboard?displayCurrency=${encodeURIComponent(currencyCode)}`,
-        {
-        headers: authHeaders,
-        },
-      );
+      const data = await apiFetch(url, opts);
       setDashboardData(data);
-    } catch (error) {
+    } catch (firstError) {
+      // Network error (backend sleeping on Render free tier) — wait and retry once
+      const isNetworkError = firstError instanceof TypeError || firstError.message === "Failed to fetch";
+      if (isNetworkError) {
+        setPageError("Connecting to server\u2026");
+        await new Promise((resolve) => setTimeout(resolve, 8000));
+        try {
+          const data = await apiFetch(url, opts);
+          setDashboardData(data);
+          setPageError("");
+          return;
+        } catch {
+          // fall through to show error below
+        }
+      }
       setDashboardData(null);
-      setPageError(error.message);
+      setPageError("Couldn\u2019t connect to the server. Please tap Retry.");
     } finally {
       setDashboardBusy(false);
     }
@@ -840,7 +852,11 @@ export default function App() {
     } catch (error) {
       setSummaryData(null);
       calculateRemaining(householdIncome, 0);
-      setPageError(error.message);
+      // Network errors are surfaced by loadDashboard (which retries); skip here
+      const isNetworkError = error instanceof TypeError || error.message === "Failed to fetch";
+      if (!isNetworkError) {
+        setPageError(error.message);
+      }
     }
   }
 
