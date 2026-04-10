@@ -1065,7 +1065,11 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!token || !session?.couple) {
+    if (!token) {
+      return;
+    }
+
+    if (!session?.couple && !soloMode) {
       return;
     }
 
@@ -1076,7 +1080,7 @@ export default function App() {
     loadMonthView(selectedMonth).catch((error) => {
       setPageError(error.message);
     });
-  }, [token, route, selectedMonth, session?.couple?.id, currencyCode]);
+  }, [token, route, selectedMonth, session?.couple?.id, soloMode, currencyCode]);
 
   useEffect(() => {
     if (!token || !session?.couple) {
@@ -1923,8 +1927,8 @@ export default function App() {
       await refreshBudgetViews({
         monthKey: expenseMonthKey,
         includeMonth: true,
+        includeNotifications: true,
       });
-      navigate("notifications");
     } catch (error) {
       setPageError(error.message);
     } finally {
