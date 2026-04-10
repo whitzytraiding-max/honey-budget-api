@@ -489,6 +489,14 @@ export default function App() {
     setStatusBarForTheme(resolvedTheme);
   }, [theme]);
 
+  // Wake the Render backend immediately on app load, then keep it alive every 20 s
+  useEffect(() => {
+    const keepAliveUrl = API_BASE_URL ? `${API_BASE_URL}/health` : "/health";
+    fetch(keepAliveUrl).catch(() => {});
+    const id = setInterval(() => { fetch(keepAliveUrl).catch(() => {}); }, 20_000);
+    return () => clearInterval(id);
+  }, []);
+
   useEffect(() => {
     const BACK_STACK = [
       "home",
@@ -504,12 +512,6 @@ export default function App() {
       "setup",
       "coach",
     ];
-    // Keep Render backend awake by pinging /health every 20 seconds
-    const keepAliveUrl = API_BASE_URL ? `${API_BASE_URL}/health` : "/health";
-    const keepAliveInterval = setInterval(() => {
-      fetch(keepAliveUrl).catch(() => {});
-    }, 20_000);
-
     const removeListener = addBackButtonListener(({ canGoBack }) => {
       if (canGoBack) {
         window.history.back();
@@ -521,7 +523,6 @@ export default function App() {
       }
     });
     return () => {
-      clearInterval(keepAliveInterval);
       removeListener.then?.((fn) => fn?.());
     };
   }, [route]);
