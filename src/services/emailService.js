@@ -17,17 +17,6 @@ function createEmailService({
   const hasSmtpConfig = Boolean(host && port && from);
 
   if (!hasSmtpConfig) {
-    if (isProduction) {
-      return {
-        isPreviewMode: false,
-        async sendPasswordResetEmail() {
-          throw new Error(
-            "SMTP is not configured for password reset emails.",
-          );
-        },
-      };
-    }
-
     return {
       isPreviewMode: true,
       async sendPasswordResetEmail({ to, name, resetUrl }) {

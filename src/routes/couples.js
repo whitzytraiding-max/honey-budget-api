@@ -109,6 +109,22 @@ export function createCoupleRoutes({ budgetRepository, requireAuth }) {
     }),
   );
 
+  router.delete(
+    "/api/couples/me",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+
+      if (!couple) {
+        throw new HttpError(404, "COUPLE_NOT_FOUND", "You are not linked to a partner.");
+      }
+
+      await budgetRepository.unlinkCouple({ coupleId: couple.id });
+
+      sendData(response, 200, { message: "Partner removed. You are now in solo mode." });
+    }),
+  );
+
   router.get(
     "/api/notifications",
     requireAuth,

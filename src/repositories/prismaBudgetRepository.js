@@ -1436,6 +1436,10 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapHouseholdRule(rule);
     },
 
+    async unlinkCouple({ coupleId }) {
+      await prisma.couple.delete({ where: { id: coupleId } });
+    },
+
     async registerPushDevice({ userId, platform, token, enabled = true }) {
       const device = await prisma.pushDevice.upsert({
         where: {

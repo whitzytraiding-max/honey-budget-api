@@ -1539,6 +1539,19 @@ export default function App() {
     }
   }
 
+  async function handleUnlinkPartner() {
+    setLinkBusy(true);
+    try {
+      await apiFetch("/api/couples/me", { method: "DELETE", headers: authHeaders });
+      setSoloMode(true);
+      localStorage.setItem("budget_solo_mode", "true");
+      await refreshDashboardBundle();
+      navigate("home");
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
   async function handleInvitePartnerFromSettings(email) {
     setLinkBusy(true);
     try {
@@ -2470,6 +2483,7 @@ export default function App() {
             onRedeemCoupon={handleRedeemCoupon}
             isPro={isPro}
             onInvitePartner={handleInvitePartnerFromSettings}
+            onUnlinkPartner={handleUnlinkPartner}
             inviteBusy={linkBusy}
           />
         );
