@@ -1535,6 +1535,21 @@ export default function App() {
     }
   }
 
+  async function handleInvitePartnerFromSettings(email) {
+    setLinkBusy(true);
+    try {
+      await apiFetch("/api/couples/link", {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ partnerEmail: email.trim().toLowerCase() }),
+      });
+      await Promise.all([fetchHouseholdData(), loadNotifications()]);
+      navigate("notifications");
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
   async function handleInviteResponse(inviteId, action) {
     setNotificationsBusy(true);
     setPageError("");
@@ -2448,6 +2463,8 @@ export default function App() {
             onMmkRateSubmit={handleMmkRateSubmit}
             onRedeemCoupon={handleRedeemCoupon}
             isPro={isPro}
+            onInvitePartner={handleInvitePartnerFromSettings}
+            inviteBusy={linkBusy}
           />
         );
       case "paywall":

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings2, Sparkles, Users } from "lucide-react";
+import { Settings2, Sparkles, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
@@ -27,9 +27,13 @@ function SettingsPage({
   onMmkRateSubmit,
   onRedeemCoupon,
   isPro,
+  onInvitePartner,
+  inviteBusy,
 }) {
   const [activeTab, setActiveTab] = useState("profile");
   const [couponCode, setCouponCode] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteResult, setInviteResult] = useState(null); // { ok: bool, message: string }
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponResult, setCouponResult] = useState(null); // { ok: bool, message: string }
   const { locale, setLocale, supportedLocales, t } = useLanguage();
@@ -319,22 +323,72 @@ function SettingsPage({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               {t("settings.partner")}
             </p>
-            <p className="mt-2 text-xl font-semibold text-slate-900">{partner?.name || t("settings.notLinked")}</p>
-            <p className="mt-1 text-sm text-slate-500">{partner?.email || t("settings.partnerHint")}</p>
-            <p className="mt-3 text-sm text-slate-600">
-              Cash {currency(partner?.salaryCashAmount ?? 0, {
-                sourceCurrency: partner?.incomeCurrencyCode || "USD",
-                convert: false,
-              })}{" "}
-              · Card{" "}
-              {currency(partner?.salaryCardAmount ?? 0, {
-                sourceCurrency: partner?.incomeCurrencyCode || "USD",
-                convert: false,
-              })}
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              {t("settings.incomeDayOfMonth")}: {partner?.incomeDayOfMonth ?? 1}
-            </p>
+            {partner ? (
+              <>
+                <p className="mt-2 text-xl font-semibold text-slate-900">{partner.name}</p>
+                <p className="mt-1 text-sm text-slate-500">{partner.email}</p>
+                <p className="mt-3 text-sm text-slate-600">
+                  Cash {currency(partner.salaryCashAmount ?? 0, {
+                    sourceCurrency: partner.incomeCurrencyCode || "USD",
+                    convert: false,
+                  })}{" "}
+                  · Card{" "}
+                  {currency(partner.salaryCardAmount ?? 0, {
+                    sourceCurrency: partner.incomeCurrencyCode || "USD",
+                    convert: false,
+                  })}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {t("settings.incomeDayOfMonth")}: {partner.incomeDayOfMonth ?? 1}
+                </p>
+              </>
+            ) : soloMode ? (
+              <>
+                <div className="mt-2 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-slate-400" />
+                  <p className="text-sm font-medium text-slate-600">Invite a partner</p>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Got a partner? Send them an invite to share this dashboard.
+                </p>
+                <form
+                  className="mt-3 flex flex-col gap-2"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!inviteEmail.trim()) return;
+                    setInviteResult(null);
+                    try {
+                      await onInvitePartner(inviteEmail);
+                    } catch (err) {
+                      setInviteResult({ ok: false, message: err.message || "Failed to send invite." });
+                    }
+                  }}
+                >
+                  <input
+                    className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                    type="email"
+                    placeholder="partner@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => {
+                      setInviteEmail(e.target.value);
+                      setInviteResult(null);
+                    }}
+                    disabled={inviteBusy}
+                  />
+                  <ActionButton busy={inviteBusy} className="w-full">
+                    Send invite
+                  </ActionButton>
+                </form>
+                {inviteResult && !inviteResult.ok && (
+                  <p className="mt-2 text-xs font-medium text-rose-600">{inviteResult.message}</p>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-xl font-semibold text-slate-900">{t("settings.notLinked")}</p>
+                <p className="mt-1 text-sm text-slate-500">{t("settings.partnerHint")}</p>
+              </>
+            )}
           </div>
         </div>
       </section>
