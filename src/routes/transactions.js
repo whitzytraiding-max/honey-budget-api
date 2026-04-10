@@ -58,12 +58,16 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
         });
       }
 
-      await materializeRecurringBills({
-        budgetRepository,
-        exchangeRateService,
-        couple,
-        throughDate: new Date().toISOString().slice(0, 10),
-      });
+      try {
+        await materializeRecurringBills({
+          budgetRepository,
+          exchangeRateService,
+          couple,
+          throughDate: new Date().toISOString().slice(0, 10),
+        });
+      } catch (error) {
+        console.warn("[/api/dashboard] materializeRecurringBills failed, continuing:", error.message);
+      }
 
       const snapshot = await buildBudgetSnapshot({
         budgetRepository,
@@ -94,12 +98,16 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
         user: request.user,
       });
 
-      await materializeRecurringBills({
-        budgetRepository,
-        exchangeRateService,
-        couple,
-        throughDate: new Date().toISOString().slice(0, 10),
-      });
+      try {
+        await materializeRecurringBills({
+          budgetRepository,
+          exchangeRateService,
+          couple,
+          throughDate: new Date().toISOString().slice(0, 10),
+        });
+      } catch (error) {
+        console.warn("[/api/summary] materializeRecurringBills failed, continuing:", error.message);
+      }
 
       const summary = await buildMonthlySummary({
         budgetRepository,
@@ -308,12 +316,16 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
       }
 
       if (couple) {
-        await materializeRecurringBills({
-          budgetRepository,
-          exchangeRateService,
-          couple,
-          throughDate: new Date().toISOString().slice(0, 10),
-        });
+        try {
+          await materializeRecurringBills({
+            budgetRepository,
+            exchangeRateService,
+            couple,
+            throughDate: new Date().toISOString().slice(0, 10),
+          });
+        } catch (error) {
+          console.warn("[/api/transactions] materializeRecurringBills failed, continuing:", error.message);
+        }
       }
 
       const monthWindow = month ? getCalendarMonthWindow(month) : null;

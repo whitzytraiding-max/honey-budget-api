@@ -180,11 +180,13 @@ function HomePage({
             </div>
           </div>
 
-          {dashboardBusy || !dashboard ? (
+          {dashboardBusy ? (
             <div className="mt-4 grid gap-3">
               <div className="h-24 animate-pulse rounded-[1.35rem] bg-slate-100" />
               <div className="h-24 animate-pulse rounded-[1.35rem] bg-slate-100" />
             </div>
+          ) : !dashboard ? (
+            <p className="mt-4 text-sm text-slate-500">Could not load income data. Try refreshing.</p>
           ) : (
             <div className="mt-4 grid gap-3">
               {dashboard.fairSplit.map((person, index) => {
