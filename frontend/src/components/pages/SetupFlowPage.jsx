@@ -1,7 +1,7 @@
 import { CheckCircle2, CircleDashed, Sparkles } from "lucide-react";
 import { ActionButton } from "../ui.jsx";
 
-function SetupFlowPage({ checklist = [], onNavigate }) {
+function SetupFlowPage({ checklist = [], onNavigate, soloMode }) {
   const completedCount = checklist.filter((item) => item.completed).length;
   const completionPct = checklist.length
     ? Math.round((completedCount / checklist.length) * 100)
@@ -20,7 +20,9 @@ function SetupFlowPage({ checklist = [], onNavigate }) {
               Get your household fully ready
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Complete these steps to get your household fully set up — link your partner, save your income, add bills, set savings goals, and personalise your experience.
+              {soloMode
+                ? "Complete these steps to get fully set up — save your income, add bills, set savings goals, and personalise your experience."
+                : "Complete these steps to get your household fully set up — link your partner, save your income, add bills, set savings goals, and personalise your experience."}
             </p>
           </div>
         </div>

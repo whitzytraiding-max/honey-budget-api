@@ -2351,6 +2351,7 @@ export default function App() {
           <SetupFlowPage
             checklist={setupChecklist}
             onNavigate={navigate}
+            soloMode={soloMode}
           />
         );
       case "planner":
@@ -2375,6 +2376,7 @@ export default function App() {
             onDeleteRule={handleDeleteHouseholdRule}
             onCancelRuleEdit={resetHouseholdRuleEditor}
             onNavigate={navigate}
+            soloMode={soloMode}
           />
         );
       case "calendar":

@@ -31,6 +31,7 @@ function PlannerPage({
   onDeleteRule,
   onCancelRuleEdit,
   onNavigate,
+  soloMode,
 }) {
   const { locale } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
@@ -231,7 +232,7 @@ function PlannerPage({
             </div>
           </section>
 
-          <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
+          {!soloMode && <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-amber-700" />
               <div>
@@ -341,7 +342,7 @@ function PlannerPage({
                 </div>
               )}
             </div>
-          </section>
+          </section>}
         </div>
 
         <div className="space-y-4">
@@ -429,8 +430,7 @@ function PlannerPage({
                 ))
               ) : (
                 <div className="hb-panel-soft rounded-[1.25rem] p-4 text-sm text-slate-500">
-                  Once you add recurring bills or coach answers, this section will surface useful
-                  discussion starters.
+                  No conversation prompts yet. Add your recurring bills and complete the coach setup — the app will generate money topics worth talking about based on your actual spending patterns.
                 </div>
               )}
             </div>

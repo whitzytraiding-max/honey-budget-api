@@ -467,11 +467,25 @@ export async function buildPlannerData({
   const couple = await budgetRepository.getCoupleForUser(currentUser.id);
 
   if (!couple || !partnerUser) {
-    throw new HttpError(
-      404,
-      "COUPLE_NOT_FOUND",
-      "Link both partners before opening the planner.",
-    );
+    const soloChecklist = buildSetupChecklist({
+      currentUser,
+      partnerUser: null,
+      coachProfile: null,
+      recurringBills: [],
+      goals: [],
+    });
+    return {
+      displayCurrencyCode: currentUser.incomeCurrencyCode || "USD",
+      setupChecklist: soloChecklist,
+      recurringBills: [],
+      upcomingBills: [],
+      householdRules: [],
+      pushReadiness: {
+        enabled: false,
+        body: "Push-notification groundwork is in place — device registration and native delivery still need the Capacitor push step.",
+      },
+      conflictCenter: { upcomingBills: [], sharedRules: [], riskAreas: [], prompts: [] },
+    };
   }
 
   await materializeRecurringBills({
