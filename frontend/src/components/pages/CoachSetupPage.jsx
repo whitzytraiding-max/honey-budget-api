@@ -100,7 +100,7 @@ function CoachSetupPage({ coachProfileForm, onChange, onSubmit, busy, completed,
         </div>
       </div>
 
-      <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4 text-sm leading-6 text-amber-900">
+      <div className="hb-panel-highlight mt-4 rounded-3xl px-4 py-4 text-sm leading-6">
         <p className="font-semibold">{t("coach.whyTitle")}</p>
         <p className="mt-1">{soloMode ? t("coach.soloWhyBody") : t("coach.whyBody")}</p>
       </div>

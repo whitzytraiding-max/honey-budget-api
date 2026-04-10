@@ -421,6 +421,7 @@ html[data-theme="dark"] .auth-info-link {
     radial-gradient(circle at top left, rgba(243, 191, 41, 0.18), transparent 34%),
     radial-gradient(circle at top right, rgba(34, 197, 94, 0.12), transparent 38%),
     linear-gradient(135deg, rgba(255, 244, 210, 0.96), rgba(235, 249, 240, 0.92));
+  color: #78350f;
 }
 
 .hb-panel-multi {
@@ -499,6 +500,7 @@ html[data-theme="dark"] .hb-panel-highlight {
     radial-gradient(circle at top left, rgba(243, 191, 41, 0.14), transparent 28%),
     radial-gradient(circle at top right, rgba(34, 197, 94, 0.1), transparent 34%),
     linear-gradient(135deg, rgba(25, 41, 67, 0.96), rgba(13, 24, 43, 0.94));
+  color: #fde68a;
 }
 
 html[data-theme="dark"] .hb-panel-multi {
