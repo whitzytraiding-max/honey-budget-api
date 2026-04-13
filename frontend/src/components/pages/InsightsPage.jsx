@@ -96,6 +96,7 @@ const ACTION_LABELS = {
 
 function CoachChat({ onSendMessage }) {
   const [message, setMessage] = useState("");
+  const [interim, setInterim] = useState(""); // live partial transcript
   const [history, setHistory] = useState([]); // { role: "user"|"coach", text, actions? }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -104,6 +105,7 @@ function CoachChat({ onSendMessage }) {
   const inputRef = useRef(null);
   const bottomRef = useRef(null);
   const recognitionRef = useRef(null);
+  const committedRef = useRef(""); // confirmed transcript so far
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -120,37 +122,77 @@ function CoachChat({ onSendMessage }) {
 
     if (listening) {
       recognitionRef.current?.stop();
-      setListening(false);
-      return;
+      return; // onend will clean up
     }
+
+    committedRef.current = message; // preserve any typed text
 
     const rec = new SR();
     rec.lang = "en-US";
-    rec.interimResults = false;
+    rec.continuous = true;       // keep going until user stops
+    rec.interimResults = true;   // show words as they're spoken
     rec.maxAlternatives = 1;
     recognitionRef.current = rec;
 
-    rec.onstart = () => setListening(true);
+    rec.onstart = () => { setListening(true); setError(null); };
+
     rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setMessage((prev) => (prev ? prev + " " + transcript : transcript));
+      let finalPart = "";
+      let interimPart = "";
+
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalPart += t;
+        } else {
+          interimPart += t;
+        }
+      }
+
+      if (finalPart) {
+        const joined = (committedRef.current + " " + finalPart).trim();
+        committedRef.current = joined;
+        setMessage(joined);
+        setInterim("");
+      } else {
+        setInterim(interimPart);
+      }
+    };
+
+    rec.onerror = (e) => {
+      if (e.error === "no-speech") return; // ignore silence, keep listening
+      setListening(false);
+      setInterim("");
+      setError("Voice input stopped. Try again.");
+    };
+
+    rec.onend = () => {
+      setListening(false);
+      setInterim("");
+      // Flush any pending interim as final
+      if (committedRef.current) {
+        setMessage(committedRef.current);
+      }
       inputRef.current?.focus();
     };
-    rec.onerror = () => {
-      setListening(false);
-      setError("Voice input failed. Try again.");
-    };
-    rec.onend = () => setListening(false);
+
     rec.start();
-  }, [listening]);
+  }, [listening, message]);
 
   async function send(text) {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
 
+    // Stop voice recording before sending
+    if (listening) {
+      recognitionRef.current?.stop();
+    }
+
     setBusy(true);
     setError(null);
     setMessage("");
+    setInterim("");
+    committedRef.current = "";
 
     // Optimistically add user bubble
     setHistory((h) => [...h, { role: "user", text: trimmed }]);
@@ -261,28 +303,39 @@ function CoachChat({ onSendMessage }) {
         <button
           type="button"
           onClick={toggleVoice}
-          title={listening ? "Stop listening" : "Speak your message"}
+          title={listening ? "Tap to stop" : "Tap to speak"}
           className={`flex shrink-0 items-center justify-center rounded-2xl px-3 py-3 transition ${
             listening
-              ? "animate-pulse bg-rose-500 text-white"
+              ? "bg-rose-500 text-white shadow-lg shadow-rose-200"
               : "hb-panel-soft text-slate-500 hover:text-slate-800"
           }`}
         >
           {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
         </button>
 
-        <input
-          ref={inputRef}
-          className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-          placeholder={listening ? "Listening…" : "Ask anything or say 'update my income to $X'"}
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          disabled={busy}
-          maxLength={1000}
-        />
+        {/* Input with live interim transcript overlay */}
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+            placeholder={listening ? "Speak now…" : "Ask anything or say 'update my income to $X'"}
+            value={message}
+            onChange={(e) => { setMessage(e.target.value); committedRef.current = e.target.value; }}
+            disabled={busy}
+            maxLength={1000}
+          />
+          {/* Live interim text shown as ghost overlay */}
+          {listening && interim && (
+            <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm text-slate-400">
+              <span className="invisible">{message}</span>
+              {message ? " " : ""}{interim}
+            </span>
+          )}
+        </div>
+
         <button
           type="submit"
-          disabled={busy || !message.trim()}
+          disabled={busy || (!message.trim() && !interim)}
           className="flex shrink-0 items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-white transition hover:bg-sky-700 disabled:opacity-40"
           aria-label="Send"
         >
