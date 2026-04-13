@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Brain, Send, Sparkles, TrendingUp, Wallet } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Brain, Mic, MicOff, Send, Sparkles, TrendingUp, Wallet } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
 
@@ -83,40 +83,106 @@ const INSIGHT_EMOJIS = ["🌿", "💳", "🎯"];
 const CHAT_SUGGESTIONS = [
   "How do we cut our food spending?",
   "Are we on track with our savings goal?",
-  "Why is our remaining budget low this month?",
+  "I got a raise — update my income to $X",
   "Which of us is spending more right now?",
 ];
 
+const ACTION_LABELS = {
+  update_income: "Income updated",
+  log_expense: "Expense logged",
+  update_bill: "Bill updated",
+  add_bill: "Bill added",
+};
+
 function CoachChat({ onSendMessage }) {
   const [message, setMessage] = useState("");
-  const [reply, setReply] = useState(null);
+  const [history, setHistory] = useState([]); // { role: "user"|"coach", text, actions? }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [listening, setListening] = useState(false);
+  const [rawHistory, setRawHistory] = useState([]); // API conversation history
   const inputRef = useRef(null);
+  const bottomRef = useRef(null);
+  const recognitionRef = useRef(null);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    const text = message.trim();
-    if (!text || busy) return;
+  // Auto-scroll to latest message
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history, busy]);
+
+  // Voice input
+  const toggleVoice = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setError("Voice input isn't supported in this browser. Try Chrome.");
+      return;
+    }
+
+    if (listening) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      return;
+    }
+
+    const rec = new SR();
+    rec.lang = "en-US";
+    rec.interimResults = false;
+    rec.maxAlternatives = 1;
+    recognitionRef.current = rec;
+
+    rec.onstart = () => setListening(true);
+    rec.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setMessage((prev) => (prev ? prev + " " + transcript : transcript));
+      inputRef.current?.focus();
+    };
+    rec.onerror = () => {
+      setListening(false);
+      setError("Voice input failed. Try again.");
+    };
+    rec.onend = () => setListening(false);
+    rec.start();
+  }, [listening]);
+
+  async function send(text) {
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
+
     setBusy(true);
-    setReply(null);
     setError(null);
+    setMessage("");
+
+    // Optimistically add user bubble
+    setHistory((h) => [...h, { role: "user", text: trimmed }]);
+
     try {
-      const result = await onSendMessage(text);
-      setReply(result);
-      setMessage("");
+      const result = await onSendMessage(trimmed, rawHistory);
+      setRawHistory(result.history ?? []);
+      setHistory((h) => [
+        ...h,
+        { role: "coach", text: result.reply, actions: result.actions ?? [] },
+      ]);
     } catch (err) {
       const msg = err.message || "";
       setError(
         msg.toLowerCase().includes("fetch")
-          ? "Couldn't reach the coach right now — check your connection and try again."
+          ? "Couldn't reach the coach — check your connection."
           : msg || "Something went wrong. Please try again."
       );
+      // Remove the optimistic user bubble on error
+      setHistory((h) => h.slice(0, -1));
     } finally {
       setBusy(false);
       inputRef.current?.focus();
     }
   }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    send(message);
+  }
+
+  const isEmpty = history.length === 0;
 
   return (
     <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
@@ -124,33 +190,95 @@ function CoachChat({ onSendMessage }) {
         <Sparkles className="h-5 w-5 text-amber-500" />
         <div>
           <h2 className="text-2xl font-semibold">Ask your coach</h2>
-          <p className="text-sm text-slate-600">Ask anything about your finances and get a personalised answer.</p>
+          <p className="text-sm text-slate-600">
+            Your AI financial auditor — ask questions or tell it to update your data.
+          </p>
         </div>
       </div>
 
-      {/* Suggestion chips */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {CHAT_SUGGESTIONS.map((s) => (
-          <button
-            key={s}
-            type="button"
-            className="hb-panel-soft rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:text-slate-900"
-            onClick={() => { setMessage(s); inputRef.current?.focus(); }}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      {/* Suggestion chips — shown only when chat is empty */}
+      {isEmpty && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {CHAT_SUGGESTIONS.map((s) => (
+            <button
+              key={s}
+              type="button"
+              className="hb-panel-soft rounded-full px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:text-slate-900"
+              onClick={() => send(s)}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
+      {/* Chat history */}
+      {!isEmpty && (
+        <div className="mt-5 flex max-h-[420px] flex-col gap-3 overflow-y-auto pr-1">
+          {history.map((msg, i) => (
+            <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                  msg.role === "user"
+                    ? "bg-sky-600 text-white"
+                    : "hb-panel-soft text-slate-800"
+                }`}
+              >
+                {msg.text}
+              </div>
+              {/* Action confirmation badges */}
+              {msg.actions?.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {msg.actions.map((a, j) => (
+                    <span
+                      key={j}
+                      className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 border border-emerald-200"
+                    >
+                      ✓ {ACTION_LABELS[a.tool] ?? a.tool}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+          {busy && (
+            <div className="flex items-start">
+              <div className="hb-panel-soft flex items-center gap-2 rounded-2xl px-4 py-3 text-sm text-slate-500">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />
+                Thinking…
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
+
+      {/* Input bar */}
       <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
+        {/* Voice button */}
+        <button
+          type="button"
+          onClick={toggleVoice}
+          title={listening ? "Stop listening" : "Speak your message"}
+          className={`flex shrink-0 items-center justify-center rounded-2xl px-3 py-3 transition ${
+            listening
+              ? "animate-pulse bg-rose-500 text-white"
+              : "hb-panel-soft text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </button>
+
         <input
           ref={inputRef}
           className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400 focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-          placeholder="e.g. How do we save faster?"
+          placeholder={listening ? "Listening…" : "Ask anything or say 'update my income to $X'"}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           disabled={busy}
-          maxLength={500}
+          maxLength={1000}
         />
         <button
           type="submit"
@@ -158,24 +286,9 @@ function CoachChat({ onSendMessage }) {
           className="flex shrink-0 items-center justify-center rounded-2xl bg-sky-600 px-4 py-3 text-white transition hover:bg-sky-700 disabled:opacity-40"
           aria-label="Send"
         >
-          {busy ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          <Send className="h-4 w-4" />
         </button>
       </form>
-
-      {/* Reply */}
-      {reply && (
-        <div className="mt-4 rounded-3xl border border-sky-100 bg-sky-50 px-4 py-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-600">Coach reply</p>
-          <p className="mt-2 text-sm leading-6 text-slate-800">{reply}</p>
-        </div>
-      )}
-      {error && (
-        <p className="mt-3 text-sm text-rose-600">{error}</p>
-      )}
     </section>
   );
 }

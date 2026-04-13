@@ -1368,16 +1368,20 @@ export default function App() {
     }
   }
 
-  async function handleCoachChat(message) {
+  async function handleCoachChat(message, conversationHistory = []) {
     const data = await apiFetch("/api/coach/chat", {
       method: "POST",
       headers: authHeaders,
       body: JSON.stringify({
         message,
+        conversationHistory,
         displayCurrency: currencyCode,
       }),
     });
-    return data.reply;
+    if (data.actions?.length > 0) {
+      refreshDashboardBundle().catch(() => {});
+    }
+    return { reply: data.reply, actions: data.actions ?? [], history: data.history ?? [] };
   }
 
   async function handleRedeemCoupon(code) {
