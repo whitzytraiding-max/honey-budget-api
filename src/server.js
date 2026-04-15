@@ -12,7 +12,8 @@ import { prisma } from "./lib/prisma.js";
 import { createPrismaBudgetRepository } from "./repositories/prismaBudgetRepository.js";
 import { createEmailService } from "./services/emailService.js";
 import { createExchangeRateService } from "./services/exchangeRateService.js";
-import { createInsightsService, createOpenAIClient, createAnthropicClient } from "./services/insightsService.js";
+import { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient } from "./services/insightsService.js";
+import { createBudgetPlannerService } from "./services/budgetPlannerService.js";
 
 const isProduction = process.env.NODE_ENV === "production";
 const host = process.env.HOST || "0.0.0.0";
@@ -59,12 +60,15 @@ if (isProduction && !resetPasswordUrlBase) {
 const budgetRepository = createPrismaBudgetRepository({ prisma });
 const emailService = createEmailService();
 const exchangeRateService = createExchangeRateService({ budgetRepository });
+const geminiClient = createGeminiClient();
 const insightsService = createInsightsService({
   budgetRepository,
   exchangeRateService,
+  geminiClient,
   anthropicClient: createAnthropicClient(),
   openaiClient: createOpenAIClient(),
 });
+const budgetPlannerService = createBudgetPlannerService({ geminiClient });
 
 function isPrivateNetworkOrigin(origin) {
   if (!origin) {
@@ -161,6 +165,7 @@ const app = createApp({
   app: serverApp,
   budgetRepository,
   insightsService,
+  budgetPlannerService,
   exchangeRateService,
   emailService,
   resetPasswordUrlBase: resetPasswordUrlBase || "http://localhost:5173",

@@ -1807,6 +1807,31 @@ function createPrismaBudgetRepository({ prisma }) {
         data: { isActive: false },
       });
     },
+
+    async createBudgetPlan({ userId, coupleId, name, startMonth, endMonth, planJson, goalAmount, goalCurrency }) {
+      return prisma.budgetPlan.create({
+        data: { userId, coupleId: coupleId ?? null, name, startMonth, endMonth, planJson, goalAmount: goalAmount ?? null, goalCurrency: goalCurrency ?? null },
+      });
+    },
+
+    async listBudgetPlans({ userId, coupleId }) {
+      return prisma.budgetPlan.findMany({
+        where: coupleId ? { coupleId } : { userId },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+
+    async getBudgetPlan({ planId, userId }) {
+      return prisma.budgetPlan.findFirst({
+        where: { id: planId, userId },
+      });
+    },
+
+    async deleteBudgetPlan({ planId, userId }) {
+      await prisma.budgetPlan.deleteMany({
+        where: { id: planId, userId },
+      });
+    },
   };
 }
 

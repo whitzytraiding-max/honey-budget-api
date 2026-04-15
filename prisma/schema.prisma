@@ -42,6 +42,7 @@ model User {
   coupleAsUserOne     Couple[]      @relation("CoupleUserOne")
   coupleAsUserTwo     Couple[]      @relation("CoupleUserTwo")
   couponRedemptions   CouponRedemption[]
+  budgetPlans         BudgetPlan[]
 
   @@map("users")
 }
@@ -74,6 +75,7 @@ model Couple {
   savingsGoals      SavingsGoal[]
   recurringBills    RecurringBill[]
   householdRules    HouseholdRule[]
+  budgetPlans       BudgetPlan[]
 
   @@map("couples")
 }
@@ -295,4 +297,22 @@ model CouponRedemption {
 
   @@unique([userId, couponCodeId])
   @@map("coupon_redemptions")
+}
+
+model BudgetPlan {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  coupleId     Int?     @map("couple_id")
+  name         String
+  startMonth   String   @map("start_month")
+  endMonth     String   @map("end_month")
+  planJson     String   @map("plan_json") @db.Text
+  goalAmount   Decimal? @db.Decimal(14, 2) @map("goal_amount")
+  goalCurrency String?  @map("goal_currency")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  couple       Couple?  @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+
+  @@map("budget_plans")
 }

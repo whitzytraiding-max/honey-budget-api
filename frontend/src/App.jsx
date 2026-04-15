@@ -4,7 +4,7 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Bell, Brain, CalendarDays, ClipboardList, House, ListTodo, PiggyBank, Settings2, ShieldCheck, Sparkles, Wallet } from "lucide-react";
+import { Bell, Brain, CalendarDays, ClipboardList, House, ListTodo, Map, PiggyBank, Settings2, ShieldCheck, Sparkles, Wallet } from "lucide-react";
 import AppShell from "./components/AppShell.jsx";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CoachSetupPage from "./components/pages/CoachSetupPage.jsx";
@@ -16,6 +16,7 @@ import InsightsPage from "./components/pages/InsightsPage.jsx";
 import MorePage from "./components/pages/MorePage.jsx";
 import NotificationsPage from "./components/pages/NotificationsPage.jsx";
 import PlannerPage from "./components/pages/PlannerPage.jsx";
+import BudgetPlannerPage from "./components/pages/BudgetPlannerPage.jsx";
 import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
@@ -83,6 +84,7 @@ const ALL_NAV_ITEMS = [
   { key: "calendar", icon: CalendarDays },
   { key: "history", icon: ClipboardList },
   { key: "planner", icon: ShieldCheck },
+  { key: "budget-planner", icon: Map },
   { key: "coach", icon: Sparkles },
   { key: "setup", icon: ListTodo },
   { key: "settings", icon: Settings2 },
@@ -94,6 +96,7 @@ const APP_ROUTES = new Set([
   "savings",
   "more",
   "planner",
+  "budget-planner",
   "setup",
   "coach",
   "notifications",
@@ -509,6 +512,7 @@ export default function App() {
       "history",
       "settings",
       "planner",
+      "budget-planner",
       "setup",
       "coach",
     ];
@@ -2233,6 +2237,7 @@ export default function App() {
     if (item.key === "notifications") return true;
     if (item.key === "coach") return showCoach;
     if (item.key === "planner") return showPlanner;
+    if (item.key === "budget-planner") return true;
     if (item.key === "setup") return showSetup;
     return true;
   });
@@ -2424,6 +2429,8 @@ export default function App() {
             soloMode={soloMode}
           />
         );
+      case "budget-planner":
+        return <BudgetPlannerPage apiBase={API_BASE_URL} token={token} displayCurrency={currencyCode} />;
       case "calendar":
         return (
           <CalendarPage

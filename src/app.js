@@ -20,11 +20,13 @@ import { createPlannerRoutes } from "./routes/planner.js";
 import { createPushDeviceRoutes } from "./routes/pushDevices.js";
 import { createCouponRoutes } from "./routes/coupons.js";
 import { createCoachChatRoutes } from "./routes/coachChat.js";
+import { createBudgetPlannerRoutes } from "./routes/budgetPlanner.js";
 
 function createApp({
   app = express(),
   budgetRepository,
   insightsService,
+  budgetPlannerService = null,
   exchangeRateService = null,
   emailService = null,
   resetPasswordUrlBase = process.env.RESET_PASSWORD_URL_BASE || process.env.APP_BASE_URL || "",
@@ -83,6 +85,9 @@ function createApp({
   app.use("/", createPushDeviceRoutes(ctx));
   app.use("/", createCouponRoutes(ctx));
   app.use("/", createCoachChatRoutes(ctx));
+  if (budgetPlannerService) {
+    app.use("/", createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }));
+  }
 
   app.use((error, _request, response, _next) => {
     if (error instanceof HttpError) {

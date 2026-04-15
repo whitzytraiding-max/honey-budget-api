@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { buildBudgetSnapshot, buildBudgetSnapshotForUsers } from "./dashboardService.js";
 
 function roundCurrency(value) {
@@ -313,12 +314,15 @@ function createInsightsService({
   exchangeRateService,
   openaiClient,
   anthropicClient,
+  geminiClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
   anthropicModel = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
+  geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash",
 }) {
-  // Prefer Anthropic if available, fall back to OpenAI
-  const useAnthropic = Boolean(anthropicClient);
-  const useAI = useAnthropic || Boolean(openaiClient);
+  // Prefer Gemini > Anthropic > OpenAI
+  const useGemini = Boolean(geminiClient);
+  const useAnthropic = !useGemini && Boolean(anthropicClient);
+  const useAI = useGemini || useAnthropic || Boolean(openaiClient);
   // In-memory layer for same-process requests (avoids repeated DB reads)
   const memCache = new Map();
 
@@ -478,7 +482,14 @@ function createInsightsService({
         ].filter(Boolean).join(" ");
 
         let rawJson;
-        if (useAnthropic) {
+        if (useGemini) {
+          const gModel = geminiClient.getGenerativeModel({
+            model: geminiModel,
+            systemInstruction: systemPrompt,
+          });
+          const result = await gModel.generateContent(`Couples budget snapshot:\n${JSON.stringify(promptPayload)}`);
+          rawJson = result.response.text() ?? "";
+        } else if (useAnthropic) {
           const msg = await anthropicClient.messages.create({
             model: anthropicModel,
             max_tokens: 1024,
@@ -503,7 +514,7 @@ function createInsightsService({
         const result = {
           snapshot,
           insights: {
-            provider: useAnthropic ? "anthropic" : "openai",
+            provider: useGemini ? "gemini" : useAnthropic ? "anthropic" : "openai",
             ...JSON.parse(jsonMatch[0]),
           },
         };
@@ -520,13 +531,81 @@ function createInsightsService({
       }
     }
 
-  async function chat({ message, snapshot, coachProfile, savingsGoals = [], currentUser, partnerUser }) {
+  const CHAT_TOOLS = [
+    {
+      name: "update_income",
+      description: "Update the current user's monthly salary/income amount. Use when the user says they got a raise, their pay changed, or they want to update their income.",
+      input_schema: {
+        type: "object",
+        properties: {
+          amount: { type: "number", description: "New monthly income amount (in their income currency)" },
+          note: { type: "string", description: "Brief confirmation note to show the user, e.g. 'Monthly income updated to $5,200'" },
+        },
+        required: ["amount", "note"],
+      },
+    },
+    {
+      name: "log_expense",
+      description: "Log a new one-time expense transaction on behalf of the user. Use when they tell you about a purchase or expense that hasn't been recorded yet.",
+      input_schema: {
+        type: "object",
+        properties: {
+          description: { type: "string", description: "What the expense was for, e.g. 'Dinner at restaurant'" },
+          amount: { type: "number", description: "Amount spent (positive number)" },
+          category: { type: "string", description: "Category: Dining, Groceries, Shopping, Transport, Entertainment, Health, Subscriptions, Debt Payment, Other" },
+          payment_method: { type: "string", enum: ["cash", "card"], description: "How it was paid" },
+          note: { type: "string", description: "Brief confirmation note, e.g. 'Logged $45 for Dinner at restaurant'" },
+        },
+        required: ["description", "amount", "category", "payment_method", "note"],
+      },
+    },
+    {
+      name: "update_bill",
+      description: "Update the amount of an existing recurring bill. Use when the user says a bill has changed, e.g. rent went up, subscription increased.",
+      input_schema: {
+        type: "object",
+        properties: {
+          bill_id: { type: "number", description: "The ID of the bill to update (from the bills list in context)" },
+          bill_name: { type: "string", description: "Name of the bill for confirmation" },
+          new_amount: { type: "number", description: "New monthly amount for this bill" },
+          note: { type: "string", description: "Brief confirmation note, e.g. 'Rent updated to $1,200/month'" },
+        },
+        required: ["bill_id", "bill_name", "new_amount", "note"],
+      },
+    },
+    {
+      name: "add_bill",
+      description: "Add a new recurring monthly bill. Use when the user mentions a new subscription, bill, or regular expense that should be tracked.",
+      input_schema: {
+        type: "object",
+        properties: {
+          title: { type: "string", description: "Name of the bill, e.g. 'Netflix', 'Car insurance'" },
+          amount: { type: "number", description: "Monthly amount" },
+          category: { type: "string", description: "Category: Housing, Utilities, Transport, Insurance, Subscriptions, Health, Childcare, Other" },
+          payment_method: { type: "string", enum: ["cash", "card"], description: "How it is usually paid" },
+          note: { type: "string", description: "Brief confirmation note, e.g. 'Added Netflix at $18/month'" },
+        },
+        required: ["title", "amount", "category", "payment_method", "note"],
+      },
+    },
+  ];
 
+  async function chatWithTools({
+    message,
+    conversationHistory = [],
+    snapshot,
+    coachProfile,
+    savingsGoals = [],
+    currentUser,
+    partnerUser,
+    bills = [],
+    onToolCall,
+  }) {
     const cashTotal = Number(snapshot.summary.cashSpent ?? 0);
     const cardTotal = Number(snapshot.summary.cardSpent ?? 0);
     const topTransactions = [...snapshot.transactions]
       .sort((a, b) => (b.displayAmount ?? b.amount ?? 0) - (a.displayAmount ?? a.amount ?? 0))
-      .slice(0, 20)
+      .slice(0, 15)
       .map(({ description, category, type, displayAmount, amount, paymentMethod }) => ({
         description, category, type, amount: displayAmount ?? amount, paymentMethod,
       }));
@@ -540,55 +619,198 @@ function createInsightsService({
       transactions: topTransactions,
       coachProfile,
       savingsGoals: savingsGoals.map((g) => ({
-        title: g.title,
-        targetAmount: g.targetAmount,
-        currentAmount: g.currentAmount,
+        title: g.title, targetAmount: g.targetAmount, currentAmount: g.currentAmount,
         targetDate: g.targetDate,
         progressPct: g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0,
       })),
+      bills: bills.map(({ id, title, amount, category, currencyCode }) => ({ id, title, amount, category, currencyCode })),
+      currentUserName: currentUser?.name ?? "You",
+      partnerName: partnerUser?.name ?? null,
       displayCurrencyCode: snapshot.displayCurrencyCode,
     };
 
     const systemPrompt = [
-      "You are Honey Budget's personal Couples Finance Coach.",
-      "Answer the user's question using only the financial data provided.",
-      "Be specific — reference real numbers, categories, and names from the data.",
-      "Keep your answer under 120 words. Be direct and actionable.",
-      "Tone: warm, clear, like a trusted friend who is also a financial advisor.",
-      "Never make up data. If the answer isn't in the context, say so honestly.",
+      "You are Honey Budget's personal Financial Coach — warm, direct, and specific.",
+      "You have access to the user's real budget data AND tools to update their finances on the spot.",
+      "When the user tells you about a change (raise, new bill, expense, etc.), use the appropriate tool to record it — don't just acknowledge it.",
+      "After using a tool, confirm what you did and give one brief piece of follow-up advice based on their data.",
+      "For conversational questions (no data change needed), answer in 2-3 sentences max using their real numbers.",
+      "Never invent data. Never be generic. Always reference their actual categories, names, and amounts.",
+      "Tone: like a trusted friend who happens to be a CFP — specific, warm, never preachy.",
+      `Context:\n${JSON.stringify(context)}`,
     ].join(" ");
 
-    const userMessage = `Financial context:\n${JSON.stringify(context)}\n\nQuestion: ${message}`;
+    // Build messages array: history + new user message
+    const messages = [
+      ...conversationHistory,
+      { role: "user", content: message },
+    ];
 
     if (!useAI) {
-      return heuristicChat(message, context);
+      return {
+        reply: heuristicChat(message, context),
+        actions: [],
+        newHistory: [...messages, { role: "assistant", content: [{ type: "text", text: heuristicChat(message, context) }] }],
+      };
     }
 
     try {
-      if (useAnthropic) {
-        const msg = await anthropicClient.messages.create({
-          model: anthropicModel,
-          max_tokens: 300,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
+      if (useGemini) {
+        // Gemini function calling format
+        const geminiTools = [{
+          functionDeclarations: CHAT_TOOLS.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema,
+          })),
+        }];
+
+        const gModel = geminiClient.getGenerativeModel({
+          model: geminiModel,
+          systemInstruction: systemPrompt,
+          tools: geminiTools,
         });
-        return msg.content[0]?.text?.trim() ?? "I couldn't generate a response. Please try again.";
+
+        // Convert conversation history to Gemini format
+        // Gemini history must alternate user/model and exclude the current message
+        const geminiHistory = [];
+        for (const msg of conversationHistory) {
+          if (msg.role === "user") {
+            const text = typeof msg.content === "string" ? msg.content : msg.content?.[0]?.text ?? "";
+            geminiHistory.push({ role: "user", parts: [{ text }] });
+          } else if (msg.role === "assistant") {
+            const text = typeof msg.content === "string" ? msg.content : msg.content?.find?.((b) => b.type === "text")?.text ?? msg.content?.[0]?.text ?? "";
+            geminiHistory.push({ role: "model", parts: [{ text }] });
+          }
+        }
+
+        const chat = gModel.startChat({ history: geminiHistory });
+        const firstResult = await chat.sendMessage(message);
+        const firstResponse = firstResult.response;
+
+        const actions = [];
+        const functionCalls = firstResponse.functionCalls?.() ?? [];
+
+        if (functionCalls.length > 0) {
+          const functionResponses = [];
+          for (const fc of functionCalls) {
+            try {
+              const result = await onToolCall(fc.name, fc.args);
+              actions.push({ tool: fc.name, note: fc.args.note, success: result.success });
+              functionResponses.push({
+                functionResponse: { name: fc.name, response: result },
+              });
+            } catch (err) {
+              actions.push({ tool: fc.name, note: fc.args.note, success: false, error: err.message });
+              functionResponses.push({
+                functionResponse: { name: fc.name, response: { success: false, error: err.message } },
+              });
+            }
+          }
+
+          const finalResult = await chat.sendMessage(functionResponses);
+          const replyText = finalResult.response.text()?.trim() ?? "Done — I've updated your finances.";
+
+          const newHistory = [
+            ...conversationHistory,
+            { role: "user", content: message },
+            { role: "assistant", content: [{ type: "text", text: replyText }] },
+          ];
+          return { reply: replyText, actions, newHistory };
+        }
+
+        // No tool use
+        const replyText = firstResponse.text()?.trim() ?? "I couldn't generate a response. Please try again.";
+        const newHistory = [
+          ...conversationHistory,
+          { role: "user", content: message },
+          { role: "assistant", content: [{ type: "text", text: replyText }] },
+        ];
+        return { reply: replyText, actions: [], newHistory };
+
       } else {
-        const msg = await openaiClient.responses.create({
-          model,
-          instructions: systemPrompt,
-          input: [{ role: "user", content: [{ type: "input_text", text: userMessage }] }],
-          text: { format: { type: "text" } },
+        // Anthropic path
+        const firstResponse = await anthropicClient.messages.create({
+          model: anthropicModel,
+          max_tokens: 1024,
+          system: systemPrompt,
+          tools: CHAT_TOOLS,
+          messages,
         });
-        return msg.output_text?.trim() ?? "I couldn't generate a response. Please try again.";
+
+        const actions = [];
+
+        if (firstResponse.stop_reason === "tool_use") {
+          const toolUseBlocks = firstResponse.content.filter((b) => b.type === "tool_use");
+          const toolResults = [];
+
+          for (const toolUse of toolUseBlocks) {
+            try {
+              const result = await onToolCall(toolUse.name, toolUse.input);
+              actions.push({ tool: toolUse.name, note: toolUse.input.note, success: result.success });
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: toolUse.id,
+                content: JSON.stringify(result),
+              });
+            } catch (err) {
+              actions.push({ tool: toolUse.name, note: toolUse.input.note, success: false, error: err.message });
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: toolUse.id,
+                is_error: true,
+                content: err.message,
+              });
+            }
+          }
+
+          const continuedMessages = [
+            ...messages,
+            { role: "assistant", content: firstResponse.content },
+            { role: "user", content: toolResults },
+          ];
+
+          const finalResponse = await anthropicClient.messages.create({
+            model: anthropicModel,
+            max_tokens: 512,
+            system: systemPrompt,
+            tools: CHAT_TOOLS,
+            messages: continuedMessages,
+          });
+
+          const replyText = finalResponse.content.find((b) => b.type === "text")?.text?.trim()
+            ?? "Done — I've updated your finances.";
+
+          const newHistory = [
+            ...continuedMessages,
+            { role: "assistant", content: finalResponse.content },
+          ];
+
+          return { reply: replyText, actions, newHistory };
+        }
+
+        const replyText = firstResponse.content.find((b) => b.type === "text")?.text?.trim()
+          ?? "I couldn't generate a response. Please try again.";
+
+        const newHistory = [
+          ...messages,
+          { role: "assistant", content: firstResponse.content },
+        ];
+
+        return { reply: replyText, actions: [], newHistory };
       }
     } catch (error) {
-      console.error("Coach chat failed:", error?.message ?? error);
-      return heuristicChat(message, context);
+      console.error("Coach chatWithTools failed:", error?.message ?? error);
+      const fallback = heuristicChat(message, context);
+      return {
+        reply: fallback,
+        actions: [],
+        newHistory: [...messages, { role: "assistant", content: [{ type: "text", text: fallback }] }],
+      };
     }
   }
 
-  return { getAiInsights, chat };
+  return { getAiInsights, chatWithTools };
 }
 
 function heuristicChat(message, context) {
@@ -683,4 +905,10 @@ function createAnthropicClient() {
   return new Anthropic({ apiKey });
 }
 
-export { createInsightsService, createOpenAIClient, createAnthropicClient, createFallbackInsights };
+function createGeminiClient() {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) return null;
+  return new GoogleGenerativeAI(apiKey);
+}
+
+export { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createFallbackInsights };
