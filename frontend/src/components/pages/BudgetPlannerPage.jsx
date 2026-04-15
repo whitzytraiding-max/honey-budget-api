@@ -45,10 +45,11 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       try {
         const res = await fetch(`${apiBase}/api/budget-planner`, { headers: headers() });
         if (!res.ok) return;
-        const data = await res.json();
-        setPlans(data.plans ?? []);
-        if (data.activePlan) {
-          setActivePlan(data.activePlan);
+        const json = await res.json();
+        const d = json.data ?? json;
+        setPlans(d.plans ?? []);
+        if (d.activePlan) {
+          setActivePlan(d.activePlan);
           setStep(STEPS.ROADMAP);
         }
       } catch { /* no existing plan */ }
@@ -70,14 +71,15 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         headers: headers(),
         body: form,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Upload failed.");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || json.message || "Upload failed.");
 
-      setParsedPlan(data.parsedPlan);
-      setQuestions(data.questions ?? []);
-      setExtractedText(data.extractedText ?? "");
+      const d = json.data ?? json;
+      setParsedPlan(d.parsedPlan);
+      setQuestions(d.questions ?? []);
+      setExtractedText(d.extractedText ?? "");
 
-      if (data.questions?.length > 0) {
+      if (d.questions?.length > 0) {
         setStep(STEPS.QUESTIONS);
       } else {
         setStep(STEPS.REVIEW);
@@ -101,9 +103,10 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         headers: { ...headers(), "Content-Type": "application/json" },
         body: JSON.stringify({ extractedText, parsedPlan, answers }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Refinement failed.");
-      setParsedPlan(data.parsedPlan);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || json.message || "Refinement failed.");
+      const d = json.data ?? json;
+      setParsedPlan(d.parsedPlan);
       setStep(STEPS.REVIEW);
     } catch (err) {
       setError(err.message);
@@ -120,14 +123,15 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         headers: { ...headers(), "Content-Type": "application/json" },
         body: JSON.stringify({ parsedPlan }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Save failed.");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || json.message || "Save failed.");
 
       // Reload roadmap
       const roadmapRes = await fetch(`${apiBase}/api/budget-planner`, { headers: headers() });
-      const roadmapData = await roadmapRes.json();
-      setPlans(roadmapData.plans ?? []);
-      setActivePlan(roadmapData.activePlan);
+      const roadmapJson = await roadmapRes.json();
+      const rd = roadmapJson.data ?? roadmapJson;
+      setPlans(rd.plans ?? []);
+      setActivePlan(rd.activePlan);
       setStep(STEPS.ROADMAP);
     } catch (err) {
       setError(err.message);
