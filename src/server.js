@@ -160,7 +160,7 @@ serverApp.use(
     legacyHeaders: false,
   }),
 );
-serverApp.use(express.json());
+serverApp.use(express.json({ limit: "10mb" }));
 const app = createApp({
   app: serverApp,
   budgetRepository,

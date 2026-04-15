@@ -140,9 +140,20 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       // If health ping fails/times out, try the upload anyway
     }
 
-    // Step 2: upload the file (server should be awake now, give it 90s)
-    const form = new FormData();
-    form.append("file", file);
+    // Step 2: read file as base64, then send as JSON (avoids multipart/multer issues)
+    let base64data;
+    try {
+      base64data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    } catch {
+      setError("Could not read the file. Please try again.");
+      setStep(STEPS.IDLE);
+      return;
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 90_000);
@@ -150,8 +161,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     try {
       const res = await fetch(`${apiBase}/api/budget-planner/parse`, {
         method: "POST",
-        headers: headers(),
-        body: form,
+        headers: { ...headers(), "Content-Type": "application/json" },
+        body: JSON.stringify({ data: base64data, mimeType: file.type, filename: file.name }),
         signal: controller.signal,
       });
       clearTimeout(timeout);

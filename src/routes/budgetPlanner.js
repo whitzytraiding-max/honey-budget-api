@@ -4,57 +4,43 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import express from "express";
-import multer from "multer";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolvePartnerUser } from "../lib/builders.js";
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
-  fileFilter(_req, file, cb) {
-    const allowed = [
-      "text/csv",
-      "application/csv",
-      "application/vnd.ms-excel",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "application/octet-stream",
-    ];
-    const ext = file.originalname.split(".").pop()?.toLowerCase();
-    if (allowed.includes(file.mimetype) || ["csv", "xlsx", "xls"].includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only CSV and Excel files are supported."));
-    }
-  },
-});
 
 export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }) {
   const router = express.Router();
 
-  // Parse uploaded spreadsheet — returns parsed plan + clarifying questions
+  // Parse uploaded spreadsheet — accepts base64-encoded file as JSON body
   router.post(
     "/api/budget-planner/parse",
     requireAuth,
-    (req, res, next) => {
-      upload.single("file")(req, res, (err) => {
-        if (err) {
-          console.error("[budget-planner] multer error:", err?.message);
-          return res.status(400).json({ error: { code: "FILE_ERROR", message: err?.message || "File upload error." } });
-        }
-        next();
-      });
-    },
     asyncHandler(async (request, response) => {
-      console.log("[budget-planner] parse called, file:", request.file?.originalname, "size:", request.file?.size);
-      if (!request.file) {
+      const { data, mimeType, filename } = request.body ?? {};
+      console.log("[budget-planner] parse called, filename:", filename, "mimeType:", mimeType, "dataLen:", data?.length);
+
+      if (!data) {
         throw new HttpError(400, "FILE_REQUIRED", "Please upload a spreadsheet file.");
       }
 
+      const MAX_BYTES = 5 * 1024 * 1024;
+      let buffer;
       try {
-        const { parsedPlan, questions, extractedText } = budgetPlannerService.parseSpreadsheet(
-          request.file.buffer,
-          request.file.mimetype,
-        );
+        buffer = Buffer.from(data, "base64");
+      } catch {
+        throw new HttpError(400, "INVALID_FILE", "Could not decode file data.");
+      }
+      if (buffer.length > MAX_BYTES) {
+        throw new HttpError(400, "FILE_TOO_LARGE", "File must be 5 MB or smaller.");
+      }
+
+      const ext = String(filename ?? "").split(".").pop()?.toLowerCase();
+      const allowed = ["csv", "xlsx", "xls"];
+      if (!allowed.includes(ext)) {
+        throw new HttpError(400, "INVALID_FILE_TYPE", "Only CSV and Excel files are supported.");
+      }
+
+      try {
+        const { parsedPlan, questions, extractedText } = budgetPlannerService.parseSpreadsheet(buffer, mimeType ?? "");
         console.log("[budget-planner] parse OK, months:", parsedPlan?.months?.length);
         sendData(response, 200, { parsedPlan, questions, extractedText });
       } catch (err) {
