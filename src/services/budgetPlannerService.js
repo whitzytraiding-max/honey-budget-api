@@ -5,124 +5,353 @@
  */
 import * as XLSX from "xlsx";
 
-const PARSE_SYSTEM_PROMPT = `You are a financial data analyst helping import a budget spreadsheet into Honey Budget.
+// Keywords used to identify row/column types
+const INCOME_KEYWORDS = ["income", "salary", "revenue", "earnings", "pay", "wage", "inflow", "total income", "gross"];
+const GOAL_KEYWORDS = ["goal", "target", "savings goal", "save", "saving", "end balance", "final", "objective"];
+const SKIP_KEYWORDS = ["total", "subtotal", "sum", "balance", "net", "profit", "loss", "surplus", "deficit"];
 
-Your job:
-1. Read the raw spreadsheet data provided.
-2. Extract: income amounts, expense categories + amounts, any savings goal, the time period covered (months).
-3. Return a structured JSON plan AND a short list of clarifying questions if anything is ambiguous.
+const MONTH_NAMES = {
+  jan: 1, january: 1,
+  feb: 2, february: 2,
+  mar: 3, march: 3,
+  apr: 4, april: 4,
+  may: 5,
+  jun: 6, june: 6,
+  jul: 7, july: 7,
+  aug: 8, august: 8,
+  sep: 9, september: 9,
+  oct: 10, october: 10,
+  nov: 11, november: 11,
+  dec: 12, december: 12,
+};
 
-Rules:
-- If months are columns (e.g. Jan, Feb...), extract each month's data separately.
-- If only one set of figures exists, treat it as the monthly average and repeat it across the period.
-- Guess category names from row labels — normalize to: Housing, Food & Dining, Transport, Utilities, Entertainment, Shopping, Health, Savings, Subscriptions, Insurance, Childcare, Debt, Other.
-- If a savings goal or end target is visible (e.g. "Save $10,000 by Dec"), extract it.
-- Never invent numbers. If something is unclear, add it to questions.
+const CATEGORY_NORMALISE = [
+  [/housing|rent|mortgage/i, "Housing"],
+  [/food|dining|restaurant|groceries|grocery|meal/i, "Food & Dining"],
+  [/transport|car|fuel|petrol|gas|uber|taxi|bus|train|travel/i, "Transport"],
+  [/utilities|electricity|water|internet|phone|mobile|utility/i, "Utilities"],
+  [/entertainment|fun|leisure|hobby|sport|gym|netflix|spotify|streaming/i, "Entertainment"],
+  [/shopping|clothes|clothing|fashion|retail/i, "Shopping"],
+  [/health|medical|doctor|pharmacy|insurance health/i, "Health"],
+  [/insurance/i, "Insurance"],
+  [/subscriptions?|subscription/i, "Subscriptions"],
+  [/childcare|child|kids|school|education/i, "Childcare"],
+  [/debt|loan|credit|repayment/i, "Debt"],
+];
 
-Respond ONLY with this JSON shape (no markdown, no extra text):
-{
-  "parsedPlan": {
-    "name": "string — a short descriptive name",
-    "startMonth": "YYYY-MM",
-    "endMonth": "YYYY-MM",
-    "currency": "3-letter code e.g. USD",
-    "goalAmount": number or null,
-    "goalDescription": "string or null",
-    "months": [
-      {
-        "month": "YYYY-MM",
-        "income": number,
-        "categories": [{ "name": "string", "amount": number }],
-        "totalExpenses": number,
-        "plannedSavings": number
-      }
-    ]
-  },
-  "questions": ["string", "string"] // empty array if nothing is unclear
-}`;
-
-const REFINE_SYSTEM_PROMPT = `You are a financial data analyst. The user has answered clarifying questions about their budget spreadsheet.
-Update the parsedPlan JSON to incorporate their answers.
-Respond ONLY with the updated parsedPlan JSON (same shape, no markdown, no extra text).`;
-
-export function createBudgetPlannerService({ geminiClient, geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite" }) {
-  if (!geminiClient) {
-    return {
-      parseSpreadsheet: async () => { throw new Error("AI not configured"); },
-      refineWithAnswers: async () => { throw new Error("AI not configured"); },
-    };
+function normaliseCategory(name) {
+  const s = String(name ?? "").trim();
+  for (const [re, cat] of CATEGORY_NORMALISE) {
+    if (re.test(s)) return cat;
   }
-
-  async function parseSpreadsheet(fileBuffer, mimeType) {
-    // Convert spreadsheet to text representation
-    const extractedText = extractSpreadsheetText(fileBuffer, mimeType);
-
-    const model = geminiClient.getGenerativeModel({
-      model: geminiModel,
-      systemInstruction: PARSE_SYSTEM_PROMPT,
-    });
-
-    const result = await model.generateContent(
-      `Spreadsheet data:\n${extractedText}`
-    );
-    const raw = result.response.text();
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Gemini returned no valid JSON");
-
-    const parsed = JSON.parse(jsonMatch[0]);
-    return {
-      parsedPlan: parsed.parsedPlan,
-      questions: parsed.questions ?? [],
-      extractedText,
-    };
-  }
-
-  async function refineWithAnswers({ extractedText, parsedPlan, answers }) {
-    const model = geminiClient.getGenerativeModel({
-      model: geminiModel,
-      systemInstruction: REFINE_SYSTEM_PROMPT,
-    });
-
-    const prompt = [
-      `Original spreadsheet data:\n${extractedText}`,
-      `\nCurrent parsed plan:\n${JSON.stringify(parsedPlan)}`,
-      `\nUser answers to clarifying questions:\n${answers}`,
-    ].join("\n");
-
-    const result = await model.generateContent(prompt);
-    const raw = result.response.text();
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Gemini returned no valid JSON");
-
-    return JSON.parse(jsonMatch[0]);
-  }
-
-  return { parseSpreadsheet, refineWithAnswers };
+  return s || "Other";
 }
 
-function extractSpreadsheetText(buffer, mimeType) {
+function toNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const n = Number(String(v).replace(/[^0-9.\-]/g, ""));
+  return isNaN(n) ? null : Math.abs(n);
+}
+
+function detectMonth(str) {
+  if (!str) return null;
+  const s = String(str).trim().toLowerCase();
+  // "Jan 2026", "January", "Jan", "2026-01", "01/2026"
+  const monthMatch = s.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)/i);
+  if (monthMatch) return MONTH_NAMES[monthMatch[1].toLowerCase().slice(0, 3)] ?? null;
+  const isoMatch = s.match(/^(\d{4})[-\/](\d{1,2})/);
+  if (isoMatch) return { year: Number(isoMatch[1]), month: Number(isoMatch[2]) };
+  const numMatch = s.match(/^(\d{1,2})[-\/](\d{4})/);
+  if (numMatch) return { year: Number(numMatch[2]), month: Number(numMatch[1]) };
+  return null;
+}
+
+function isMonthHeader(val) {
+  if (!val) return false;
+  const s = String(val).trim().toLowerCase();
+  return s in MONTH_NAMES || /^\d{4}[-\/]\d{1,2}$/.test(s) || /^\d{1,2}[-\/]\d{4}$/.test(s);
+}
+
+function yyyyMm(year, month) {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function parseGrid(buffer, mimeType) {
   try {
-    // CSV — pass through as text
-    if (mimeType === "text/csv" || mimeType === "application/csv") {
-      return buffer.toString("utf-8");
+    let workbook;
+    if (mimeType === "text/csv" || mimeType === "application/csv" || String(buffer).includes(",")) {
+      workbook = XLSX.read(buffer.toString("utf-8"), { type: "string" });
+    } else {
+      workbook = XLSX.read(buffer, { type: "buffer" });
+    }
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+  } catch {
+    return [];
+  }
+}
+
+export function createBudgetPlannerService() {
+  function parseSpreadsheet(fileBuffer, mimeType) {
+    const grid = parseGrid(fileBuffer, mimeType);
+    if (!grid.length) throw new Error("Could not read the spreadsheet. Please check the file format.");
+
+    // Remove fully empty rows
+    const rows = grid.filter((r) => r.some((c) => String(c ?? "").trim() !== ""));
+
+    // Detect orientation: months as column headers (row 0) or row labels (col 0)
+    const firstRow = rows[0] ?? [];
+    const firstColVals = rows.map((r) => r[0]);
+
+    const monthsInRow0 = firstRow.slice(1).filter(isMonthHeader).length;
+    const monthsInCol0 = firstColVals.slice(1).filter(isMonthHeader).length;
+
+    let parsedPlan;
+
+    if (monthsInRow0 >= 2) {
+      parsedPlan = parseMonthsAsColumns(rows);
+    } else if (monthsInCol0 >= 2) {
+      parsedPlan = parseMonthsAsRows(rows);
+    } else {
+      parsedPlan = parseSinglePeriod(rows);
     }
 
-    // Excel (xlsx, xls, etc.)
-    const workbook = XLSX.read(buffer, { type: "buffer" });
-    const lines = [];
+    return { parsedPlan, questions: [], extractedText: "" };
+  }
 
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      const csv = XLSX.utils.sheet_to_csv(sheet, { skipHidden: true });
-      if (csv.trim()) {
-        lines.push(`=== Sheet: ${sheetName} ===`);
-        lines.push(csv);
+  return { parseSpreadsheet };
+}
+
+// ── MONTHS AS COLUMNS ─────────────────────────────────────────────────────────
+// Row 0: label | Jan | Feb | Mar ...
+// Row n: Category | 500 | 600 | 450 ...
+function parseMonthsAsColumns(rows) {
+  const headerRow = rows[0];
+  const currentYear = new Date().getFullYear();
+
+  // Build month index: colIndex → { year, month }
+  const monthCols = [];
+  for (let c = 1; c < headerRow.length; c++) {
+    const m = detectMonth(headerRow[c]);
+    if (!m) continue;
+    if (typeof m === "object") {
+      monthCols.push({ col: c, year: m.year, month: m.month });
+    } else {
+      // month number only — assign year by sequence
+      const prev = monthCols[monthCols.length - 1];
+      let year = currentYear;
+      if (prev) {
+        year = m < prev.month ? prev.year + 1 : prev.year;
+      }
+      monthCols.push({ col: c, year, month: m });
+    }
+  }
+
+  if (!monthCols.length) return parseSinglePeriod(rows);
+
+  // Init month buckets
+  const months = monthCols.map(({ year, month }) => ({
+    month: yyyyMm(year, month),
+    income: 0,
+    categories: [],
+    totalExpenses: 0,
+    plannedSavings: 0,
+  }));
+
+  let goalAmount = null;
+  let goalDescription = null;
+  let name = "Budget Plan";
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const label = String(row[0] ?? "").trim();
+    if (!label) continue;
+
+    const labelLower = label.toLowerCase();
+    const isIncome = INCOME_KEYWORDS.some((k) => labelLower.includes(k));
+    const isGoal = GOAL_KEYWORDS.some((k) => labelLower.includes(k));
+    const isSkip = SKIP_KEYWORDS.some((k) => labelLower === k);
+
+    if (isSkip && !isIncome) continue;
+
+    if (isGoal) {
+      const val = toNum(row[monthCols[monthCols.length - 1]?.col]);
+      if (val !== null) goalAmount = val;
+      goalDescription = label;
+      continue;
+    }
+
+    for (let i = 0; i < monthCols.length; i++) {
+      const val = toNum(row[monthCols[i].col]);
+      if (val === null || val === 0) continue;
+
+      if (isIncome) {
+        months[i].income += val;
+      } else {
+        months[i].categories.push({ name: normaliseCategory(label), amount: val });
+        months[i].totalExpenses += val;
+      }
+    }
+  }
+
+  // Compute savings
+  for (const m of months) {
+    m.plannedSavings = Math.max(0, m.income - m.totalExpenses);
+    // Deduplicate merged categories
+    const merged = {};
+    for (const c of m.categories) {
+      merged[c.name] = (merged[c.name] ?? 0) + c.amount;
+    }
+    m.categories = Object.entries(merged).map(([n, a]) => ({ name: n, amount: a }));
+  }
+
+  // Derive goal from last month savings if not found
+  if (!goalAmount && months.length) {
+    const total = months.reduce((s, m) => s + m.plannedSavings, 0);
+    if (total > 0) goalAmount = Math.round(total);
+  }
+
+  return {
+    name,
+    startMonth: months[0].month,
+    endMonth: months[months.length - 1].month,
+    currency: "USD",
+    goalAmount,
+    goalDescription,
+    months,
+  };
+}
+
+// ── MONTHS AS ROWS ─────────────────────────────────────────────────────────
+// Col 0: Jan/Feb/... | Col 1: Income | Col 2: Housing | Col 3: Food ...
+function parseMonthsAsRows(rows) {
+  const headerRow = rows[0] ?? [];
+  const currentYear = new Date().getFullYear();
+
+  // Find income col and category cols
+  const colMap = {}; // colIndex → { type: "income"|"category", label }
+  for (let c = 1; c < headerRow.length; c++) {
+    const label = String(headerRow[c] ?? "").trim();
+    if (!label) continue;
+    const ll = label.toLowerCase();
+    if (INCOME_KEYWORDS.some((k) => ll.includes(k))) {
+      colMap[c] = { type: "income", label };
+    } else if (!SKIP_KEYWORDS.some((k) => ll === k)) {
+      colMap[c] = { type: "category", label: normaliseCategory(label) };
+    }
+  }
+
+  const months = [];
+  let goalAmount = null;
+  let goalDescription = null;
+  let prevMonth = null, prevYear = currentYear;
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const m = detectMonth(row[0]);
+    if (!m) continue;
+
+    let year = prevYear, month;
+    if (typeof m === "object") { year = m.year; month = m.month; }
+    else {
+      month = m;
+      if (prevMonth && month < prevMonth) year = prevYear + 1;
+    }
+    prevMonth = month; prevYear = year;
+
+    const bucket = { month: yyyyMm(year, month), income: 0, categories: [], totalExpenses: 0, plannedSavings: 0 };
+
+    for (const [ci, info] of Object.entries(colMap)) {
+      const val = toNum(row[Number(ci)]);
+      if (val === null || val === 0) continue;
+      if (info.type === "income") {
+        bucket.income += val;
+      } else {
+        bucket.categories.push({ name: info.label, amount: val });
+        bucket.totalExpenses += val;
       }
     }
 
-    return lines.join("\n");
-  } catch {
-    // Last resort: try reading as text
-    return buffer.toString("utf-8");
+    bucket.plannedSavings = Math.max(0, bucket.income - bucket.totalExpenses);
+    months.push(bucket);
   }
+
+  if (!months.length) return parseSinglePeriod(rows);
+
+  if (!goalAmount) {
+    const total = months.reduce((s, m) => s + m.plannedSavings, 0);
+    if (total > 0) goalAmount = Math.round(total);
+  }
+
+  return {
+    name: "Budget Plan",
+    startMonth: months[0].month,
+    endMonth: months[months.length - 1].month,
+    currency: "USD",
+    goalAmount,
+    goalDescription,
+    months,
+  };
+}
+
+// ── SINGLE PERIOD (no months detected) ──────────────────────────────────────
+// Two-column: Label | Amount
+// Repeat across 12 months from current month
+function parseSinglePeriod(rows) {
+  const now = new Date();
+  let income = 0;
+  const categories = [];
+  let goalAmount = null;
+  let goalDescription = null;
+
+  for (const row of rows) {
+    const label = String(row[0] ?? "").trim();
+    if (!label) continue;
+    const labelLower = label.toLowerCase();
+
+    // Find first numeric value in the row
+    let val = null;
+    for (let c = 1; c < row.length; c++) {
+      val = toNum(row[c]);
+      if (val !== null && val > 0) break;
+    }
+    if (val === null) continue;
+
+    if (GOAL_KEYWORDS.some((k) => labelLower.includes(k))) {
+      goalAmount = val; goalDescription = label; continue;
+    }
+    if (SKIP_KEYWORDS.some((k) => labelLower === k)) continue;
+    if (INCOME_KEYWORDS.some((k) => labelLower.includes(k))) {
+      income += val;
+    } else {
+      categories.push({ name: normaliseCategory(label), amount: val });
+    }
+  }
+
+  const totalExpenses = categories.reduce((s, c) => s + c.amount, 0);
+  const plannedSavings = Math.max(0, income - totalExpenses);
+  if (!goalAmount && plannedSavings > 0) goalAmount = Math.round(plannedSavings * 12);
+
+  // Build 12 months from now
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    months.push({
+      month: yyyyMm(d.getFullYear(), d.getMonth() + 1),
+      income,
+      categories: categories.map((c) => ({ ...c })),
+      totalExpenses,
+      plannedSavings,
+    });
+  }
+
+  return {
+    name: "Monthly Budget",
+    startMonth: months[0].month,
+    endMonth: months[11].month,
+    currency: "USD",
+    goalAmount,
+    goalDescription,
+    months,
+  };
 }

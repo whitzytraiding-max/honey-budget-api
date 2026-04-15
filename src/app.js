@@ -85,9 +85,7 @@ function createApp({
   app.use("/", createPushDeviceRoutes(ctx));
   app.use("/", createCouponRoutes(ctx));
   app.use("/", createCoachChatRoutes(ctx));
-  if (budgetPlannerService) {
-    app.use("/", createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }));
-  }
+  app.use("/", createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }));
 
   app.use((error, _request, response, _next) => {
     if (error instanceof HttpError) {

@@ -76,14 +76,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
 
       const d = json.data ?? json;
       setParsedPlan(d.parsedPlan);
-      setQuestions(d.questions ?? []);
-      setExtractedText(d.extractedText ?? "");
-
-      if (d.questions?.length > 0) {
-        setStep(STEPS.QUESTIONS);
-      } else {
-        setStep(STEPS.REVIEW);
-      }
+      setStep(STEPS.REVIEW);
     } catch (err) {
       setError(err.message);
       setStep(STEPS.IDLE);
