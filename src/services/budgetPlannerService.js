@@ -45,7 +45,7 @@ const REFINE_SYSTEM_PROMPT = `You are a financial data analyst. The user has ans
 Update the parsedPlan JSON to incorporate their answers.
 Respond ONLY with the updated parsedPlan JSON (same shape, no markdown, no extra text).`;
 
-export function createBudgetPlannerService({ geminiClient, geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash" }) {
+export function createBudgetPlannerService({ geminiClient, geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash" }) {
   if (!geminiClient) {
     return {
       parseSpreadsheet: async () => { throw new Error("AI not configured"); },

@@ -317,7 +317,7 @@ function createInsightsService({
   geminiClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
   anthropicModel = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
-  geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash",
+  geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash",
 }) {
   // Prefer Gemini > Anthropic > OpenAI
   const useGemini = Boolean(geminiClient);
@@ -908,7 +908,7 @@ function createAnthropicClient() {
 function createGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenerativeAI(apiKey, { apiVersion: "v1" });
 }
 
 export { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createFallbackInsights };
