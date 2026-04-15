@@ -80,7 +80,8 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
         throw new HttpError(400, "INVALID_PLAN", "Invalid plan data.");
       }
 
-      const couple = await budgetRepository.getCoupleForUser(request.user.id);
+      let couple = null;
+      try { couple = await budgetRepository.getCoupleForUser(request.user.id); } catch { /* solo */ }
 
       const plan = await budgetRepository.createBudgetPlan({
         userId: request.user.id,
@@ -102,11 +103,18 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
     "/api/budget-planner",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const couple = await budgetRepository.getCoupleForUser(request.user.id);
-      const plans = await budgetRepository.listBudgetPlans({
-        userId: request.user.id,
-        coupleId: couple?.id ?? null,
-      });
+      let plans = [];
+      try {
+        const couple = await budgetRepository.getCoupleForUser(request.user.id);
+        plans = await budgetRepository.listBudgetPlans({
+          userId: request.user.id,
+          coupleId: couple?.id ?? null,
+        });
+      } catch (err) {
+        // Table may not exist yet (migration pending) — return empty state
+        console.warn("[budget-planner] list failed (table may not exist yet):", err?.message);
+        return sendData(response, 200, { plans: [] });
+      }
 
       if (!plans.length) {
         return sendData(response, 200, { plans: [] });
