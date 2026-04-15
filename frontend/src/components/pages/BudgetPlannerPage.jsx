@@ -16,13 +16,20 @@ const UPLOAD_STAGES = [
   { pct: 90, label: "Building your plan…" },
 ];
 
-function UploadProgress({ active }) {
+function UploadProgress({ active, done }) {
   const [pct, setPct] = useState(0);
   const [stageIdx, setStageIdx] = useState(0);
   const intervalRef = useRef(null);
 
   useEffect(() => {
-    if (!active) { setPct(0); setStageIdx(0); return; }
+    if (!active && !done) { setPct(0); setStageIdx(0); return; }
+
+    if (done) {
+      clearInterval(intervalRef.current);
+      setPct(100);
+      setStageIdx(UPLOAD_STAGES.length - 1);
+      return;
+    }
 
     let current = 0;
     let stage = 0;
@@ -30,7 +37,7 @@ function UploadProgress({ active }) {
     const delays = [300, 600, 1200, 2500];
 
     function tick() {
-      const target = UPLOAD_STAGES[stage]?.pct ?? 95;
+      const target = UPLOAD_STAGES[stage]?.pct ?? 90;
       if (current < target) {
         current = Math.min(current + 1, target);
         setPct(current);
@@ -45,23 +52,25 @@ function UploadProgress({ active }) {
 
     intervalRef.current = setInterval(tick, delays[0]);
     return () => clearInterval(intervalRef.current);
-  }, [active]);
+  }, [active, done]);
 
-  if (!active) return null;
+  if (!active && !done) return null;
 
   return (
     <div className="mt-4 space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-sky-600 font-medium">{UPLOAD_STAGES[stageIdx]?.label}</span>
+        <span className={`font-medium ${done ? "text-emerald-600" : "text-sky-600"}`}>
+          {done ? "Done! Loading your plan…" : UPLOAD_STAGES[stageIdx]?.label}
+        </span>
         <span className="text-slate-400">{pct}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 transition-all duration-300"
+          className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ${done ? "from-emerald-400 to-emerald-500" : "from-sky-400 to-sky-600"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <p className="text-xs text-slate-400">First load may take up to 60s while the server wakes up.</p>
+      {!done && <p className="text-xs text-slate-400">This can take up to 60s on first load while the server wakes up.</p>}
     </div>
   );
 }
@@ -79,6 +88,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
   const [step, setStep] = useState(STEPS.IDLE);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadDone, setUploadDone] = useState(false);
   const fileRef = useRef(null);
 
   // Parse step state
@@ -117,25 +127,38 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
   async function handleFile(file) {
     if (!file) return;
     setError(null);
+    setUploadDone(false);
     setStep(STEPS.UPLOADING);
 
     const form = new FormData();
     form.append("file", file);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120_000);
 
     try {
       const res = await fetch(`${apiBase}/api/budget-planner/parse`, {
         method: "POST",
         headers: headers(),
         body: form,
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || json.message || "Upload failed.");
 
       const d = json.data ?? json;
       setParsedPlan(d.parsedPlan);
-      setStep(STEPS.REVIEW);
+      // Show 100% complete briefly before switching step
+      setUploadDone(true);
+      setTimeout(() => {
+        setUploadDone(false);
+        setStep(STEPS.REVIEW);
+      }, 700);
     } catch (err) {
-      setError(err.message);
+      clearTimeout(timeout);
+      setUploadDone(false);
+      setError(err.name === "AbortError" ? "Request timed out. Please try again." : err.message);
       setStep(STEPS.IDLE);
     }
   }
@@ -431,6 +454,21 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     );
   }
 
+  // ── SAVING STEP ───────────────────────────────────────────────────────────
+  if (step === STEPS.SAVING) {
+    return (
+      <div className="space-y-4">
+        <section className="hb-surface-card rounded-[1.5rem] p-6 sm:rounded-[1.75rem]">
+          <div className="flex flex-col items-center gap-4 py-8">
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-sky-200 border-t-sky-500" />
+            <p className="font-medium text-slate-700">Saving your plan…</p>
+            <p className="text-sm text-slate-400">Building your roadmap with real transaction data.</p>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   // ── QUESTIONS STEP ────────────────────────────────────────────────────────
   if (step === STEPS.QUESTIONS) {
     return (
@@ -517,7 +555,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           />
         </div>
 
-        <UploadProgress active={step === STEPS.UPLOADING} />
+        <UploadProgress active={step === STEPS.UPLOADING} done={uploadDone} />
 
         {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
       </section>
@@ -527,7 +565,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         <div className="space-y-3">
           {[
             { n: "1", title: "Upload your spreadsheet", body: "Any format — monthly columns, annual totals, however you track it." },
-            { n: "2", title: "AI reads and organises it", body: "Gemini extracts income, expense categories, and your savings goal. It'll ask a couple of questions if anything is unclear." },
+            { n: "2", title: "Reads and organises it", body: "Extracts income, expense categories, and your savings goal automatically. Works with monthly columns, annual totals, or simple two-column layouts." },
             { n: "3", title: "Confirm and save", body: "Review the parsed plan before it's saved. Make sure the numbers look right." },
             { n: "4", title: "Track your roadmap", body: "Each month shows planned vs actual. You'll see instantly if you're on track toward your goal." },
           ].map((item) => (
