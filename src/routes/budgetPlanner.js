@@ -41,12 +41,16 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
         throw new HttpError(400, "FILE_REQUIRED", "Please upload a spreadsheet file.");
       }
 
-      const { parsedPlan, questions, extractedText } = await budgetPlannerService.parseSpreadsheet(
-        request.file.buffer,
-        request.file.mimetype,
-      );
-
-      sendData(response, 200, { parsedPlan, questions, extractedText });
+      try {
+        const { parsedPlan, questions, extractedText } = await budgetPlannerService.parseSpreadsheet(
+          request.file.buffer,
+          request.file.mimetype,
+        );
+        sendData(response, 200, { parsedPlan, questions, extractedText });
+      } catch (err) {
+        console.error("Budget planner parse error:", err?.message ?? err);
+        throw new HttpError(500, "PARSE_FAILED", err?.message ?? "Failed to analyse the spreadsheet.");
+      }
     }),
   );
 
