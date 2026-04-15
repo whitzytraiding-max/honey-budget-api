@@ -5,7 +5,6 @@
  */
 import express from "express";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
-import { resolvePartnerUser } from "../lib/builders.js";
 
 export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }) {
   const router = express.Router();

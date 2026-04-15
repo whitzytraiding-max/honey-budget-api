@@ -212,12 +212,16 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
   async function handleSave() {
     setError(null);
     setStep(STEPS.SAVING);
+    const saveCtrl = new AbortController();
+    const saveTimeout = setTimeout(() => saveCtrl.abort(), 60_000);
     try {
       const res = await fetch(`${apiBase}/api/budget-planner/save`, {
         method: "POST",
         headers: { ...headers(), "Content-Type": "application/json" },
         body: JSON.stringify({ parsedPlan }),
+        signal: saveCtrl.signal,
       });
+      clearTimeout(saveTimeout);
       const json = await res.json();
       if (!res.ok) throw new Error(json.error?.message || json.message || "Save failed.");
 
@@ -225,11 +229,19 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       const roadmapRes = await fetch(`${apiBase}/api/budget-planner`, { headers: headers() });
       const roadmapJson = await roadmapRes.json();
       const rd = roadmapJson.data ?? roadmapJson;
+      const loadedPlan = rd.activePlan ?? null;
       setPlans(rd.plans ?? []);
-      setActivePlan(rd.activePlan);
-      setStep(STEPS.ROADMAP);
+      setActivePlan(loadedPlan);
+      if (loadedPlan) {
+        setStep(STEPS.ROADMAP);
+      } else {
+        // Plan saved but roadmap couldn't load — show the parsed plan as a local roadmap
+        setActivePlan({ parsedPlan, roadmap: [] });
+        setStep(STEPS.ROADMAP);
+      }
     } catch (err) {
-      setError(err.message);
+      clearTimeout(saveTimeout);
+      setError(err.name === "AbortError" ? "Save timed out. Please try again." : err.message);
       setStep(STEPS.REVIEW);
     }
   }
@@ -551,7 +563,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
         <h3 className="mb-3 font-semibold text-slate-900">Upload your budget</h3>
         <p className="mb-4 text-sm text-slate-500">
-          Upload an Excel (.xlsx) or CSV file. The AI will read it, make sense of it, and build your roadmap automatically.
+          Upload an Excel (.xlsx) or CSV file. We'll read it, organise your income and expenses, and build your roadmap automatically.
         </p>
 
         <div

@@ -87,6 +87,11 @@ function createApp({
   app.use("/", createCoachChatRoutes(ctx));
   app.use("/", createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }));
 
+  // Catch-all 404 — prevents silent hangs on unmatched routes
+  app.use((_request, response) => {
+    response.status(404).json({ error: { code: "NOT_FOUND", message: "Route not found." } });
+  });
+
   app.use((error, _request, response, _next) => {
     if (error instanceof HttpError) {
       response.status(error.status).json({
