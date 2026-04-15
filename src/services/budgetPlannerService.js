@@ -56,9 +56,18 @@ function toNum(v) {
 function detectMonth(str) {
   if (!str) return null;
   const s = String(str).trim().toLowerCase();
-  // "Jan 2026", "January", "Jan", "2026-01", "01/2026"
-  const monthMatch = s.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)/i);
-  if (monthMatch) return MONTH_NAMES[monthMatch[1].toLowerCase().slice(0, 3)] ?? null;
+  // "Jan 2026", "January 2026", "Jan", "January"
+  const monthMatch = s.match(/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[\s\-\/]?(\d{2,4})?/i);
+  if (monthMatch) {
+    const monthNum = MONTH_NAMES[monthMatch[1].toLowerCase().slice(0, 3)] ?? null;
+    if (!monthNum) return null;
+    const yearStr = monthMatch[2];
+    if (yearStr) {
+      const year = yearStr.length === 2 ? 2000 + Number(yearStr) : Number(yearStr);
+      return { year, month: monthNum };
+    }
+    return monthNum;
+  }
   const isoMatch = s.match(/^(\d{4})[-\/](\d{1,2})/);
   if (isoMatch) return { year: Number(isoMatch[1]), month: Number(isoMatch[2]) };
   const numMatch = s.match(/^(\d{1,2})[-\/](\d{4})/);
@@ -69,7 +78,15 @@ function detectMonth(str) {
 function isMonthHeader(val) {
   if (!val) return false;
   const s = String(val).trim().toLowerCase();
-  return s in MONTH_NAMES || /^\d{4}[-\/]\d{1,2}$/.test(s) || /^\d{1,2}[-\/]\d{4}$/.test(s);
+  // Plain "jan", "january"
+  if (s in MONTH_NAMES) return true;
+  // "Jan 2026", "January 2026", "jan-2026", "jan/2026"
+  if (/^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)[\s\-\/]?\d{2,4}$/i.test(s)) return true;
+  // "2026-01", "2026/01"
+  if (/^\d{4}[-\/]\d{1,2}$/.test(s)) return true;
+  // "01/2026", "01-2026"
+  if (/^\d{1,2}[-\/]\d{4}$/.test(s)) return true;
+  return false;
 }
 
 function yyyyMm(year, month) {
