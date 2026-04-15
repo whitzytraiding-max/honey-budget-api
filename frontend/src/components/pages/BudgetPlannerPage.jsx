@@ -6,13 +6,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle, ChevronDown, ChevronUp, CloudUpload, Map, Trash2, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { ActionButton } from "../ui.jsx";
+import { parseBudgetSpreadsheet } from "../../lib/budgetParser.js";
 
 const STEPS = { IDLE: "idle", UPLOADING: "uploading", QUESTIONS: "questions", REVIEW: "review", SAVING: "saving", ROADMAP: "roadmap" };
 
 const UPLOAD_STAGES = [
-  { pct: 25, label: "Waking up the server…" },
-  { pct: 60, label: "Uploading your file…" },
-  { pct: 85, label: "Reading spreadsheet…" },
+  { pct: 50, label: "Reading your file…" },
   { pct: 95, label: "Building your plan…" },
 ];
 
@@ -70,7 +69,7 @@ function UploadProgress({ active, done }) {
           style={{ width: `${pct}%` }}
         />
       </div>
-      {!done && <p className="text-xs text-slate-400">This can take up to 60s on first load while the server wakes up.</p>}
+      {!done && <p className="text-xs text-slate-400">Parsing your spreadsheet locally — this only takes a moment.</p>}
     </div>
   );
 }
@@ -130,72 +129,19 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     setUploadDone(false);
     setStep(STEPS.UPLOADING);
 
-    // Step 1: poll /health until we get a real 200 response (not a 502 from Render proxy)
-    const wakeDeadline = Date.now() + 120_000;
-    let serverReady = false;
-    while (Date.now() < wakeDeadline) {
-      try {
-        const wakeCtrl = new AbortController();
-        const wt = setTimeout(() => wakeCtrl.abort(), 8_000);
-        const hr = await fetch(`${apiBase}/health`, { signal: wakeCtrl.signal });
-        clearTimeout(wt);
-        if (hr.ok) { serverReady = true; break; }
-      } catch { /* not ready yet */ }
-      await new Promise((r) => setTimeout(r, 3_000));
-    }
-    if (!serverReady) {
-      setError("Server is taking too long to wake up. Please try again in a moment.");
-      setStep(STEPS.IDLE);
-      return;
-    }
-
-    // Step 2: read file as base64, then send as JSON (avoids multipart/multer issues)
-    let base64data;
     try {
-      base64data = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(",")[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    } catch {
-      setError("Could not read the file. Please try again.");
-      setStep(STEPS.IDLE);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
-
-    try {
-      const res = await fetch(`${apiBase}/api/budget-planner/parse`, {
-        method: "POST",
-        headers: { ...headers(), "Content-Type": "application/json" },
-        body: JSON.stringify({ data: base64data, mimeType: file.type, filename: file.name }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-
-      let json;
-      try {
-        json = await res.json();
-      } catch {
-        throw new Error("Server returned an unexpected response. Please try again.");
-      }
-      if (!res.ok) throw new Error(json.error?.message || json.message || "Upload failed.");
-
-      const d = json.data ?? json;
-      setParsedPlan(d.parsedPlan);
-      // Show 100% complete briefly before switching step
+      // Parse entirely in the browser — no server call, no upload, no timeouts
+      const arrayBuffer = await file.arrayBuffer();
+      const plan = parseBudgetSpreadsheet(arrayBuffer, file.type, file.name);
+      setParsedPlan(plan);
       setUploadDone(true);
       setTimeout(() => {
         setUploadDone(false);
         setStep(STEPS.REVIEW);
-      }, 700);
+      }, 500);
     } catch (err) {
-      clearTimeout(timeout);
       setUploadDone(false);
-      setError(err.name === "AbortError" ? "Server took too long to respond. Please try again." : err.message);
+      setError(err.message || "Could not read the spreadsheet. Please check the file format.");
       setStep(STEPS.IDLE);
     }
   }
