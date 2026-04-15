@@ -9,6 +9,63 @@ import { ActionButton } from "../ui.jsx";
 
 const STEPS = { IDLE: "idle", UPLOADING: "uploading", QUESTIONS: "questions", REVIEW: "review", SAVING: "saving", ROADMAP: "roadmap" };
 
+const UPLOAD_STAGES = [
+  { pct: 15, label: "Waking up the server…" },
+  { pct: 40, label: "Uploading your file…" },
+  { pct: 70, label: "Reading spreadsheet…" },
+  { pct: 90, label: "Building your plan…" },
+];
+
+function UploadProgress({ active }) {
+  const [pct, setPct] = useState(0);
+  const [stageIdx, setStageIdx] = useState(0);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (!active) { setPct(0); setStageIdx(0); return; }
+
+    let current = 0;
+    let stage = 0;
+    // Advance quickly at first (waking server), then slow down
+    const delays = [300, 600, 1200, 2500];
+
+    function tick() {
+      const target = UPLOAD_STAGES[stage]?.pct ?? 95;
+      if (current < target) {
+        current = Math.min(current + 1, target);
+        setPct(current);
+      }
+      if (current >= target && stage < UPLOAD_STAGES.length - 1) {
+        stage++;
+        setStageIdx(stage);
+        clearInterval(intervalRef.current);
+        intervalRef.current = setInterval(tick, delays[stage] ?? 2500);
+      }
+    }
+
+    intervalRef.current = setInterval(tick, delays[0]);
+    return () => clearInterval(intervalRef.current);
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="flex items-center justify-between text-sm">
+        <span className="text-sky-600 font-medium">{UPLOAD_STAGES[stageIdx]?.label}</span>
+        <span className="text-slate-400">{pct}%</span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-sky-600 transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="text-xs text-slate-400">First load may take up to 60s while the server wakes up.</p>
+    </div>
+  );
+}
+
 function fmt(amount, currency = "USD") {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(amount ?? 0));
 }
@@ -460,15 +517,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           />
         </div>
 
-        {step === STEPS.UPLOADING && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-sky-600">
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            Analysing your spreadsheet…
-          </div>
-        )}
+        <UploadProgress active={step === STEPS.UPLOADING} />
 
         {error && <p className="mt-3 text-sm text-rose-500">{error}</p>}
       </section>
