@@ -9,8 +9,12 @@
 import * as XLSX from "xlsx";
 
 const INCOME_KEYWORDS = ["income", "salary", "revenue", "earnings", "pay", "wage", "inflow", "total income", "gross"];
-const GOAL_KEYWORDS = ["goal", "target", "savings goal", "save", "saving", "end balance", "final", "objective"];
-const SKIP_KEYWORDS = ["total", "subtotal", "sum", "balance", "net", "profit", "loss", "surplus", "deficit"];
+// Explicit savings contributions (per-month amounts being set aside)
+const SAVINGS_KEYWORDS = ["saving", "save"];
+// Overall goal/target amount (not per-month contribution)
+const GOAL_KEYWORDS = ["goal", "target", "end balance", "objective"];
+// Summary/calculated rows/columns — skip these entirely
+const SKIP_KEYWORDS = ["total", "subtotal", "sum", "balance", "net", "profit", "loss", "surplus", "deficit", "remaining", "leftover"];
 
 const MONTH_NAMES = {
   jan: 1, january: 1,
@@ -90,6 +94,16 @@ function yyyyMm(year, month) {
   return `${year}-${String(month).padStart(2, "0")}`;
 }
 
+function isSavingsLabel(ll) {
+  // Per-month savings contributions — but NOT if the label also indicates an overall goal/target
+  const isGoal = GOAL_KEYWORDS.some((k) => ll.includes(k));
+  return !isGoal && SAVINGS_KEYWORDS.some((k) => ll.includes(k));
+}
+
+function isSkipLabel(ll) {
+  return SKIP_KEYWORDS.some((k) => ll === k);
+}
+
 function parseGrid(arrayBuffer, mimeType, filename) {
   try {
     let workbook;
@@ -107,6 +121,9 @@ function parseGrid(arrayBuffer, mimeType, filename) {
   }
 }
 
+// ── MONTHS AS COLUMNS ─────────────────────────────────────────────────────────
+// Row 0: label | Jan | Feb | Mar ...
+// Row n: Category | 500 | 600 | 450 ...
 function parseMonthsAsColumns(rows) {
   const headerRow = rows[0];
   const currentYear = new Date().getFullYear();
@@ -139,29 +156,43 @@ function parseMonthsAsColumns(rows) {
 
   let goalAmount = null;
   let goalDescription = null;
+  let hasExplicitSavings = false;
 
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
     const label = String(row[0] ?? "").trim();
     if (!label) continue;
 
-    const labelLower = label.toLowerCase();
-    const isIncome = INCOME_KEYWORDS.some((k) => labelLower.includes(k));
-    const isGoal = GOAL_KEYWORDS.some((k) => labelLower.includes(k));
-    const isSkip = SKIP_KEYWORDS.some((k) => labelLower === k);
+    const ll = label.toLowerCase();
+    const isIncome = INCOME_KEYWORDS.some((k) => ll.includes(k));
+    const isSavings = isSavingsLabel(ll);
+    const isGoal = !isSavings && GOAL_KEYWORDS.some((k) => ll.includes(k));
+    const isSkip = isSkipLabel(ll);
 
-    if (isSkip && !isIncome) continue;
+    if ((isSkip || isGoal) && !isIncome) {
+      if (isGoal) {
+        // Capture overall savings target from the last month column
+        const val = toNum(row[monthCols[monthCols.length - 1]?.col]);
+        if (val !== null) goalAmount = val;
+        goalDescription = label;
+      }
+      continue;
+    }
 
-    if (isGoal) {
-      const val = toNum(row[monthCols[monthCols.length - 1]?.col]);
-      if (val !== null) goalAmount = val;
-      goalDescription = label;
+    if (isSavings) {
+      // Explicit savings contributions — distribute per month
+      hasExplicitSavings = true;
+      for (let i = 0; i < monthCols.length; i++) {
+        const val = toNum(row[monthCols[i].col]);
+        if (val !== null && val > 0) months[i].plannedSavings += val;
+      }
       continue;
     }
 
     for (let i = 0; i < monthCols.length; i++) {
       const val = toNum(row[monthCols[i].col]);
       if (val === null || val === 0) continue;
+
       if (isIncome) {
         months[i].income += val;
       } else {
@@ -172,7 +203,9 @@ function parseMonthsAsColumns(rows) {
   }
 
   for (const m of months) {
-    m.plannedSavings = Math.max(0, m.income - m.totalExpenses);
+    if (!hasExplicitSavings) {
+      m.plannedSavings = Math.max(0, m.income - m.totalExpenses);
+    }
     const merged = {};
     for (const c of m.categories) {
       merged[c.name] = (merged[c.name] ?? 0) + c.amount;
@@ -196,10 +229,13 @@ function parseMonthsAsColumns(rows) {
   };
 }
 
+// ── MONTHS AS ROWS ─────────────────────────────────────────────────────────
+// Col 0: Jan/Feb/... | Col 1: Income | Col 2: Housing | Col 3: Food ...
 function parseMonthsAsRows(rows) {
   const headerRow = rows[0] ?? [];
   const currentYear = new Date().getFullYear();
 
+  // Build colMap: colIndex → { type: "income"|"savings"|"category", label }
   const colMap = {};
   for (let c = 1; c < headerRow.length; c++) {
     const label = String(headerRow[c] ?? "").trim();
@@ -207,11 +243,17 @@ function parseMonthsAsRows(rows) {
     const ll = label.toLowerCase();
     if (INCOME_KEYWORDS.some((k) => ll.includes(k))) {
       colMap[c] = { type: "income", label };
-    } else if (!SKIP_KEYWORDS.some((k) => ll === k)) {
+    } else if (isSavingsLabel(ll)) {
+      // e.g. "Savings", "House savings", "Save for house" — per-month contributions
+      colMap[c] = { type: "savings", label };
+    } else if (isSkipLabel(ll)) {
+      // e.g. "Remaining", "Total" summary columns — skip
+    } else {
       colMap[c] = { type: "category", label: normaliseCategory(label) };
     }
   }
 
+  const hasSavingsCols = Object.values(colMap).some((v) => v.type === "savings");
   const months = [];
   let goalAmount = null;
   let goalDescription = null;
@@ -237,13 +279,18 @@ function parseMonthsAsRows(rows) {
       if (val === null || val === 0) continue;
       if (info.type === "income") {
         bucket.income += val;
+      } else if (info.type === "savings") {
+        bucket.plannedSavings += val;
       } else {
         bucket.categories.push({ name: info.label, amount: val });
         bucket.totalExpenses += val;
       }
     }
 
-    bucket.plannedSavings = Math.max(0, bucket.income - bucket.totalExpenses);
+    // If no explicit savings columns, derive from income minus expenses
+    if (!hasSavingsCols) {
+      bucket.plannedSavings = Math.max(0, bucket.income - bucket.totalExpenses);
+    }
     months.push(bucket);
   }
 
@@ -265,9 +312,14 @@ function parseMonthsAsRows(rows) {
   };
 }
 
+// ── SINGLE PERIOD (no months detected) ──────────────────────────────────────
+// Two-column: Label | Amount
+// Repeat across 12 months from current month
 function parseSinglePeriod(rows) {
   const now = new Date();
   let income = 0;
+  let plannedSavings = 0;
+  let hasExplicitSavings = false;
   const categories = [];
   let goalAmount = null;
   let goalDescription = null;
@@ -275,7 +327,7 @@ function parseSinglePeriod(rows) {
   for (const row of rows) {
     const label = String(row[0] ?? "").trim();
     if (!label) continue;
-    const labelLower = label.toLowerCase();
+    const ll = label.toLowerCase();
 
     let val = null;
     for (let c = 1; c < row.length; c++) {
@@ -284,20 +336,23 @@ function parseSinglePeriod(rows) {
     }
     if (val === null) continue;
 
-    if (GOAL_KEYWORDS.some((k) => labelLower.includes(k))) {
+    if (GOAL_KEYWORDS.some((k) => ll.includes(k)) && !isSavingsLabel(ll)) {
       goalAmount = val; goalDescription = label; continue;
     }
-    if (SKIP_KEYWORDS.some((k) => labelLower === k)) continue;
-    if (INCOME_KEYWORDS.some((k) => labelLower.includes(k))) {
+    if (isSkipLabel(ll)) continue;
+    if (INCOME_KEYWORDS.some((k) => ll.includes(k))) {
       income += val;
+    } else if (isSavingsLabel(ll)) {
+      plannedSavings += val;
+      hasExplicitSavings = true;
     } else {
       categories.push({ name: normaliseCategory(label), amount: val });
     }
   }
 
   const totalExpenses = categories.reduce((s, c) => s + c.amount, 0);
-  const plannedSavings = Math.max(0, income - totalExpenses);
-  if (!goalAmount && plannedSavings > 0) goalAmount = Math.round(plannedSavings * 12);
+  const monthSavings = hasExplicitSavings ? plannedSavings : Math.max(0, income - totalExpenses);
+  if (!goalAmount && monthSavings > 0) goalAmount = Math.round(monthSavings * 12);
 
   const months = [];
   for (let i = 0; i < 12; i++) {
@@ -307,7 +362,7 @@ function parseSinglePeriod(rows) {
       income,
       categories: categories.map((c) => ({ ...c })),
       totalExpenses,
-      plannedSavings,
+      plannedSavings: monthSavings,
     });
   }
 
