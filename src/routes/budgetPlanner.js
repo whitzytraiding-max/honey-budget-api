@@ -35,17 +35,27 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
   router.post(
     "/api/budget-planner/parse",
     requireAuth,
-    upload.single("file"),
+    (req, res, next) => {
+      upload.single("file")(req, res, (err) => {
+        if (err) {
+          console.error("[budget-planner] multer error:", err?.message);
+          return res.status(400).json({ error: { code: "FILE_ERROR", message: err?.message || "File upload error." } });
+        }
+        next();
+      });
+    },
     asyncHandler(async (request, response) => {
+      console.log("[budget-planner] parse called, file:", request.file?.originalname, "size:", request.file?.size);
       if (!request.file) {
         throw new HttpError(400, "FILE_REQUIRED", "Please upload a spreadsheet file.");
       }
 
       try {
-        const { parsedPlan, questions, extractedText } = await budgetPlannerService.parseSpreadsheet(
+        const { parsedPlan, questions, extractedText } = budgetPlannerService.parseSpreadsheet(
           request.file.buffer,
           request.file.mimetype,
         );
+        console.log("[budget-planner] parse OK, months:", parsedPlan?.months?.length);
         sendData(response, 200, { parsedPlan, questions, extractedText });
       } catch (err) {
         console.error("Budget planner parse error:", err?.message ?? err);

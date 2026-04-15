@@ -10,10 +10,10 @@ import { ActionButton } from "../ui.jsx";
 const STEPS = { IDLE: "idle", UPLOADING: "uploading", QUESTIONS: "questions", REVIEW: "review", SAVING: "saving", ROADMAP: "roadmap" };
 
 const UPLOAD_STAGES = [
-  { pct: 15, label: "Waking up the server…" },
-  { pct: 40, label: "Uploading your file…" },
-  { pct: 70, label: "Reading spreadsheet…" },
-  { pct: 90, label: "Building your plan…" },
+  { pct: 25, label: "Waking up the server…" },
+  { pct: 60, label: "Uploading your file…" },
+  { pct: 85, label: "Reading spreadsheet…" },
+  { pct: 95, label: "Building your plan…" },
 ];
 
 function UploadProgress({ active, done }) {
@@ -130,11 +130,22 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     setUploadDone(false);
     setStep(STEPS.UPLOADING);
 
+    // Step 1: wake up the server first (ping health, up to 120s)
+    try {
+      const wakeCtrl = new AbortController();
+      const wakeTimeout = setTimeout(() => wakeCtrl.abort(), 120_000);
+      await fetch(`${apiBase}/health`, { signal: wakeCtrl.signal });
+      clearTimeout(wakeTimeout);
+    } catch {
+      // If health ping fails/times out, try the upload anyway
+    }
+
+    // Step 2: upload the file (server should be awake now, give it 90s)
     const form = new FormData();
     form.append("file", file);
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 120_000);
+    const timeout = setTimeout(() => controller.abort(), 90_000);
 
     try {
       const res = await fetch(`${apiBase}/api/budget-planner/parse`, {
@@ -158,7 +169,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     } catch (err) {
       clearTimeout(timeout);
       setUploadDone(false);
-      setError(err.name === "AbortError" ? "Request timed out. Please try again." : err.message);
+      setError(err.name === "AbortError" ? "Server took too long to respond. Please try again." : err.message);
       setStep(STEPS.IDLE);
     }
   }
