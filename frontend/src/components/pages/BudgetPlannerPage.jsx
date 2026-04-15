@@ -130,14 +130,23 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     setUploadDone(false);
     setStep(STEPS.UPLOADING);
 
-    // Step 1: wake up the server first (ping health, up to 120s)
-    try {
-      const wakeCtrl = new AbortController();
-      const wakeTimeout = setTimeout(() => wakeCtrl.abort(), 120_000);
-      await fetch(`${apiBase}/health`, { signal: wakeCtrl.signal });
-      clearTimeout(wakeTimeout);
-    } catch {
-      // If health ping fails/times out, try the upload anyway
+    // Step 1: poll /health until we get a real 200 response (not a 502 from Render proxy)
+    const wakeDeadline = Date.now() + 120_000;
+    let serverReady = false;
+    while (Date.now() < wakeDeadline) {
+      try {
+        const wakeCtrl = new AbortController();
+        const wt = setTimeout(() => wakeCtrl.abort(), 8_000);
+        const hr = await fetch(`${apiBase}/health`, { signal: wakeCtrl.signal });
+        clearTimeout(wt);
+        if (hr.ok) { serverReady = true; break; }
+      } catch { /* not ready yet */ }
+      await new Promise((r) => setTimeout(r, 3_000));
+    }
+    if (!serverReady) {
+      setError("Server is taking too long to wake up. Please try again in a moment.");
+      setStep(STEPS.IDLE);
+      return;
     }
 
     // Step 2: read file as base64, then send as JSON (avoids multipart/multer issues)
@@ -156,7 +165,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 90_000);
+    const timeout = setTimeout(() => controller.abort(), 30_000);
 
     try {
       const res = await fetch(`${apiBase}/api/budget-planner/parse`, {
@@ -166,7 +175,13 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      const json = await res.json();
+
+      let json;
+      try {
+        json = await res.json();
+      } catch {
+        throw new Error("Server returned an unexpected response. Please try again.");
+      }
       if (!res.ok) throw new Error(json.error?.message || json.message || "Upload failed.");
 
       const d = json.data ?? json;
