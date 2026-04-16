@@ -519,6 +519,45 @@ html[data-theme="dark"] .hb-kicker {
   color: #a9bbd3;
 }
 
+/* ─── Budget Planner dark-mode colour fixes ────────────────────────────────── */
+
+html[data-theme="dark"] .text-sky-400,
+html[data-theme="dark"] .text-sky-500,
+html[data-theme="dark"] .text-sky-600 {
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] .text-emerald-500,
+html[data-theme="dark"] .text-emerald-600 {
+  color: #4ade80 !important;
+}
+
+html[data-theme="dark"] .text-rose-400,
+html[data-theme="dark"] .text-rose-500 {
+  color: #f87171 !important;
+}
+
+html[data-theme="dark"] .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .text-slate-300 {
+  color: #64748b !important;
+}
+
+html[data-theme="dark"] .bg-sky-100 {
+  background-color: rgba(14, 40, 72, 0.9) !important;
+}
+
+html[data-theme="dark"] .bg-emerald-100 {
+  background-color: rgba(6, 50, 30, 0.9) !important;
+}
+
+html[data-theme="dark"] .border-sky-100,
+html[data-theme="dark"] .border-sky-50 {
+  border-color: rgba(56, 189, 248, 0.12) !important;
+}
+
 /* ─── Page transition ──────────────────────────────────────────────────────── */
 
 @keyframes hb-page-enter {

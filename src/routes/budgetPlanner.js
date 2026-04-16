@@ -49,23 +49,39 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
     }),
   );
 
-  // Refine plan after user answers clarifying questions
+  // Gemini analyses ambiguous spreadsheet structure and returns clarifying questions
+  router.post(
+    "/api/budget-planner/analyse",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const { rawHeaders, sampleRows, parsedPlan } = request.body ?? {};
+      if (!parsedPlan || !rawHeaders) {
+        return sendData(response, 200, { questions: [], looksGood: true });
+      }
+      const result = await budgetPlannerService.analyseWithGemini({
+        rawHeaders,
+        sampleRows: sampleRows ?? [],
+        parsedPlan,
+      });
+      sendData(response, 200, result);
+    }),
+  );
+
+  // Refine plan after user answers Gemini's clarifying questions
   router.post(
     "/api/budget-planner/refine",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const { extractedText, parsedPlan, answers } = request.body ?? {};
-
-      if (!extractedText || !parsedPlan) {
-        throw new HttpError(400, "INVALID_INPUT", "extractedText and parsedPlan are required.");
+      const { rawHeaders, sampleRows, parsedPlan, answers } = request.body ?? {};
+      if (!parsedPlan) {
+        throw new HttpError(400, "INVALID_INPUT", "parsedPlan is required.");
       }
-
       const refined = await budgetPlannerService.refineWithAnswers({
-        extractedText,
+        rawHeaders: rawHeaders ?? [],
+        sampleRows: sampleRows ?? [],
         parsedPlan,
         answers: answers || "No additional information provided.",
       });
-
       sendData(response, 200, { parsedPlan: refined });
     }),
   );

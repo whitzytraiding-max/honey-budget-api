@@ -122,7 +122,10 @@ function parseGrid(buffer, mimeType) {
   }
 }
 
-export function createBudgetPlannerService() {
+export function createBudgetPlannerService({
+  geminiClient = null,
+  geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+} = {}) {
   function parseSpreadsheet(fileBuffer, mimeType) {
     const grid = parseGrid(fileBuffer, mimeType);
     if (!grid.length) throw new Error("Could not read the spreadsheet. Please check the file format.");
@@ -150,7 +153,133 @@ export function createBudgetPlannerService() {
     return { parsedPlan, questions: [], extractedText: "" };
   }
 
-  return { parseSpreadsheet };
+  // ── GEMINI: ANALYSE ──────────────────────────────────────────────────────────
+  // Called when client-side parser has low confidence (e.g. income = 0).
+  // Sends column headers + sample rows to Gemini, returns clarifying questions.
+  async function analyseWithGemini({ rawHeaders, sampleRows, parsedPlan }) {
+    if (!geminiClient) return { questions: [], looksGood: true };
+
+    const allMonths = parsedPlan.months ?? [];
+    const totalIncome = allMonths.reduce((s, m) => s + (m.income || 0), 0);
+    const totalSavings = allMonths.reduce((s, m) => s + (m.plannedSavings || 0), 0);
+    const uniqueCats = [...new Set(allMonths.flatMap((m) => m.categories.map((c) => c.name)))];
+    const monthCount = allMonths.length;
+
+    const issues = [];
+    if (totalIncome === 0) issues.push("income column not detected");
+    if (totalSavings === 0) issues.push("savings amounts not detected");
+
+    const headerStr = (rawHeaders ?? []).map((h, i) => `[${i}] "${h}"`).join("  ");
+    const sampleStr = (sampleRows ?? []).slice(0, 4).map((row, ri) =>
+      `  Row ${ri + 1}: ${JSON.stringify(row)}`
+    ).join("\n");
+
+    const avgIncome = monthCount ? (totalIncome / monthCount).toFixed(0) : 0;
+    const avgSavings = monthCount ? (totalSavings / monthCount).toFixed(0) : 0;
+
+    const prompt = `You are a financial spreadsheet analyst. A user uploaded a budget spreadsheet that was automatically parsed.
+
+SPREADSHEET HEADERS: ${headerStr}
+SAMPLE DATA (first few rows):
+${sampleStr}
+
+PARSE RESULT:
+- Monthly income: $${avgIncome}${totalIncome === 0 ? " (FAILED TO DETECT)" : ""}
+- Monthly planned savings: $${avgSavings}${totalSavings === 0 ? " (FAILED TO DETECT)" : ""}
+- Expense categories found: ${uniqueCats.join(", ") || "none"}
+- Months in plan: ${monthCount}
+${issues.length ? "PROBLEMS: " + issues.join(", ") : ""}
+
+Your task: decide if the parse result is correct or if clarification is needed.
+
+If everything looks correct (income > 0 and meaningful categories found), return:
+{"questions":[],"looksGood":true}
+
+If something is wrong or ambiguous, ask 1–3 short friendly questions. Reference actual column names from the spreadsheet. Be specific. Examples:
+- "We couldn't identify your income column. Which column contains your monthly take-home pay?"
+- "Is 'House savings' ($600/month) money you set aside each month, or a regular expense like a mortgage?"
+- "We spotted 'Book georgia', 'Book Japan' — are these travel bookings? We can group them as Travel if you like."
+
+Return ONLY valid JSON — no markdown, no extra text:
+{"questions":["Q1","Q2"],"looksGood":false}`;
+
+    try {
+      const model = geminiClient.getGenerativeModel({ model: geminiModel });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return { questions: [], looksGood: true };
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 3) : [],
+        looksGood: Boolean(parsed.looksGood),
+      };
+    } catch (err) {
+      console.error("[budget-planner] Gemini analyse error:", err?.message);
+      return { questions: [], looksGood: true }; // fail open — don't block the user
+    }
+  }
+
+  // ── GEMINI: REFINE ────────────────────────────────────────────────────────────
+  // Called after user answers Gemini's clarifying questions.
+  // Returns a corrected parsedPlan with the right income/savings/categories.
+  async function refineWithAnswers({ rawHeaders, sampleRows, parsedPlan, answers }) {
+    if (!geminiClient) return parsedPlan;
+
+    const headerStr = (rawHeaders ?? []).map((h, i) => `[${i}] "${h}"`).join("  ");
+    const sampleStr = (sampleRows ?? []).slice(0, 4).map((row, ri) =>
+      `  Row ${ri + 1}: ${JSON.stringify(row)}`
+    ).join("\n");
+
+    const prompt = `You are a financial data expert. A user uploaded a budget spreadsheet and answered clarifying questions about it.
+
+SPREADSHEET HEADERS: ${headerStr}
+SAMPLE DATA:
+${sampleStr}
+
+CURRENT PARSED PLAN (may have errors — fix it based on the user's answers):
+${JSON.stringify(parsedPlan, null, 2)}
+
+USER'S ANSWERS:
+${answers}
+
+Produce a corrected parsedPlan. Use the user's answers to fix income, savings, and categories. Keep all months but correct the numbers.
+
+Required JSON structure (return ONLY this JSON, no markdown, no explanation):
+{
+  "name": string,
+  "startMonth": "YYYY-MM",
+  "endMonth": "YYYY-MM",
+  "currency": "USD",
+  "goalAmount": number | null,
+  "goalDescription": string | null,
+  "months": [
+    {
+      "month": "YYYY-MM",
+      "income": number,
+      "categories": [{"name": string, "amount": number}],
+      "totalExpenses": number,
+      "plannedSavings": number
+    }
+  ]
+}`;
+
+    try {
+      const model = geminiClient.getGenerativeModel({ model: geminiModel });
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) return parsedPlan;
+      const refined = JSON.parse(jsonMatch[0]);
+      if (!refined.months?.length || !refined.startMonth || !refined.endMonth) return parsedPlan;
+      return refined;
+    } catch (err) {
+      console.error("[budget-planner] Gemini refine error:", err?.message);
+      return parsedPlan; // fail gracefully
+    }
+  }
+
+  return { parseSpreadsheet, analyseWithGemini, refineWithAnswers };
 }
 
 // ── MONTHS AS COLUMNS ─────────────────────────────────────────────────────────

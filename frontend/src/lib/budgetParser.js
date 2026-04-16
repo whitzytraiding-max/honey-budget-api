@@ -379,7 +379,8 @@ function parseSinglePeriod(rows) {
 
 /**
  * Parse a spreadsheet ArrayBuffer in the browser.
- * Returns a parsedPlan object identical to what the server returns.
+ * Returns { parsedPlan, confidence, rawHeaders, sampleRows }.
+ * confidence "low" means Gemini should be consulted before showing REVIEW.
  */
 export function parseBudgetSpreadsheet(arrayBuffer, mimeType, filename) {
   const grid = parseGrid(arrayBuffer, mimeType, filename);
@@ -387,13 +388,25 @@ export function parseBudgetSpreadsheet(arrayBuffer, mimeType, filename) {
 
   const rows = grid.filter((r) => r.some((c) => String(c ?? "").trim() !== ""));
 
+  // Capture raw structure for Gemini (before any parsing)
+  const rawHeaders = (rows[0] ?? []).map((h) => String(h ?? "").trim());
+  const sampleRows = rows.slice(1, 5).map((r) => r.map((c) => String(c ?? "").trim()));
+
   const firstRow = rows[0] ?? [];
   const firstColVals = rows.map((r) => r[0]);
 
   const monthsInRow0 = firstRow.slice(1).filter(isMonthHeader).length;
   const monthsInCol0 = firstColVals.slice(1).filter(isMonthHeader).length;
 
-  if (monthsInRow0 >= 2) return parseMonthsAsColumns(rows);
-  if (monthsInCol0 >= 2) return parseMonthsAsRows(rows);
-  return parseSinglePeriod(rows);
+  let parsedPlan;
+  if (monthsInRow0 >= 2) parsedPlan = parseMonthsAsColumns(rows);
+  else if (monthsInCol0 >= 2) parsedPlan = parseMonthsAsRows(rows);
+  else parsedPlan = parseSinglePeriod(rows);
+
+  // Confidence: low if we couldn't detect income at all
+  const allMonths = parsedPlan.months ?? [];
+  const totalIncome = allMonths.reduce((s, m) => s + (m.income || 0), 0);
+  const confidence = totalIncome > 0 ? "high" : "low";
+
+  return { parsedPlan, confidence, rawHeaders, sampleRows };
 }

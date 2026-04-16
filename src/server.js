@@ -68,7 +68,7 @@ const insightsService = createInsightsService({
   anthropicClient: createAnthropicClient(),
   openaiClient: createOpenAIClient(),
 });
-const budgetPlannerService = createBudgetPlannerService();
+const budgetPlannerService = createBudgetPlannerService({ geminiClient });
 
 function isPrivateNetworkOrigin(origin) {
   if (!origin) {
