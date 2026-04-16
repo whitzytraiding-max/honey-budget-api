@@ -317,7 +317,7 @@ function createInsightsService({
   geminiClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
   anthropicModel = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
-  geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+  geminiModel = process.env.GEMINI_MODEL || "gemini-1.5-flash",
 }) {
   // Prefer Gemini > Anthropic > OpenAI
   const useGemini = Boolean(geminiClient);
@@ -901,8 +901,10 @@ ${financialBrief}`;
     } catch (error) {
       const errMsg = error?.message ?? String(error);
       console.error("[coach] chatWithTools FAILED:", error?.status ?? "", errMsg);
-      // Surface the real error as a coach message — never silent fallback
-      const reply = `I hit a technical issue and couldn't process that. Error: ${errMsg}. Please try again in a moment.`;
+      const isQuota = errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("Too Many Requests");
+      const reply = isQuota
+        ? "I'm temporarily unavailable — the AI service has hit its usage limit for today. This resets automatically, or you can enable billing on Google AI Studio for uninterrupted access. Try again in a little while."
+        : `I hit a technical issue: ${errMsg}. Please try again in a moment.`;
       return {
         reply,
         actions: [],
