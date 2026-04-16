@@ -899,21 +899,14 @@ ${financialBrief}`;
         return { reply: replyText, actions: [], newHistory };
       }
     } catch (error) {
-      console.error("[coach] chatWithTools FAILED:", error?.status ?? "", error?.message ?? error, error?.stack ?? "");
-      // In dev, surface the real error so we can debug it
-      const isDev = process.env.NODE_ENV !== "production";
-      if (isDev) {
-        return {
-          reply: `[DEBUG] AI error: ${error?.message ?? error}`,
-          actions: [],
-          newHistory: messages,
-        };
-      }
-      const fallback = heuristicChat(message, context);
+      const errMsg = error?.message ?? String(error);
+      console.error("[coach] chatWithTools FAILED:", error?.status ?? "", errMsg);
+      // Surface the real error as a coach message — never silent fallback
+      const reply = `I hit a technical issue and couldn't process that. Error: ${errMsg}. Please try again in a moment.`;
       return {
-        reply: fallback,
+        reply,
         actions: [],
-        newHistory: [...messages, { role: "assistant", content: [{ type: "text", text: fallback }] }],
+        newHistory: [...messages, { role: "assistant", content: [{ type: "text", text: reply }] }],
       };
     }
   }
@@ -1016,7 +1009,8 @@ function createAnthropicClient() {
 function createGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) return null;
-  return new GoogleGenerativeAI(apiKey, { apiVersion: "v1" });
+  // Use default API version (v1beta) — required for function calling / tool use
+  return new GoogleGenerativeAI(apiKey);
 }
 
 export { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createFallbackInsights };
