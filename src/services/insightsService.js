@@ -744,9 +744,15 @@ ${financialBrief}`;
       { role: "user", content: message },
     ];
 
-    console.log(`[coach] useAI=${useAI} useGemini=${useGemini} useAnthropic=${useAnthropic}`);
+    // For chat: prefer Groq (free, reliable) over Gemini, even if both keys are set
+    const useChatGroq = Boolean(groqClient);
+    const useChatGemini = !useChatGroq && Boolean(geminiClient);
+    const useChatAnthropic = !useChatGroq && !useChatGemini && Boolean(anthropicClient);
+    const hasChat = useChatGroq || useChatGemini || useChatAnthropic || Boolean(openaiClient);
 
-    if (!useAI) {
+    console.log(`[coach] groq=${useChatGroq} gemini=${useChatGemini} anthropic=${useChatAnthropic}`);
+
+    if (!hasChat) {
       console.log("[coach] no AI client — using heuristic fallback");
       return {
         reply: heuristicChat(message, context),
@@ -756,81 +762,7 @@ ${financialBrief}`;
     }
 
     try {
-      if (useGemini) {
-        console.log(`[coach] calling Gemini model: ${geminiModel}`);
-        // Gemini function calling format
-        const geminiTools = [{
-          functionDeclarations: CHAT_TOOLS.map((tool) => ({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.input_schema,
-          })),
-        }];
-
-        const gModel = geminiClient.getGenerativeModel({
-          model: geminiModel,
-          systemInstruction: systemPrompt,
-          tools: geminiTools,
-        });
-
-        // Convert conversation history to Gemini format
-        // Gemini history must alternate user/model and exclude the current message
-        const geminiHistory = [];
-        for (const msg of conversationHistory) {
-          if (msg.role === "user") {
-            const text = typeof msg.content === "string" ? msg.content : msg.content?.[0]?.text ?? "";
-            geminiHistory.push({ role: "user", parts: [{ text }] });
-          } else if (msg.role === "assistant") {
-            const text = typeof msg.content === "string" ? msg.content : msg.content?.find?.((b) => b.type === "text")?.text ?? msg.content?.[0]?.text ?? "";
-            geminiHistory.push({ role: "model", parts: [{ text }] });
-          }
-        }
-
-        const chat = gModel.startChat({ history: geminiHistory });
-        const firstResult = await chat.sendMessage(message);
-        const firstResponse = firstResult.response;
-
-        const actions = [];
-        const functionCalls = firstResponse.functionCalls?.() ?? [];
-
-        if (functionCalls.length > 0) {
-          const functionResponses = [];
-          for (const fc of functionCalls) {
-            try {
-              const result = await onToolCall(fc.name, fc.args);
-              actions.push({ tool: fc.name, note: fc.args.note, success: result.success });
-              functionResponses.push({
-                functionResponse: { name: fc.name, response: result },
-              });
-            } catch (err) {
-              actions.push({ tool: fc.name, note: fc.args.note, success: false, error: err.message });
-              functionResponses.push({
-                functionResponse: { name: fc.name, response: { success: false, error: err.message } },
-              });
-            }
-          }
-
-          const finalResult = await chat.sendMessage(functionResponses);
-          const replyText = finalResult.response.text()?.trim() ?? "Done — I've updated your finances.";
-
-          const newHistory = [
-            ...conversationHistory,
-            { role: "user", content: message },
-            { role: "assistant", content: [{ type: "text", text: replyText }] },
-          ];
-          return { reply: replyText, actions, newHistory };
-        }
-
-        // No tool use
-        const replyText = firstResponse.text()?.trim() ?? "I couldn't generate a response. Please try again.";
-        const newHistory = [
-          ...conversationHistory,
-          { role: "user", content: message },
-          { role: "assistant", content: [{ type: "text", text: replyText }] },
-        ];
-        return { reply: replyText, actions: [], newHistory };
-
-      } else if (useGroq) {
+      if (useChatGroq) {
         console.log(`[coach] calling Groq model: ${groqModel}`);
         // Groq uses OpenAI-compatible chat completions with tool use
         const groqTools = CHAT_TOOLS.map((tool) => ({
@@ -901,6 +833,62 @@ ${financialBrief}`;
           { role: "assistant", content: [{ type: "text", text: replyText }] },
         ];
         return { reply: replyText, actions: [], newHistory };
+
+      } else if (useChatGemini) {
+        console.log(`[coach] calling Gemini model: ${geminiModel}`);
+        const geminiTools = [{
+          functionDeclarations: CHAT_TOOLS.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema,
+          })),
+        }];
+
+        const gModel = geminiClient.getGenerativeModel({
+          model: geminiModel,
+          systemInstruction: systemPrompt,
+          tools: geminiTools,
+        });
+
+        const geminiHistory = [];
+        for (const msg of conversationHistory) {
+          if (msg.role === "user") {
+            const text = typeof msg.content === "string" ? msg.content : msg.content?.[0]?.text ?? "";
+            geminiHistory.push({ role: "user", parts: [{ text }] });
+          } else if (msg.role === "assistant") {
+            const text = typeof msg.content === "string" ? msg.content : msg.content?.find?.((b) => b.type === "text")?.text ?? msg.content?.[0]?.text ?? "";
+            geminiHistory.push({ role: "model", parts: [{ text }] });
+          }
+        }
+
+        const chat = gModel.startChat({ history: geminiHistory });
+        const firstResult = await chat.sendMessage(message);
+        const firstResponse = firstResult.response;
+
+        const gemActions = [];
+        const functionCalls = firstResponse.functionCalls?.() ?? [];
+
+        if (functionCalls.length > 0) {
+          const functionResponses = [];
+          for (const fc of functionCalls) {
+            try {
+              const result = await onToolCall(fc.name, fc.args);
+              gemActions.push({ tool: fc.name, note: fc.args.note, success: result.success });
+              functionResponses.push({ functionResponse: { name: fc.name, response: result } });
+            } catch (err) {
+              gemActions.push({ tool: fc.name, note: fc.args.note, success: false, error: err.message });
+              functionResponses.push({ functionResponse: { name: fc.name, response: { success: false, error: err.message } } });
+            }
+          }
+          const finalResult = await chat.sendMessage(functionResponses);
+          const gemReply = finalResult.response.text()?.trim() ?? "Done — I've updated your finances.";
+          const gemHistory = [...conversationHistory, { role: "user", content: message }, { role: "assistant", content: [{ type: "text", text: gemReply }] }];
+          return { reply: gemReply, actions: gemActions, newHistory: gemHistory };
+        }
+
+        const gemReply = firstResponse.text()?.trim() ?? "I couldn't generate a response. Please try again.";
+        const gemHistory = [...conversationHistory, { role: "user", content: message }, { role: "assistant", content: [{ type: "text", text: gemReply }] }];
+        return { reply: gemReply, actions: [], newHistory: gemHistory };
 
       } else {
         // Anthropic path
