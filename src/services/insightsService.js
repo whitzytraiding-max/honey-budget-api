@@ -541,7 +541,7 @@ function createInsightsService({
       input_schema: {
         type: "object",
         properties: {
-          amount: { type: "number", description: "New monthly income amount (in their income currency)" },
+          amount: { type: "string", description: "New monthly income amount as a numeric string, e.g. '5200'" },
           note: { type: "string", description: "Brief confirmation note to show the user, e.g. 'Monthly income updated to $5,200'" },
         },
         required: ["amount", "note"],
@@ -553,11 +553,11 @@ function createInsightsService({
       input_schema: {
         type: "object",
         properties: {
-          description: { type: "string", description: "What the expense was for, e.g. 'Dinner at restaurant'" },
-          amount: { type: "number", description: "Amount spent (positive number)" },
+          description: { type: "string", description: "What the expense was for, e.g. 'Groceries'" },
+          amount: { type: "string", description: "Amount spent as a numeric string, e.g. '200'" },
           category: { type: "string", description: "Category: Dining, Groceries, Shopping, Transport, Entertainment, Health, Subscriptions, Debt Payment, Other" },
           payment_method: { type: "string", enum: ["cash", "card"], description: "How it was paid" },
-          note: { type: "string", description: "Brief confirmation note, e.g. 'Logged $45 for Dinner at restaurant'" },
+          note: { type: "string", description: "Brief confirmation note, e.g. 'Logged $200 for Groceries'" },
         },
         required: ["description", "amount", "category", "payment_method", "note"],
       },
@@ -568,9 +568,9 @@ function createInsightsService({
       input_schema: {
         type: "object",
         properties: {
-          bill_id: { type: "number", description: "The ID of the bill to update (from the bills list in context)" },
+          bill_id: { type: "string", description: "The ID of the bill to update as a string, e.g. '3'" },
           bill_name: { type: "string", description: "Name of the bill for confirmation" },
-          new_amount: { type: "number", description: "New monthly amount for this bill" },
+          new_amount: { type: "string", description: "New monthly amount as a numeric string, e.g. '1200'" },
           note: { type: "string", description: "Brief confirmation note, e.g. 'Rent updated to $1,200/month'" },
         },
         required: ["bill_id", "bill_name", "new_amount", "note"],
@@ -582,8 +582,8 @@ function createInsightsService({
       input_schema: {
         type: "object",
         properties: {
-          title: { type: "string", description: "Name of the bill, e.g. 'Netflix', 'Car insurance'" },
-          amount: { type: "number", description: "Monthly amount" },
+          title: { type: "string", description: "Name of the bill, e.g. 'Netflix'" },
+          amount: { type: "string", description: "Monthly amount as a numeric string, e.g. '18'" },
           category: { type: "string", description: "Category: Housing, Utilities, Transport, Insurance, Subscriptions, Health, Childcare, Other" },
           payment_method: { type: "string", enum: ["cash", "card"], description: "How it is usually paid" },
           note: { type: "string", description: "Brief confirmation note, e.g. 'Added Netflix at $18/month'" },
@@ -714,6 +714,7 @@ DO NOT:
 - Make up data or estimate numbers not in the brief
 - Give generic advice like "make a budget" or "spend less" without specifics
 - Repeat the same advice twice in a conversation unless the client asks again
+- Refuse to respond to greetings, casual messages, or "test" — just reply naturally and briefly
 
 CURRENT CLIENT FINANCIAL BRIEF:
 ${financialBrief}`;
