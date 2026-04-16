@@ -12,7 +12,7 @@ import { prisma } from "./lib/prisma.js";
 import { createPrismaBudgetRepository } from "./repositories/prismaBudgetRepository.js";
 import { createEmailService } from "./services/emailService.js";
 import { createExchangeRateService } from "./services/exchangeRateService.js";
-import { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient } from "./services/insightsService.js";
+import { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createGroqClient } from "./services/insightsService.js";
 import { createBudgetPlannerService } from "./services/budgetPlannerService.js";
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -65,6 +65,7 @@ const insightsService = createInsightsService({
   budgetRepository,
   exchangeRateService,
   geminiClient,
+  groqClient: createGroqClient(),
   anthropicClient: createAnthropicClient(),
   openaiClient: createOpenAIClient(),
 });

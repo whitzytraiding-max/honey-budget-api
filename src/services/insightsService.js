@@ -315,14 +315,17 @@ function createInsightsService({
   openaiClient,
   anthropicClient,
   geminiClient,
+  groqClient,
   model = process.env.OPENAI_MODEL || "gpt-4o-mini",
   anthropicModel = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
   geminiModel = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite",
+  groqModel = process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
 }) {
-  // Prefer Gemini > Anthropic > OpenAI
+  // Prefer Gemini > Groq > Anthropic > OpenAI
   const useGemini = Boolean(geminiClient);
-  const useAnthropic = !useGemini && Boolean(anthropicClient);
-  const useAI = useGemini || useAnthropic || Boolean(openaiClient);
+  const useGroq = !useGemini && Boolean(groqClient);
+  const useAnthropic = !useGemini && !useGroq && Boolean(anthropicClient);
+  const useAI = useGemini || useGroq || useAnthropic || Boolean(openaiClient);
   // In-memory layer for same-process requests (avoids repeated DB reads)
   const memCache = new Map();
 
@@ -827,6 +830,78 @@ ${financialBrief}`;
         ];
         return { reply: replyText, actions: [], newHistory };
 
+      } else if (useGroq) {
+        console.log(`[coach] calling Groq model: ${groqModel}`);
+        // Groq uses OpenAI-compatible chat completions with tool use
+        const groqTools = CHAT_TOOLS.map((tool) => ({
+          type: "function",
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema,
+          },
+        }));
+
+        const groqMessages = [
+          { role: "system", content: systemPrompt },
+          ...conversationHistory.map((m) => ({
+            role: m.role === "assistant" ? "assistant" : "user",
+            content: typeof m.content === "string" ? m.content : m.content?.[0]?.text ?? "",
+          })),
+          { role: "user", content: message },
+        ];
+
+        const firstResponse = await groqClient.chat.completions.create({
+          model: groqModel,
+          messages: groqMessages,
+          tools: groqTools,
+          tool_choice: "auto",
+          max_tokens: 1024,
+        });
+
+        const choice = firstResponse.choices[0];
+        const actions = [];
+
+        if (choice.finish_reason === "tool_calls" && choice.message.tool_calls?.length) {
+          const toolCallMsgs = [{ role: "assistant", content: choice.message.content ?? "", tool_calls: choice.message.tool_calls }];
+          const toolResultMsgs = [];
+
+          for (const tc of choice.message.tool_calls) {
+            let toolInput;
+            try { toolInput = JSON.parse(tc.function.arguments); } catch { toolInput = {}; }
+            try {
+              const result = await onToolCall(tc.function.name, toolInput);
+              actions.push({ tool: tc.function.name, note: toolInput.note, success: result.success });
+              toolResultMsgs.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify(result) });
+            } catch (err) {
+              actions.push({ tool: tc.function.name, note: toolInput.note, success: false, error: err.message });
+              toolResultMsgs.push({ role: "tool", tool_call_id: tc.id, content: JSON.stringify({ success: false, error: err.message }) });
+            }
+          }
+
+          const finalResponse = await groqClient.chat.completions.create({
+            model: groqModel,
+            messages: [...groqMessages, ...toolCallMsgs, ...toolResultMsgs],
+            max_tokens: 512,
+          });
+
+          const replyText = finalResponse.choices[0]?.message?.content?.trim() ?? "Done — I've updated your finances.";
+          const newHistory = [
+            ...conversationHistory,
+            { role: "user", content: message },
+            { role: "assistant", content: [{ type: "text", text: replyText }] },
+          ];
+          return { reply: replyText, actions, newHistory };
+        }
+
+        const replyText = choice.message?.content?.trim() ?? "I couldn't generate a response. Please try again.";
+        const newHistory = [
+          ...conversationHistory,
+          { role: "user", content: message },
+          { role: "assistant", content: [{ type: "text", text: replyText }] },
+        ];
+        return { reply: replyText, actions: [], newHistory };
+
       } else {
         // Anthropic path
         const firstResponse = await anthropicClient.messages.create({
@@ -1002,6 +1077,13 @@ function createOpenAIClient() {
   return new OpenAI({ apiKey });
 }
 
+function createGroqClient() {
+  const apiKey = process.env.GROQ_API_KEY?.trim();
+  if (!apiKey) return null;
+  // Groq is OpenAI-compatible — same SDK, different base URL
+  return new OpenAI({ apiKey, baseURL: "https://api.groq.com/openai/v1" });
+}
+
 function createAnthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) return null;
@@ -1015,4 +1097,4 @@ function createGeminiClient() {
   return new GoogleGenerativeAI(apiKey);
 }
 
-export { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createFallbackInsights };
+export { createInsightsService, createOpenAIClient, createAnthropicClient, createGeminiClient, createGroqClient, createFallbackInsights };
