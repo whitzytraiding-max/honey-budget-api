@@ -98,7 +98,7 @@ export function createCoachChatRoutes({
         }
 
         if (toolName === "update_bill") {
-          const bill = bills.find((b) => b.id === Number(input.bill_id));
+          const bill = bills.find((b) => b.id === Number(input.bill_id ?? input.bill_id));
           if (!bill) return { success: false, error: "Bill not found" };
           await budgetRepository.updateRecurringBill({
             recurringBillId: bill.id,

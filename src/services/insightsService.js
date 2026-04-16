@@ -541,52 +541,52 @@ function createInsightsService({
       input_schema: {
         type: "object",
         properties: {
-          amount: { type: "string", description: "New monthly income amount as a numeric string, e.g. '5200'" },
-          note: { type: "string", description: "Brief confirmation note to show the user, e.g. 'Monthly income updated to $5,200'" },
+          amount: { type: "number", description: "New monthly income as a JSON number (not a string). Example: 5200" },
+          note: { type: "string", description: "Brief confirmation note, e.g. 'Monthly income updated to $5,200'" },
         },
         required: ["amount", "note"],
       },
     },
     {
       name: "log_expense",
-      description: "Log a new one-time expense transaction on behalf of the user. Use when they tell you about a purchase or expense that hasn't been recorded yet.",
+      description: "Log a new one-time expense transaction. Use when the user mentions a purchase or expense.",
       input_schema: {
         type: "object",
         properties: {
           description: { type: "string", description: "What the expense was for, e.g. 'Groceries'" },
-          amount: { type: "string", description: "Amount spent as a numeric string, e.g. '200'" },
-          category: { type: "string", description: "Category: Dining, Groceries, Shopping, Transport, Entertainment, Health, Subscriptions, Debt Payment, Other" },
+          amount: { type: "number", description: "Amount spent as a JSON number (not a string). Example: 200" },
+          category: { type: "string", description: "One of: Dining, Groceries, Shopping, Transport, Entertainment, Health, Subscriptions, Debt Payment, Other" },
           payment_method: { type: "string", enum: ["cash", "card"], description: "How it was paid" },
-          note: { type: "string", description: "Brief confirmation note, e.g. 'Logged $200 for Groceries'" },
+          note: { type: "string", description: "Confirmation note, e.g. 'Logged $200 for Groceries'" },
         },
         required: ["description", "amount", "category", "payment_method", "note"],
       },
     },
     {
       name: "update_bill",
-      description: "Update the amount of an existing recurring bill. Use when the user says a bill has changed, e.g. rent went up, subscription increased.",
+      description: "Update the amount of an existing recurring bill.",
       input_schema: {
         type: "object",
         properties: {
-          bill_id: { type: "string", description: "The ID of the bill to update as a string, e.g. '3'" },
-          bill_name: { type: "string", description: "Name of the bill for confirmation" },
-          new_amount: { type: "string", description: "New monthly amount as a numeric string, e.g. '1200'" },
-          note: { type: "string", description: "Brief confirmation note, e.g. 'Rent updated to $1,200/month'" },
+          bill_id: { type: "number", description: "The numeric ID of the bill from the bills list. Example: 3" },
+          bill_name: { type: "string", description: "Name of the bill" },
+          new_amount: { type: "number", description: "New monthly amount as a JSON number. Example: 1200" },
+          note: { type: "string", description: "Confirmation note, e.g. 'Rent updated to $1,200/month'" },
         },
         required: ["bill_id", "bill_name", "new_amount", "note"],
       },
     },
     {
       name: "add_bill",
-      description: "Add a new recurring monthly bill. Use when the user mentions a new subscription, bill, or regular expense that should be tracked.",
+      description: "Add a new recurring monthly bill.",
       input_schema: {
         type: "object",
         properties: {
           title: { type: "string", description: "Name of the bill, e.g. 'Netflix'" },
-          amount: { type: "string", description: "Monthly amount as a numeric string, e.g. '18'" },
-          category: { type: "string", description: "Category: Housing, Utilities, Transport, Insurance, Subscriptions, Health, Childcare, Other" },
+          amount: { type: "number", description: "Monthly amount as a JSON number. Example: 18" },
+          category: { type: "string", description: "One of: Housing, Utilities, Transport, Insurance, Subscriptions, Health, Childcare, Other" },
           payment_method: { type: "string", enum: ["cash", "card"], description: "How it is usually paid" },
-          note: { type: "string", description: "Brief confirmation note, e.g. 'Added Netflix at $18/month'" },
+          note: { type: "string", description: "Confirmation note, e.g. 'Added Netflix at $18/month'" },
         },
         required: ["title", "amount", "category", "payment_method", "note"],
       },
@@ -802,6 +802,10 @@ ${financialBrief}`;
           for (const tc of choice.message.tool_calls) {
             let toolInput;
             try { toolInput = JSON.parse(tc.function.arguments); } catch { toolInput = {}; }
+            // Coerce numeric fields in case model returns strings despite schema
+            for (const f of ["amount", "new_amount", "bill_id"]) {
+              if (toolInput[f] !== undefined) toolInput[f] = Number(toolInput[f]);
+            }
             try {
               const result = await onToolCall(tc.function.name, toolInput);
               actions.push({ tool: tc.function.name, note: toolInput.note, success: result.success });
