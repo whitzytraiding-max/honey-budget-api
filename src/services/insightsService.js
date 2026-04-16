@@ -741,7 +741,10 @@ ${financialBrief}`;
       { role: "user", content: message },
     ];
 
+    console.log(`[coach] useAI=${useAI} useGemini=${useGemini} useAnthropic=${useAnthropic}`);
+
     if (!useAI) {
+      console.log("[coach] no AI client — using heuristic fallback");
       return {
         reply: heuristicChat(message, context),
         actions: [],
@@ -751,6 +754,7 @@ ${financialBrief}`;
 
     try {
       if (useGemini) {
+        console.log(`[coach] calling Gemini model: ${geminiModel}`);
         // Gemini function calling format
         const geminiTools = [{
           functionDeclarations: CHAT_TOOLS.map((tool) => ({
@@ -895,7 +899,16 @@ ${financialBrief}`;
         return { reply: replyText, actions: [], newHistory };
       }
     } catch (error) {
-      console.error("Coach chatWithTools failed:", error?.message ?? error);
+      console.error("[coach] chatWithTools FAILED:", error?.status ?? "", error?.message ?? error, error?.stack ?? "");
+      // In dev, surface the real error so we can debug it
+      const isDev = process.env.NODE_ENV !== "production";
+      if (isDev) {
+        return {
+          reply: `[DEBUG] AI error: ${error?.message ?? error}`,
+          actions: [],
+          newHistory: messages,
+        };
+      }
       const fallback = heuristicChat(message, context);
       return {
         reply: fallback,
