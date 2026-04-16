@@ -8,6 +8,7 @@ import { Bell, Brain, CalendarDays, ClipboardList, House, ListTodo, Map, PiggyBa
 import AppShell from "./components/AppShell.jsx";
 import AuthPanel from "./components/AuthPanel.jsx";
 import CoachSetupPage from "./components/pages/CoachSetupPage.jsx";
+import CoachPage from "./components/pages/CoachPage.jsx";
 import ExpensesPage from "./components/pages/ExpensesPage.jsx";
 import CalendarPage from "./components/pages/CalendarPage.jsx";
 import HistoryPage from "./components/pages/HistoryPage.jsx";
@@ -386,6 +387,7 @@ export default function App() {
   const [linkBusy, setLinkBusy] = useState(false);
   const [incomeProfileBusy, setIncomeProfileBusy] = useState(false);
   const [coachProfileBusy, setCoachProfileBusy] = useState(false);
+  const [coachEditingProfile, setCoachEditingProfile] = useState(false);
   const [suppressNextInsightsError, setSuppressNextInsightsError] = useState(false);
   const [savingsBusy, setSavingsBusy] = useState(false);
   const [savingsTargetBusy, setSavingsTargetBusy] = useState(false);
@@ -1125,6 +1127,7 @@ export default function App() {
   function navigate(routeKey) {
     setHashLocation({ route: routeKey, query: "" });
     setRouteHash(routeKey);
+    if (routeKey !== "coach") setCoachEditingProfile(false);
   }
 
   function toggleHideNavItem(key) {
@@ -2383,17 +2386,39 @@ export default function App() {
             insightsBusy={insightsBusy}
             insights={insights}
             dashboard={dashboard}
-            onChatMessage={handleCoachChat}
           />
         );
       case "coach":
+        // If setup not done yet, show the setup form
+        if (!coachProfile?.completed) {
+          return (
+            <CoachSetupPage
+              coachProfileForm={coachProfileForm}
+              onChange={updateCoachProfileForm}
+              onSubmit={handleCoachProfileSubmit}
+              busy={coachProfileBusy}
+              completed={false}
+              soloMode={soloMode}
+            />
+          );
+        }
+        // Setup done — show the chat. "Edit profile" navigates to a sub-state.
+        if (coachEditingProfile) {
+          return (
+            <CoachSetupPage
+              coachProfileForm={coachProfileForm}
+              onChange={updateCoachProfileForm}
+              onSubmit={async (e) => { await handleCoachProfileSubmit(e); setCoachEditingProfile(false); }}
+              busy={coachProfileBusy}
+              completed={true}
+              soloMode={soloMode}
+            />
+          );
+        }
         return (
-          <CoachSetupPage
-            coachProfileForm={coachProfileForm}
-            onChange={updateCoachProfileForm}
-            onSubmit={handleCoachProfileSubmit}
-            busy={coachProfileBusy}
-            completed={Boolean(coachProfile?.completed)}
+          <CoachPage
+            onSendMessage={handleCoachChat}
+            onEditProfile={() => setCoachEditingProfile(true)}
           />
         );
       case "setup":
