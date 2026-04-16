@@ -610,6 +610,112 @@ function createInsightsService({
         description, category, type, amount: displayAmount ?? amount, paymentMethod,
       }));
 
+    const currency = currentUser?.incomeCurrencyCode || snapshot.displayCurrencyCode || "USD";
+    function fmt(n) {
+      return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(Number(n ?? 0));
+    }
+
+    const income = Number(snapshot.summary?.totalIncome ?? currentUser?.monthlySalary ?? 0);
+    const totalSpent = Number(snapshot.summary?.totalSpent ?? 0);
+    const savingsRate = income > 0 ? Math.round(((income - totalSpent) / income) * 100) : 0;
+    const surplus = income - totalSpent;
+
+    // Build a human-readable financial brief so the AI reasons from clear numbers, not raw JSON
+    const financialBrief = [
+      `=== CLIENT FINANCIAL BRIEF ===`,
+      `Client: ${currentUser?.name ?? "User"}${partnerUser ? ` + ${partnerUser.name}` : ""}`,
+      `Period: ${snapshot.period?.from ?? "this month"} to ${snapshot.period?.to ?? "now"}`,
+      `Currency: ${currency}`,
+      ``,
+      `=== INCOME & SPENDING ===`,
+      `Monthly income: ${fmt(income)}`,
+      `Total spent this period: ${fmt(totalSpent)}`,
+      `Surplus (income minus spending): ${fmt(surplus)}`,
+      `Savings rate: ${savingsRate}% ${savingsRate < 10 ? "(LOW — needs attention)" : savingsRate < 20 ? "(fair — can improve)" : "(healthy)"}`,
+      `Cash spending: ${fmt(cashTotal)} | Card spending: ${fmt(cardTotal)}`,
+      snapshot.topCategories?.length
+        ? `\nTop spending categories:\n${snapshot.topCategories.map((c) => `  - ${c.category}: ${fmt(c.amount)} (${c.sharePct}% of total)`).join("\n")}`
+        : "",
+      ``,
+      `=== RECENT TRANSACTIONS (top 15 by amount) ===`,
+      topTransactions.length
+        ? topTransactions.map((t) => `  - ${t.description} | ${t.category} | ${fmt(t.amount)} | ${t.paymentMethod}`).join("\n")
+        : "  No transactions recorded yet.",
+      ``,
+      `=== RECURRING BILLS ===`,
+      bills.length
+        ? bills.map((b) => `  - [ID:${b.id}] ${b.title} | ${b.category} | ${fmt(b.amount)}`).join("\n")
+        : "  No recurring bills set up.",
+      ``,
+      `=== SAVINGS GOALS ===`,
+      savingsGoals.length
+        ? savingsGoals.map((g) => {
+            const pct = g.targetAmount > 0 ? Math.round((g.currentAmount / g.targetAmount) * 100) : 0;
+            return `  - ${g.title}: ${fmt(g.currentAmount)} of ${fmt(g.targetAmount)} (${pct}%)${g.targetDate ? ` | target date: ${g.targetDate}` : ""}`;
+          }).join("\n")
+        : "  No savings goals set.",
+      ``,
+      coachProfile ? [
+        `=== CLIENT COACHING PROFILE ===`,
+        coachProfile.primaryGoal ? `  Primary goal: ${coachProfile.primaryGoal}` : "",
+        coachProfile.goalHorizon ? `  Timeline: ${coachProfile.goalHorizon}` : "",
+        coachProfile.biggestMoneyStress ? `  Biggest stress: ${coachProfile.biggestMoneyStress}` : "",
+        coachProfile.hardestCategory ? `  Hardest category to control: ${coachProfile.hardestCategory}` : "",
+        coachProfile.conflictTrigger ? `  Main money conflict/trigger: ${coachProfile.conflictTrigger}` : "",
+        coachProfile.coachingFocus ? `  Coaching focus: ${coachProfile.coachingFocus}` : "",
+        coachProfile.monthlyBudgetTarget ? `  Monthly budget target: ${fmt(coachProfile.monthlyBudgetTarget)}` : "",
+        coachProfile.paySchedule ? `  Pay schedule: ${coachProfile.paySchedule}` : "",
+        coachProfile.personalAllowance ? `  Personal allowance per person: ${fmt(coachProfile.personalAllowance)}` : "",
+        coachProfile.totalDebtAmount ? `  Total debt to pay off: ${fmt(coachProfile.totalDebtAmount)}` : "",
+        coachProfile.notes ? `  Additional notes: ${coachProfile.notes}` : "",
+      ].filter(Boolean).join("\n") : "  No coaching profile — give general advice based on spending data.",
+      partnerUser ? `\n  Partner: ${partnerUser.name}` : "",
+      snapshot.fairSplit?.length >= 2
+        ? `\n  Fair bill split (by income): ${snapshot.fairSplit.map((u) => `${u.name} ${u.sharePct}%`).join(" / ")}`
+        : "",
+    ].filter((l) => l !== undefined).join("\n");
+
+    const systemPrompt = `You are Alex, a Certified Financial Planner (CFP) and personal finance coach inside Honey Budget.
+
+ROLE & APPROACH:
+You give the kind of clear, specific, honest advice a great financial adviser gives in a private session — not generic tips from a blog. You know the client's real numbers and you use them. You're warm and human but direct: you don't sugarcoat problems, but you never shame or lecture either.
+
+You use a proven financial planning framework when advising:
+1. CASH FLOW CLARITY — Is income covering expenses? What's the savings rate?
+2. EMERGENCY BUFFER — Do they have 3–6 months of expenses saved?
+3. DEBT STRATEGY — High-interest debt first (avalanche method) or smallest balance (snowball) depending on psychology.
+4. SAVINGS GOALS — Are they on track? Is the monthly contribution realistic?
+5. SPENDING LEAKS — Which categories are out of proportion to income? (Rule of thumb: housing <30%, food <15%, transport <15% of income.)
+6. INCOME GROWTH — Is there room to increase income, not just cut spending?
+
+HOW TO RESPOND:
+- Always use real numbers from the financial brief. Never make up figures.
+- Address the client by name (${currentUser?.name ?? "there"}).
+- If they have a coaching profile, tie advice to their stated goal, timeline, and hardest category.
+- Give specific, actionable steps — not vague suggestions.
+- For complex questions, use a short structure: situation → problem → specific action → expected outcome.
+- For simple questions, answer in 2–4 sentences with the key number they need.
+- If you spot a financial health issue they didn't ask about (e.g. savings rate below 10%, no emergency fund, debt not being paid down), mention it briefly at the end — not in a preachy way, just flag it.
+- If both partners are present, consider the relationship dynamic. Never assign blame. Frame as "you two" not "you" or "they."
+
+USING TOOLS:
+When a client tells you about a financial change, USE THE TOOL — don't just acknowledge it.
+- "I got a raise to $X" → call update_income immediately
+- "I spent $X on Y" → call log_expense immediately
+- "Our Netflix went up to $X" → find the bill ID from the brief and call update_bill
+- "We signed up for a new gym" → call add_bill immediately
+After using a tool, confirm what you did in one sentence, then give one piece of follow-up advice based on their updated picture.
+
+DO NOT:
+- Recommend specific investment products, stocks, or platforms (not a licensed adviser)
+- Make up data or estimate numbers not in the brief
+- Give generic advice like "make a budget" or "spend less" without specifics
+- Repeat the same advice twice in a conversation unless the client asks again
+
+CURRENT CLIENT FINANCIAL BRIEF:
+${financialBrief}`;
+
+    // Minimal context object kept for heuristicChat fallback only
     const context = {
       period: snapshot.period,
       summary: { ...snapshot.summary, cashSpent: cashTotal, cardSpent: cardTotal },
@@ -628,17 +734,6 @@ function createInsightsService({
       partnerName: partnerUser?.name ?? null,
       displayCurrencyCode: snapshot.displayCurrencyCode,
     };
-
-    const systemPrompt = [
-      "You are Honey Budget's personal Financial Coach — warm, direct, and specific.",
-      "You have access to the user's real budget data AND tools to update their finances on the spot.",
-      "When the user tells you about a change (raise, new bill, expense, etc.), use the appropriate tool to record it — don't just acknowledge it.",
-      "After using a tool, confirm what you did and give one brief piece of follow-up advice based on their data.",
-      "For conversational questions (no data change needed), answer in 2-3 sentences max using their real numbers.",
-      "Never invent data. Never be generic. Always reference their actual categories, names, and amounts.",
-      "Tone: like a trusted friend who happens to be a CFP — specific, warm, never preachy.",
-      `Context:\n${JSON.stringify(context)}`,
-    ].join(" ");
 
     // Build messages array: history + new user message
     const messages = [
@@ -732,7 +827,7 @@ function createInsightsService({
         // Anthropic path
         const firstResponse = await anthropicClient.messages.create({
           model: anthropicModel,
-          max_tokens: 1024,
+          max_tokens: 2048,
           system: systemPrompt,
           tools: CHAT_TOOLS,
           messages,
