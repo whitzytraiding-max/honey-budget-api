@@ -1473,7 +1473,7 @@ export default function App() {
     try {
       const data = await apiFetch("/api/auth/google", {
         method: "POST",
-        body: JSON.stringify({ credential }),
+        body: JSON.stringify({ access_token: credential }),
       });
 
       const isNewUser = Number(data.user?.monthlySalary ?? 0) === 0;

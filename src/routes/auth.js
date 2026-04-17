@@ -4,7 +4,6 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import express from "express";
-import { OAuth2Client } from "google-auth-library";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolveCurrencyCode } from "../services/currencyConversionService.js";
 import {
@@ -273,26 +272,23 @@ export function createAuthRoutes({
   router.post(
     "/api/auth/google",
     asyncHandler(async (request, response) => {
-      const { credential } = request.body;
-      if (!credential) {
-        throw new HttpError(400, "VALIDATION_ERROR", "credential is required.");
+      const { access_token } = request.body;
+      if (!access_token) {
+        throw new HttpError(400, "VALIDATION_ERROR", "access_token is required.");
       }
 
-      const clientId = process.env.GOOGLE_CLIENT_ID;
-      if (!clientId) {
-        throw new HttpError(500, "CONFIG_ERROR", "Google Sign-In is not configured.");
-      }
-
-      let payload;
+      let googleUser;
       try {
-        const client = new OAuth2Client(clientId);
-        const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
-        payload = ticket.getPayload();
+        const res = await fetch(`https://www.googleapis.com/oauth2/v3/userinfo`, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        });
+        if (!res.ok) throw new Error("Failed to fetch user info");
+        googleUser = await res.json();
       } catch {
-        throw new HttpError(401, "INVALID_GOOGLE_TOKEN", "Invalid Google credential.");
+        throw new HttpError(401, "INVALID_GOOGLE_TOKEN", "Invalid Google access token.");
       }
 
-      const { sub: googleId, name, email } = payload;
+      const { sub: googleId, name, email } = googleUser;
       if (!email) {
         throw new HttpError(400, "VALIDATION_ERROR", "Google account has no email.");
       }
