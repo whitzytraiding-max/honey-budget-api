@@ -359,6 +359,42 @@ function createPrismaBudgetRepository({ prisma }) {
       });
     },
 
+    async upsertGoogleUser({ googleId, name, email }) {
+      // Already linked to this Google account
+      let user = await prisma.user.findUnique({ where: { googleId } });
+      if (user) return mapUser(user);
+
+      // Email exists — link the Google ID to the existing account
+      const existing = await prisma.user.findUnique({ where: { email } });
+      if (existing) {
+        user = await prisma.user.update({
+          where: { id: existing.id },
+          data: { googleId },
+        });
+        return mapUser(user);
+      }
+
+      // Brand new user — create with salary defaults (setup flow handles the rest)
+      user = await prisma.user.create({
+        data: {
+          name,
+          email,
+          googleId,
+          passwordHash: null,
+          monthlySalary: 0,
+          incomeCurrencyCode: "USD",
+          salaryPaymentMethod: "card",
+          salaryCashAmount: 0,
+          salaryCardAmount: 0,
+          salaryCashAllocationPct: 0,
+          salaryCardAllocationPct: 100,
+          incomeDayOfMonth: 1,
+          monthlySavingsTarget: 0,
+        },
+      });
+      return mapUser(user);
+    },
+
     async getUserByEmail(email) {
       const user = await prisma.user.findUnique({
         where: { email },

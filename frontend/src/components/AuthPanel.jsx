@@ -4,6 +4,7 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { Brain, TrendingUp, Wallet } from "lucide-react";
+import { GoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getCurrencyOptions } from "../lib/format.js";
 import { ActionButton, Input, Select } from "./ui.jsx";
@@ -21,6 +22,7 @@ function AuthPanel({
   onResetPasswordChange,
   onRegister,
   onLogin,
+  onGoogleAuth,
   onForgotPassword,
   onResetPassword,
   isSubmitting,
@@ -174,6 +176,24 @@ function AuthPanel({
               />
               <p className="auth-helper-copy text-sm leading-6 text-slate-600">{t("auth.currencySetupHelp")}</p>
               <ActionButton busy={isSubmitting}>{t("auth.createAccount")}</ActionButton>
+              {onGoogleAuth ? (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <span className="text-xs font-medium text-slate-400">or</span>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={(response) => onGoogleAuth(response.credential)}
+                      onError={() => {}}
+                      shape="pill"
+                      size="large"
+                      text="continue_with"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </form>
           ) : null}
 
@@ -203,6 +223,24 @@ function AuthPanel({
               >
                 {t("auth.forgotPassword")}
               </button>
+              {onGoogleAuth ? (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <span className="text-xs font-medium text-slate-400">or</span>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+                  <div className="flex justify-center">
+                    <GoogleLogin
+                      onSuccess={(response) => onGoogleAuth(response.credential)}
+                      onError={() => {}}
+                      shape="pill"
+                      size="large"
+                      text="signin_with"
+                    />
+                  </div>
+                </div>
+              ) : null}
             </form>
           ) : null}
 

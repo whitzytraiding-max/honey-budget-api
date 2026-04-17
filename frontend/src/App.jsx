@@ -1465,6 +1465,27 @@ export default function App() {
     }
   }
 
+  async function handleGoogleAuth(credential) {
+    setAuthBusy(true);
+    clearAuthFeedback();
+    setPostAuthFailureMessage("");
+
+    try {
+      const data = await apiFetch("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({ credential }),
+      });
+
+      setPostAuthFailureMessage(LOGIN_BOOTSTRAP_ERROR);
+      localStorage.setItem("budget_token", data.accessToken);
+      setToken(data.accessToken);
+    } catch (error) {
+      setAuthError(error.message);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function handleForgotPassword(event) {
     event.preventDefault();
     setAuthBusy(true);
@@ -2220,6 +2241,7 @@ export default function App() {
         onResetPasswordChange={updateResetPasswordForm}
         onRegister={handleRegister}
         onLogin={handleLogin}
+        onGoogleAuth={handleGoogleAuth}
         onForgotPassword={handleForgotPassword}
         onResetPassword={handleResetPassword}
         isSubmitting={authBusy}

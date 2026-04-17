@@ -4,6 +4,7 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import express from "express";
+import { OAuth2Client } from "google-auth-library";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolveCurrencyCode } from "../services/currencyConversionService.js";
 import {
@@ -266,6 +267,39 @@ export function createAuthRoutes({
         user,
         accessToken,
       });
+    }),
+  );
+
+  router.post(
+    "/api/auth/google",
+    asyncHandler(async (request, response) => {
+      const { credential } = request.body;
+      if (!credential) {
+        throw new HttpError(400, "VALIDATION_ERROR", "credential is required.");
+      }
+
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        throw new HttpError(500, "CONFIG_ERROR", "Google Sign-In is not configured.");
+      }
+
+      let payload;
+      try {
+        const client = new OAuth2Client(clientId);
+        const ticket = await client.verifyIdToken({ idToken: credential, audience: clientId });
+        payload = ticket.getPayload();
+      } catch {
+        throw new HttpError(401, "INVALID_GOOGLE_TOKEN", "Invalid Google credential.");
+      }
+
+      const { sub: googleId, name, email } = payload;
+      if (!email) {
+        throw new HttpError(400, "VALIDATION_ERROR", "Google account has no email.");
+      }
+
+      const user = await budgetRepository.upsertGoogleUser({ googleId, name: name ?? email.split("@")[0], email });
+      const accessToken = authService.signAccessToken(user);
+      sendData(response, 200, { user: sanitizeUser(user), accessToken });
     }),
   );
 

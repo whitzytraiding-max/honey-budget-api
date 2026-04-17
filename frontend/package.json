@@ -18,7 +18,6 @@
     "cap:android": "npx cap open android"
   },
   "dependencies": {
-    "xlsx": "^0.18.5",
     "@capacitor/android": "^8.2.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.2.0",
@@ -28,9 +27,11 @@
     "@capacitor/keyboard": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
+    "@react-oauth/google": "^0.13.5",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@capacitor/assets": "^3.0.5",
