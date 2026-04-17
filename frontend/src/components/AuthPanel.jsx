@@ -189,6 +189,7 @@ function AuthPanel({
                       onError={() => {}}
                       shape="pill"
                       size="large"
+                      theme="filled_black"
                       text="continue_with"
                     />
                   </div>
@@ -236,6 +237,7 @@ function AuthPanel({
                       onError={() => {}}
                       shape="pill"
                       size="large"
+                      theme="filled_black"
                       text="signin_with"
                     />
                   </div>
