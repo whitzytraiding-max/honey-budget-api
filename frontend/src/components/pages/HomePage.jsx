@@ -85,24 +85,40 @@ function CatChat({ onSendMessage, remainingPct }) {
 
     rec.onerror = (e) => {
       if (e.error === "no-speech") return;
+      recognitionRef.current = null;
       setRecording(false);
-      setError("Recording stopped. Try again.");
-    };
-
-    rec.onend = () => {
-      setRecording(false);
-      if (releasedRef.current && capturedRef.current) {
-        sendText(capturedRef.current);
+      if (e.error === "not-allowed") {
+        setError("Microphone access denied — check your browser settings.");
+      } else {
+        setError("Recording stopped. Tap to try again.");
       }
     };
 
-    rec.start();
+    rec.onend = () => {
+      const wasReleased = releasedRef.current;
+      const captured = capturedRef.current;
+      recognitionRef.current = null;
+      setRecording(false);
+      if (wasReleased && captured) {
+        sendText(captured);
+      }
+    };
+
+    try {
+      rec.start();
+    } catch {
+      recognitionRef.current = null;
+      setRecording(false);
+      setError("Couldn't start recording. Tap to try again.");
+    }
   }
 
   function stopRecording() {
     releasedRef.current = true;
-    recognitionRef.current?.stop();
+    const rec = recognitionRef.current;
+    recognitionRef.current = null;
     setRecording(false);
+    rec?.stop();
   }
 
   function handleCatTap() {
