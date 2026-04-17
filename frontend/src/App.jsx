@@ -2601,6 +2601,7 @@ export default function App() {
             onNavigateToCoach={() => navigate("coach")}
             setupChecklist={setupChecklist}
             onNavigateToSetup={() => navigate("setup")}
+            onSendMessage={handleCoachChat}
           />
         );
     }
