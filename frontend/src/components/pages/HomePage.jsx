@@ -105,15 +105,13 @@ function CatChat({ onSendMessage, remainingPct }) {
     setRecording(false);
   }
 
-  function handlePointerDown(e) {
-    e.preventDefault();
+  function handleCatTap() {
     if (busy) return;
-    startRecording();
-  }
-
-  function handlePointerUp(e) {
-    e.preventDefault();
-    stopRecording();
+    if (recording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
   }
 
   const hasContent = Boolean(bubble || busy || error);
@@ -152,28 +150,28 @@ function CatChat({ onSendMessage, remainingPct }) {
         ) : null}
       </div>
 
-      {/* Cat — press and hold to speak */}
+      {/* Cat — tap to start, tap again to stop and send */}
       <div className="flex flex-col items-center gap-2">
-        <div
-          className={`relative cursor-pointer select-none touch-none transition-transform active:scale-95 ${recording ? "drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]" : ""}`}
-          onPointerDown={handlePointerDown}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+        <button
+          type="button"
+          onClick={handleCatTap}
+          disabled={busy}
+          className={`relative cursor-pointer select-none transition-transform active:scale-95 disabled:opacity-60 ${recording ? "drop-shadow-[0_0_20px_rgba(251,191,36,0.8)]" : ""}`}
+          style={{ background: "none", border: "none", padding: 0, WebkitTouchCallout: "none" }}
+          onContextMenu={(e) => e.preventDefault()}
         >
-          {/* Pulse ring when recording */}
           {recording && (
             <span className="absolute inset-0 -m-3 animate-ping rounded-full bg-amber-400/30" />
           )}
           <MoneyCat remainingPct={remainingPct} size={140} />
-        </div>
+        </button>
 
         <p className="text-xs font-semibold text-slate-400 tracking-wide text-center">
           {recording
-            ? "🎙 Listening… release to send"
+            ? "🎙 Listening… tap again to send"
             : busy
             ? "Thinking…"
-            : "Hold to speak"}
+            : "Tap to speak"}
         </p>
       </div>
 
