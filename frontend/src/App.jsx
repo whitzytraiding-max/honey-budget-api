@@ -1476,6 +1476,14 @@ export default function App() {
         body: JSON.stringify({ credential }),
       });
 
+      const isNewUser = Number(data.user?.monthlySalary ?? 0) === 0;
+      if (isNewUser) {
+        // Clear solo mode so new users see the partner/solo choice screen,
+        // then land on settings to fill in their income profile
+        localStorage.removeItem("budget_solo_mode");
+        setRouteHash("settings");
+      }
+
       setPostAuthFailureMessage(LOGIN_BOOTSTRAP_ERROR);
       localStorage.setItem("budget_token", data.accessToken);
       setToken(data.accessToken);
