@@ -57,12 +57,25 @@ function CatChat({ onSendMessage, remainingPct }) {
     }
   }
 
-  function startRecording() {
+  async function startRecording() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       setError("Voice not supported in this browser. Try Chrome.");
       return;
     }
+
+    // Pre-warm mic permission — on iOS, SpeechRecognition.start() fires not-allowed
+    // even after the user grants permission unless getUserMedia has already resolved first.
+    if (navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((t) => t.stop());
+      } catch {
+        setError("Microphone access denied. Allow microphone access in your browser settings, then tap to try again.");
+        return;
+      }
+    }
+
     capturedRef.current = "";
     releasedRef.current = false;
     setRecording(true);
@@ -84,14 +97,10 @@ function CatChat({ onSendMessage, remainingPct }) {
     };
 
     rec.onerror = (e) => {
-      if (e.error === "no-speech") return;
+      if (e.error === "no-speech" || e.error === "aborted") return;
       recognitionRef.current = null;
       setRecording(false);
-      if (e.error === "not-allowed") {
-        setError("Microphone access denied — check your browser settings.");
-      } else {
-        setError("Recording stopped. Tap to try again.");
-      }
+      setError("Recording stopped. Tap to try again.");
     };
 
     rec.onend = () => {
