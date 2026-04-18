@@ -81,20 +81,31 @@ export default function CoachPage({ onSendMessage, onEditProfile }) {
     };
 
     rec.onerror = (e) => {
-      if (e.error === "no-speech") return;
+      if (e.error === "no-speech" || e.error === "aborted") return;
       setListening(false);
       setInterim("");
-      setError("Voice input stopped. Try again.");
+      recognitionRef.current = null;
+      if (e.error === "not-allowed") {
+        setError("Microphone access was denied. Please allow it in your browser settings and try again.");
+      } else {
+        setError("Voice input stopped. Tap the mic to try again.");
+      }
     };
 
     rec.onend = () => {
       setListening(false);
       setInterim("");
+      recognitionRef.current = null;
       if (committedRef.current) setMessage(committedRef.current);
       inputRef.current?.focus();
     };
 
-    rec.start();
+    try {
+      rec.start();
+    } catch {
+      recognitionRef.current = null;
+      setError("Couldn't start voice input. Tap the mic to try again.");
+    }
   }, [listening, message]);
 
   async function send(text) {
