@@ -71,7 +71,14 @@ function CatChat({ onSendMessage, remainingPct }) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach((t) => t.stop());
       } catch {
-        setError("Microphone access denied. Allow microphone access in your browser settings, then tap to try again.");
+        const isStandalone =
+          window.navigator.standalone === true ||
+          window.matchMedia("(display-mode: standalone)").matches;
+        if (isStandalone) {
+          setError("Tap to open: iOS Settings → Honey Budget → enable Microphone, then come back and try again.");
+        } else {
+          setError("Microphone access denied. Tap the lock icon in your browser's address bar to allow microphone access.");
+        }
         return;
       }
     }
