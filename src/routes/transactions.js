@@ -128,8 +128,55 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const normalizedTransaction = normalizeTransactionPayload(request.body);
+      const isJoint = request.body?.joint === true;
 
-      // Resolve which user this expense is logged under (self or partner)
+      const sourceCurrencyCode =
+        normalizedTransaction.currencyCode ??
+        resolveCurrencyCode(request.user.incomeCurrencyCode || "USD");
+      const displayCurrencyCode = resolveDisplayCurrencyCode({
+        requestedDisplayCurrency: request.body?.displayCurrencyCode,
+        currentUser: request.user,
+      });
+
+      // ── Joint expense: split 50/50 between both partners ─────────────────
+      if (isJoint) {
+        const partner = getPartner(couple, request.user.id);
+        if (!partner) {
+          throw new HttpError(409, "COUPLE_REQUIRED", "Link a partner before logging a joint expense.");
+        }
+        const halfAmount = roundCurrency(normalizedTransaction.amount / 2);
+        const exchangeSnapshot = await buildMmkTransactionSnapshot({
+          exchangeRateService,
+          coupleId: couple.id,
+          amount: halfAmount,
+          sourceCurrencyCode,
+          targetCurrencyCode: displayCurrencyCode,
+          transactionDate: normalizedTransaction.date,
+        });
+        const sharedFields = {
+          ...normalizedTransaction,
+          amount: halfAmount,
+          currencyCode: sourceCurrencyCode,
+          ...exchangeSnapshot,
+        };
+        const [myTransaction, partnerTransaction] = await budgetRepository.addJointTransactions([
+          { userId: request.user.id, ...sharedFields },
+          { userId: partner.id, ...sharedFields },
+        ]);
+        await createPartnerExpenseNotification({
+          budgetRepository,
+          actor: request.user,
+          transaction: myTransaction,
+        });
+        return sendData(response, 201, {
+          transaction: myTransaction,
+          partnerTransaction,
+          joint: true,
+          coupleId: couple.id,
+        });
+      }
+
+      // ── Single-user expense (self or on behalf of partner) ────────────────
       let targetUserId = request.user.id;
       const requestedLogAsUserId = request.body?.logAsUserId
         ? Number(request.body.logAsUserId)
@@ -142,13 +189,6 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
         targetUserId = requestedLogAsUserId;
       }
 
-      const sourceCurrencyCode =
-        normalizedTransaction.currencyCode ??
-        resolveCurrencyCode(request.user.incomeCurrencyCode || "USD");
-      const displayCurrencyCode = resolveDisplayCurrencyCode({
-        requestedDisplayCurrency: request.body?.displayCurrencyCode,
-        currentUser: request.user,
-      });
       const exchangeSnapshot = await buildMmkTransactionSnapshot({
         exchangeRateService,
         coupleId: couple?.id ?? null,

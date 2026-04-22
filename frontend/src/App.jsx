@@ -1996,9 +1996,11 @@ export default function App() {
             type: nextExpenseDraft.type,
             paymentMethod: nextExpenseDraft.paymentMethod,
             date: normalizedDate,
-            ...(nextExpenseDraft.logAsUserId && !editingTransactionId
-              ? { logAsUserId: Number(nextExpenseDraft.logAsUserId) }
-              : {}),
+            ...(nextExpenseDraft.logAsUserId === "joint" && !editingTransactionId
+              ? { joint: true }
+              : nextExpenseDraft.logAsUserId && !editingTransactionId
+                ? { logAsUserId: Number(nextExpenseDraft.logAsUserId) }
+                : {}),
           }),
         },
       );

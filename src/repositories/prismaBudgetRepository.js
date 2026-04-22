@@ -1010,6 +1010,21 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapTransaction(transaction);
     },
 
+    async addJointTransactions(transactionDataArray) {
+      const results = await prisma.$transaction(
+        transactionDataArray.map((data) =>
+          prisma.transaction.create({
+            data: {
+              ...data,
+              date: new Date(`${data.date}T00:00:00.000Z`),
+            },
+            include: { user: { select: { name: true } } },
+          }),
+        ),
+      );
+      return results.map(mapTransaction);
+    },
+
     async updateUserTransaction({
       transactionId,
       userId,
