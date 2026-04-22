@@ -558,6 +558,32 @@ html[data-theme="dark"] .border-sky-50 {
   border-color: rgba(56, 189, 248, 0.12) !important;
 }
 
+/* ─── Missing dark-mode colour fixes ────────────────────────────────────────── */
+
+/* Light tint backgrounds that need to go dark */
+html[data-theme="dark"] .bg-sky-50,
+html[data-theme="dark"] .bg-emerald-50 {
+  background-color: rgba(15, 23, 36, 0.9) !important;
+}
+
+/* Text colours missing from the main block */
+html[data-theme="dark"] .text-sky-800,
+html[data-theme="dark"] .text-sky-600,
+html[data-theme="dark"] .text-emerald-600 {
+  color: #e5eef6 !important;
+}
+
+/* Borders for coloured active states */
+html[data-theme="dark"] .border-emerald-200 {
+  border-color: rgba(52, 211, 153, 0.3) !important;
+}
+html[data-theme="dark"] .border-sky-400 {
+  border-color: rgba(56, 189, 248, 0.45) !important;
+}
+html[data-theme="dark"] .border-emerald-400 {
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
 /* ─── Page transition ──────────────────────────────────────────────────────── */
 
 @keyframes hb-page-enter {

@@ -140,7 +140,7 @@ function TipCard({ emoji, title, action, reason }) {
         )}
       </div>
       {open && (
-        <div className="mt-2.5 space-y-1.5 border-t border-slate-200/60 pt-2.5">
+        <div className="mt-2.5 space-y-1.5 border-t border-slate-200 pt-2.5">
           <p className="text-sm leading-6 text-slate-700">{action}</p>
           {reason && <p className="text-xs leading-5 text-slate-500">{reason}</p>}
         </div>
