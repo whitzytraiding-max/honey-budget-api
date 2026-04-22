@@ -148,7 +148,7 @@ function CatChat({ onSendMessage, remainingPct }) {
   const isIdle = !bubble && !busy && !error && !recording;
 
   return (
-    <section className="hb-surface-card rounded-[1.35rem] p-5 sm:rounded-[1.5rem] sm:p-7">
+    <div className="pt-4">
       <div className="flex flex-col items-center gap-0">
 
         {/* Speech bubble — sits above the cat with a downward tail */}
@@ -245,7 +245,7 @@ function CatChat({ onSendMessage, remainingPct }) {
         </p>
 
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -330,6 +330,10 @@ function HomePage({
           />
         </div>
 
+        {onSendMessage && (
+          <CatChat onSendMessage={onSendMessage} remainingPct={remainingPct} />
+        )}
+
         {dashboard && !dashboardBusy && (
           <div className="mt-4 space-y-3">
             {dashboard.fairSplit.map((person, index) => {
@@ -350,10 +354,6 @@ function HomePage({
         )}
       </section>
 
-      {/* Cat advisor */}
-      {onSendMessage && (
-        <CatChat onSendMessage={onSendMessage} remainingPct={remainingPct} />
-      )}
     </div>
   );
 }
