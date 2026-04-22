@@ -128,6 +128,20 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
     asyncHandler(async (request, response) => {
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
       const normalizedTransaction = normalizeTransactionPayload(request.body);
+
+      // Resolve which user this expense is logged under (self or partner)
+      let targetUserId = request.user.id;
+      const requestedLogAsUserId = request.body?.logAsUserId
+        ? Number(request.body.logAsUserId)
+        : null;
+      if (requestedLogAsUserId && requestedLogAsUserId !== request.user.id) {
+        const partner = getPartner(couple, request.user.id);
+        if (!partner || partner.id !== requestedLogAsUserId) {
+          throw new HttpError(403, "FORBIDDEN", "You can only log expenses for yourself or your partner.");
+        }
+        targetUserId = requestedLogAsUserId;
+      }
+
       const sourceCurrencyCode =
         normalizedTransaction.currencyCode ??
         resolveCurrencyCode(request.user.incomeCurrencyCode || "USD");
@@ -145,7 +159,7 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
       });
 
       const transaction = await budgetRepository.addTransaction({
-        userId: request.user.id,
+        userId: targetUserId,
         ...normalizedTransaction,
         currencyCode: sourceCurrencyCode,
         ...exchangeSnapshot,

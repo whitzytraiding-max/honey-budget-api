@@ -74,6 +74,7 @@ const TRANSACTION_FIELDS = {
   type: "one-time",
   paymentMethod: "card",
   date: getTodayLocalIso(),
+  logAsUserId: "",
 };
 
 const ALL_NAV_ITEMS = [
@@ -1995,6 +1996,9 @@ export default function App() {
             type: nextExpenseDraft.type,
             paymentMethod: nextExpenseDraft.paymentMethod,
             date: normalizedDate,
+            ...(nextExpenseDraft.logAsUserId && !editingTransactionId
+              ? { logAsUserId: Number(nextExpenseDraft.logAsUserId) }
+              : {}),
           }),
         },
       );
@@ -2385,6 +2389,7 @@ export default function App() {
             mmkRateData={mmkRateData}
             editingTransactionId={editingTransactionId}
             currentUserId={session?.user?.id}
+            householdUsers={householdUsers}
             onEditTransaction={handleEditTransaction}
             onDeleteTransaction={handleDeleteTransaction}
             onCancelEdit={resetExpenseEditor}

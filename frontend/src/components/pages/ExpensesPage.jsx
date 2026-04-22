@@ -39,6 +39,7 @@ function ExpensesPage({
   mmkRateData,
   editingTransactionId,
   currentUserId,
+  householdUsers,
   onEditTransaction,
   onDeleteTransaction,
   onCancelEdit,
@@ -170,6 +171,46 @@ function ExpensesPage({
               ]}
             />
           </div>
+
+          {/* Log on behalf of partner — only shown for couples, hidden when editing */}
+          {!editingTransactionId && householdUsers?.length >= 2 && (() => {
+            const partner = householdUsers.find((u) => u.id !== currentUserId);
+            const me = householdUsers.find((u) => u.id === currentUserId);
+            if (!partner) return null;
+            const activeId = expenseForm.logAsUserId
+              ? String(expenseForm.logAsUserId)
+              : String(currentUserId);
+            return (
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
+                  Logged under
+                </p>
+                <div className="flex gap-2">
+                  {[
+                    { id: currentUserId, label: `${me?.name ?? "You"} (you)` },
+                    { id: partner.id, label: partner.name },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() =>
+                        onExpenseChange({
+                          target: { name: "logAsUserId", value: String(id) },
+                        })
+                      }
+                      className={`flex-1 rounded-2xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                        activeId === String(id)
+                          ? "border-sky-400 bg-sky-50 text-sky-800"
+                          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           <ActionButton busy={expenseBusy} className="sm:w-auto">
             {editingTransactionId ? t("expenses.saveChanges") : t("expenses.save")}
