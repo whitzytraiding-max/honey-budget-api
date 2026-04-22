@@ -58,7 +58,13 @@ function createApp({
     app.use(jsonParser);
   }
 
-  app.get("/health", (_request, response) => {
+  app.get("/health", async (_request, response) => {
+    try {
+      await budgetRepository.healthCheck();
+    } catch {
+      // DB reconnecting — still return 200 so UptimeRobot doesn't alert,
+      // but the attempt itself warms the connection for the next real request.
+    }
     sendData(response, 200, { status: "ok" });
   });
 

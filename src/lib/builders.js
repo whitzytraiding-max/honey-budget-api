@@ -102,7 +102,11 @@ export async function buildMmkTransactionSnapshot({
       );
     }
 
-    throw error;
+    throw new HttpError(
+      503,
+      "EXCHANGE_RATE_UNAVAILABLE",
+      "Currency conversion is temporarily unavailable. Please try again in a moment.",
+    );
   }
 }
 

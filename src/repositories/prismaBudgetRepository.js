@@ -311,6 +311,10 @@ function sortTransactions(rows) {
 
 function createPrismaBudgetRepository({ prisma }) {
   return {
+    async healthCheck() {
+      await prisma.$queryRaw`SELECT 1`;
+    },
+
     async createUser({
       name,
       email,
