@@ -255,7 +255,7 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
 
           {/* Total */}
           <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-2.5 text-center">
-            <p className="text-xs text-slate-500">Total spent (30 days)</p>
+            <p className="text-xs text-slate-500">Total spent · last 30 days</p>
             <p className="text-xl font-bold text-slate-900">{currency(totalSpent)}</p>
           </div>
         </section>
@@ -287,7 +287,7 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
         <section className="hb-surface-card rounded-[2rem] p-5">
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-4 w-4 text-[#245188]" />
-            <h2 className="text-base font-semibold">Who spent what</h2>
+            <h2 className="text-base font-semibold">Spending by person</h2>
           </div>
           <div className="space-y-3">
             {users.map((u, i) => {
@@ -318,7 +318,7 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
         <section className="hb-panel-multi rounded-[2rem] border border-sky-200/70 p-5 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)]">
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="h-4 w-4 text-[#17385d]" />
-            <h2 className="text-base font-semibold">Coach tips</h2>
+            <h2 className="text-base font-semibold">Coaching tips</h2>
           </div>
           <div className="space-y-2">
             {insights.tips.map((tip, i) => (

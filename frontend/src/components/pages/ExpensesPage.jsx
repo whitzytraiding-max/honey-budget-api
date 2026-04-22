@@ -183,7 +183,7 @@ function ExpensesPage({
             return (
               <div>
                 <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                  Logged under
+                  Log expense under
                 </p>
                 <div className="flex gap-2">
                   {[

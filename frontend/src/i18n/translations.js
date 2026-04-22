@@ -68,19 +68,18 @@ const translations = {
     },
     expenses: {
       title: "Add an expense",
-      subtitle:
-        "Keep logging separate from the overview so you can enter spend quickly without noise.",
+      subtitle: "Log expenses quickly without leaving the main overview.",
       latest: "Latest expenses",
       latestSubtitle: "A tighter receipt-style list for the most recent spending moments.",
       save: "Save expense",
       saveChanges: "Save changes",
       amount: "Amount",
-      entryCurrencyLabel: "What you type in",
-      entryCurrencyHelp: "is the currency you should use when entering this expense.",
-      displayCurrencyLabel: "What you see in the app",
-      displayCurrencyHelp: "is only for display. The app converts the saved amount for viewing.",
+      entryCurrencyLabel: "Currency",
+      entryCurrencyHelp: "— enter the amount in this currency.",
+      displayCurrencyLabel: "Display currency",
+      displayCurrencyHelp: "— totals are converted to this for display only.",
       dummyProofCurrency:
-        "Simple rule: type the amount in the real currency from the receipt or bank charge. Honey Budget will convert the totals for viewing.",
+        "Type the amount in the currency on the receipt or bank charge. Honey Budget converts totals for display.",
       mmkRateMissing:
         "MMK needs a monthly rate first. Go to Settings and save this month’s MMK rate before logging MMK-related amounts.",
       actions: "Actions",
@@ -398,19 +397,18 @@ const translations = {
     },
     expenses: {
       title: "Agregar un gasto",
-      subtitle:
-        "Mantén el registro separado del resumen para anotar gastos rápido y sin ruido.",
+      subtitle: "Registra gastos rápidamente sin salir del resumen principal.",
       latest: "Últimos gastos",
       latestSubtitle: "Una lista compacta tipo recibo para los gastos más recientes.",
       save: "Guardar gasto",
       saveChanges: "Guardar cambios",
       amount: "Monto",
-      entryCurrencyLabel: "Lo que escribes",
-      entryCurrencyHelp: "es la moneda que debes usar al registrar este gasto.",
-      displayCurrencyLabel: "Lo que ves en la app",
-      displayCurrencyHelp: "es solo para mostrar. La app convierte el monto guardado para verlo.",
+      entryCurrencyLabel: "Moneda",
+      entryCurrencyHelp: "— escribe el monto en esta moneda.",
+      displayCurrencyLabel: "Moneda de visualización",
+      displayCurrencyHelp: "— los totales se convierten a esta moneda solo para mostrarlos.",
       dummyProofCurrency:
-        "Regla simple: escribe el monto en la moneda real del recibo o del cargo bancario. Honey Budget convierte los totales para mostrarlos.",
+        "Escribe el monto en la moneda del recibo o cargo bancario. Honey Budget convierte los totales para mostrarlos.",
       mmkRateMissing:
         "MMK necesita una tasa mensual primero. Ve a Configuración y guarda la tasa MMK de este mes antes de registrar montos relacionados con MMK.",
       actions: "Acciones",
