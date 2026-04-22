@@ -165,13 +165,30 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
     { name: "Card",  value: summary?.cardSpent  ?? 0, color: CARD_COLOR },
   ].filter((d) => d.value > 0);
 
-  // Donut: recurring vs one-time
-  const typeData = [
-    { name: "Bills", value: summary?.recurringSpent ?? 0, color: REC_COLOR },
-    { name: "Flex",  value: summary?.oneTimeSpent   ?? 0, color: ONCE_COLOR },
-  ].filter((d) => d.value > 0);
-
   const totalSpent = summary?.totalSpent ?? 0;
+
+  // Donut: Bills vs Flex — falls back to top category vs rest when no recurring bills
+  const recurringSpent = summary?.recurringSpent ?? 0;
+  const hasRecurring = recurringSpent > 0;
+
+  const typeData = hasRecurring
+    ? [
+        { name: "Bills", value: recurringSpent, color: REC_COLOR },
+        { name: "Flex",  value: summary?.oneTimeSpent ?? 0, color: ONCE_COLOR },
+      ].filter((d) => d.value > 0)
+    : cats.length > 0
+      ? [
+          { name: cats[0].category, value: cats[0].amount, color: CAT_COLORS[0] },
+          { name: "Other", value: Math.max(0, totalSpent - cats[0].amount), color: CAT_COLORS[2] },
+        ].filter((d) => d.value > 0)
+      : [];
+
+  const rightLabel  = hasRecurring
+    ? currency(recurringSpent)
+    : cats.length > 0 ? `${cats[0].sharePct}%` : "—";
+  const rightSublabel = hasRecurring
+    ? "bills"
+    : cats.length > 0 ? cats[0].category.toLowerCase() : "";
 
   return (
     <div className="space-y-5">
@@ -233,13 +250,13 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
               </div>
             )}
 
-            {/* Recurring vs One-time donut */}
+            {/* Bills vs Flex — or top category vs rest */}
             {typeData.length > 0 && (
               <div>
                 <DonutChart
                   data={typeData}
-                  label={currency(summary?.recurringSpent ?? 0)}
-                  sublabel="bills"
+                  label={rightLabel}
+                  sublabel={rightSublabel}
                 />
                 <div className="mt-2 flex justify-center gap-3">
                   {typeData.map((d) => (
