@@ -5,7 +5,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Check, ChevronDown, ChevronUp, CloudUpload, Map,
+  Check, CheckCircle, ChevronDown, ChevronUp, CloudUpload, Map,
   Trash2, Sparkles, Target,
 } from "lucide-react";
 import { ActionButton } from "../ui.jsx";
@@ -87,12 +87,29 @@ function UploadProgress({ active, done }) {
 }
 
 // ── Timeline journey roadmap ──────────────────────────────────────────────────
-function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew }) {
+const CHECKIN_OPTIONS = [
+  { value: "on-track", emoji: "✅", label: "On Track", color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
+  { value: "behind",   emoji: "⚠️",  label: "Behind",   color: "#ef4444", bg: "rgba(239,68,68,0.12)"  },
+  { value: "ahead",    emoji: "🔥",  label: "Ahead",    color: "#f59e0b", bg: "rgba(245,158,11,0.15)" },
+];
+
+function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew, onImportGoal, importGoalBusy, importGoalDone }) {
   const cur = currentYYYYMM();
   const totalPlanned = roadmap.reduce((s, m) => s + (m.planned?.savings ?? 0), 0);
 
   // Auto-open current month
   const [expanded, setExpanded] = useState(() => cur);
+
+  // Per-month manual check-ins stored in localStorage
+  const checkinKey = `hb_checkins_${activePlanId}`;
+  const [checkIns, setCheckIns] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(checkinKey) ?? "{}"); } catch { return {}; }
+  });
+  function setCheckIn(month, value) {
+    const updated = { ...checkIns, [month]: value };
+    setCheckIns(updated);
+    localStorage.setItem(checkinKey, JSON.stringify(updated));
+  }
 
   function nodeState(m) {
     if (m.month === cur) return "current";
@@ -166,6 +183,30 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                   style={{ background: "rgba(34,197,94,0.1)", color: "var(--hb-ink-soft)" }}>
                   {fmt(totalPlanned / (roadmap.length || 1), currency)}/mo target
                 </span>
+              )}
+            </div>
+
+            {/* Import to Savings Goals */}
+            <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--hb-border)" }}>
+              {importGoalDone ? (
+                <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#22c55e" }}>
+                  <CheckCircle className="h-4 w-4" />
+                  Added to Savings Goals
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={importGoalBusy}
+                  onClick={onImportGoal}
+                  className="rounded-xl px-4 py-2 text-sm font-semibold transition"
+                  style={{
+                    background: "rgba(56,189,248,0.12)",
+                    color: "#38bdf8",
+                    opacity: importGoalBusy ? 0.6 : 1,
+                  }}
+                >
+                  {importGoalBusy ? "Adding…" : "＋ Import as Savings Goal"}
+                </button>
               )}
             </div>
           </div>
@@ -301,6 +342,15 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                             {b.emoji} {b.label}
                           </span>
                         )}
+                        {checkIns[m.month] && (() => {
+                          const ci = CHECKIN_OPTIONS.find((o) => o.value === checkIns[m.month]);
+                          return ci ? (
+                            <span className="text-xs font-semibold rounded-full px-2 py-0.5"
+                              style={{ background: ci.bg, color: ci.color }}>
+                              {ci.emoji} {ci.label}
+                            </span>
+                          ) : null;
+                        })()}
                       </div>
 
                       {/* Collapsed right side */}
@@ -444,6 +494,35 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                             </span>
                           </div>
                         )}
+
+                        {/* Manual check-in */}
+                        <div className="mt-3 rounded-xl px-3 py-3"
+                          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid var(--hb-border)" }}>
+                          <p className="text-xs mb-2 font-semibold uppercase tracking-wider"
+                            style={{ color: "var(--hb-ink-soft)" }}>
+                            Your check-in
+                          </p>
+                          <div className="flex gap-2">
+                            {CHECKIN_OPTIONS.map((opt) => {
+                              const active = checkIns[m.month] === opt.value;
+                              return (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  className="flex-1 rounded-xl py-2 text-xs font-semibold transition"
+                                  style={{
+                                    background: active ? opt.bg : "rgba(0,0,0,0.06)",
+                                    border: active ? `1px solid ${opt.color}40` : "1px solid transparent",
+                                    color: active ? opt.color : "var(--hb-ink-soft)",
+                                  }}
+                                  onClick={() => setCheckIn(m.month, active ? null : opt.value)}
+                                >
+                                  {opt.emoji} {opt.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -483,6 +562,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
 
   const [activePlan, setActivePlan] = useState(null);
   const [plans, setPlans] = useState([]);
+  const [importGoalBusy, setImportGoalBusy] = useState(false);
+  const [importGoalDone, setImportGoalDone] = useState(false);
 
   const authHeaders = useCallback(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -589,6 +670,26 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     } catch { /* ignore */ }
   }
 
+  async function handleImportGoal() {
+    if (!activePlan) return;
+    const plan = activePlan.parsedPlan;
+    setImportGoalBusy(true);
+    try {
+      await fetch(`${apiBase}/api/savings/goal`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: plan.goalDescription || plan.name,
+          targetAmount: plan.goalAmount,
+          targetDate: plan.endMonth ? `${plan.endMonth}-28` : null,
+          currencyCode: plan.currency || displayCurrency,
+        }),
+      });
+      setImportGoalDone(true);
+    } catch { /* silently fail */ }
+    setImportGoalBusy(false);
+  }
+
   function onDrop(e) {
     e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files[0];
@@ -617,6 +718,9 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         activePlanId={activePlan.id}
         onDelete={handleDelete}
         onImportNew={() => { setActivePlan(null); setStep(STEPS.IDLE); }}
+        onImportGoal={handleImportGoal}
+        importGoalBusy={importGoalBusy}
+        importGoalDone={importGoalDone}
       />
     );
   }
