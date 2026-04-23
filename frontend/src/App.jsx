@@ -403,6 +403,7 @@ export default function App() {
   const [savingsForm, setSavingsForm] = useState(SAVINGS_FIELDS);
   const [savingsGoalForm, setSavingsGoalForm] = useState(() => createSavingsGoalDraft(null));
   const [editingSavingsGoalId, setEditingSavingsGoalId] = useState(null);
+  const [editingSavingsEntryId, setEditingSavingsEntryId] = useState(null);
   const [plannerData, setPlannerData] = useState(null);
   const [plannerBusy, setPlannerBusy] = useState(false);
   const [recurringBillForm, setRecurringBillForm] = useState(() =>
@@ -2134,6 +2135,61 @@ export default function App() {
     }
   }
 
+  function handleEditSavingsEntry(entry) {
+    setPageError("");
+    setEditingSavingsEntryId(entry.id);
+    setSavingsForm({
+      amount: String(Math.abs(Number(entry.amount ?? entry.displayAmount ?? 0))),
+      note: entry.note ?? "",
+      currencyCode: entry.currencyCode || baseCurrencyCode,
+      savingsGoalId: entry.savingsGoalId ? String(entry.savingsGoalId) : "",
+      date: entry.date ?? getTodayLocalIso(),
+    });
+  }
+
+  function resetSavingsEntryEditor() {
+    setEditingSavingsEntryId(null);
+    setSavingsForm({ ...SAVINGS_FIELDS, currencyCode: incomeProfileForm.incomeCurrencyCode || baseCurrencyCode });
+  }
+
+  async function handleDeleteSavingsEntry(entry) {
+    const label = entry.note && entry.note !== "Savings entry" ? entry.note : "this savings entry";
+    if (!window.confirm(`Delete ${label}?`)) return;
+    setSavingsBusy(true);
+    setPageError("");
+    try {
+      await apiFetch(`/api/savings/${entry.id}`, { method: "DELETE", headers: authHeaders });
+      if (editingSavingsEntryId === entry.id) resetSavingsEntryEditor();
+      await Promise.all([loadSavings(), loadSummary()]);
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setSavingsBusy(false);
+    }
+  }
+
+  async function handleSavingsWithdraw({ amount, note, savingsGoalId }) {
+    setSavingsBusy(true);
+    setPageError("");
+    try {
+      await apiFetch("/api/savings/withdraw", {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          note: note.trim() || "Transfer to current",
+          currencyCode: incomeProfileForm.incomeCurrencyCode || baseCurrencyCode,
+          savingsGoalId: savingsGoalId || null,
+        }),
+      });
+      await Promise.all([loadSavings(), loadSummary()]);
+    } catch (error) {
+      setPageError(error.message);
+    } finally {
+      setSavingsBusy(false);
+    }
+  }
+
   async function handleSavingsSubmit(event) {
     event.preventDefault();
     setSavingsBusy(true);
@@ -2154,12 +2210,10 @@ export default function App() {
     }
 
     try {
-      await apiFetch("/api/savings", {
-        method: "POST",
-        headers: {
-          ...authHeaders,
-          "Content-Type": "application/json",
-        },
+      const url = editingSavingsEntryId ? `/api/savings/${editingSavingsEntryId}` : "/api/savings";
+      await apiFetch(url, {
+        method: editingSavingsEntryId ? "PATCH" : "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
         body: JSON.stringify({
           amount,
           currencyCode: savingsForm.currencyCode || baseCurrencyCode,
@@ -2169,6 +2223,7 @@ export default function App() {
         }),
       });
 
+      setEditingSavingsEntryId(null);
       setSavingsForm({
         ...SAVINGS_FIELDS,
         currencyCode: incomeProfileForm.incomeCurrencyCode || baseCurrencyCode,
@@ -2523,6 +2578,7 @@ export default function App() {
             savingsTargetForm={incomeProfileForm}
             savingsGoalForm={savingsGoalForm}
             editingSavingsGoalId={editingSavingsGoalId}
+            editingSavingsEntryId={editingSavingsEntryId}
             onSavingsChange={updateSavingsForm}
             onSavingsTargetChange={updateIncomeProfileForm}
             onSavingsGoalChange={updateSavingsGoalForm}
@@ -2532,6 +2588,10 @@ export default function App() {
             onEditSavingsGoal={handleEditSavingsGoal}
             onDeleteSavingsGoal={handleDeleteSavingsGoal}
             onCancelSavingsGoalEdit={resetSavingsGoalEditor}
+            onEditSavingsEntry={handleEditSavingsEntry}
+            onDeleteSavingsEntry={handleDeleteSavingsEntry}
+            onCancelSavingsEntryEdit={resetSavingsEntryEditor}
+            onSavingsWithdraw={handleSavingsWithdraw}
             savingsBusy={savingsBusy}
             savingsTargetBusy={savingsTargetBusy}
             isPro={isPro}

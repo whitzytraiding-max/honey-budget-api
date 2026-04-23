@@ -194,5 +194,94 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
     }),
   );
 
+  router.patch(
+    "/api/savings/:entryId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const entryId = Number.parseInt(request.params.entryId, 10);
+      if (!Number.isInteger(entryId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "entryId must be an integer.");
+      }
+      const amount = Number(request.body?.amount);
+      const note = request.body?.note?.trim() || "Savings entry";
+      const date = request.body?.date;
+      const currencyCode = resolveCurrencyCode(
+        request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
+      );
+      const rawGoalId = request.body?.savingsGoalId;
+      const savingsGoalId =
+        rawGoalId === undefined || rawGoalId === null || rawGoalId === ""
+          ? null
+          : Number.parseInt(String(rawGoalId), 10);
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
+      }
+      if (!validateIsoDate(date)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "date must use YYYY-MM-DD.");
+      }
+
+      const entry = await budgetRepository.updateSavingsEntry({
+        entryId,
+        userId: request.user.id,
+        amount,
+        note,
+        date,
+        currencyCode,
+        savingsGoalId,
+      });
+      sendData(response, 200, { entry });
+    }),
+  );
+
+  router.delete(
+    "/api/savings/:entryId",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const entryId = Number.parseInt(request.params.entryId, 10);
+      if (!Number.isInteger(entryId)) {
+        throw new HttpError(400, "VALIDATION_ERROR", "entryId must be an integer.");
+      }
+      const entry = await budgetRepository.deleteSavingsEntry({
+        entryId,
+        userId: request.user.id,
+      });
+      sendData(response, 200, { entry });
+    }),
+  );
+
+  // Transfer from savings back to current balance (negative savings entry)
+  router.post(
+    "/api/savings/withdraw",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const amount = Number(request.body?.amount);
+      const note = request.body?.note?.trim() || "Transfer to current";
+      const currencyCode = resolveCurrencyCode(
+        request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
+      );
+      const rawGoalId = request.body?.savingsGoalId;
+      const savingsGoalId =
+        rawGoalId === undefined || rawGoalId === null || rawGoalId === ""
+          ? null
+          : Number.parseInt(String(rawGoalId), 10);
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (!Number.isFinite(amount) || amount <= 0) {
+        throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
+      }
+
+      const entry = await budgetRepository.addSavingsEntry({
+        userId: request.user.id,
+        savingsGoalId,
+        amount: -amount,
+        currencyCode,
+        note,
+        date: today,
+      });
+      sendData(response, 201, { entry });
+    }),
+  );
+
   return router;
 }

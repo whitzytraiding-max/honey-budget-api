@@ -1603,6 +1603,24 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapSavingsEntry(entry);
     },
 
+    async updateSavingsEntry({ entryId, userId, amount, note, date, currencyCode, savingsGoalId }) {
+      const existing = await prisma.savingsEntry.findFirst({ where: { id: entryId, userId } });
+      if (!existing) throw new HttpError(404, "NOT_FOUND", "Savings entry not found.");
+      const entry = await prisma.savingsEntry.update({
+        where: { id: entryId },
+        data: { amount, note, date: new Date(`${date}T00:00:00.000Z`), currencyCode, savingsGoalId },
+        include: { user: { select: { name: true } }, savingsGoal: { select: { title: true } } },
+      });
+      return mapSavingsEntry(entry);
+    },
+
+    async deleteSavingsEntry({ entryId, userId }) {
+      const existing = await prisma.savingsEntry.findFirst({ where: { id: entryId, userId } });
+      if (!existing) throw new HttpError(404, "NOT_FOUND", "Savings entry not found.");
+      await prisma.savingsEntry.delete({ where: { id: entryId } });
+      return mapSavingsEntry(existing);
+    },
+
     async listSavingsEntriesForUserIds({ userIds, days = 365 }) {
       const filteredUserIds = [...new Set(userIds.filter((value) => Number.isInteger(value)))];
 
