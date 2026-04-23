@@ -167,28 +167,12 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
 
   const totalSpent = summary?.totalSpent ?? 0;
 
-  // Donut: Bills vs Flex — falls back to top category vs rest when no recurring bills
-  const recurringSpent = summary?.recurringSpent ?? 0;
-  const hasRecurring = recurringSpent > 0;
-
-  const typeData = hasRecurring
-    ? [
-        { name: "Bills", value: recurringSpent, color: REC_COLOR },
-        { name: "Flex",  value: summary?.oneTimeSpent ?? 0, color: ONCE_COLOR },
-      ].filter((d) => d.value > 0)
-    : cats.length > 0
-      ? [
-          { name: cats[0].category, value: cats[0].amount, color: CAT_COLORS[0] },
-          { name: "Other", value: Math.max(0, totalSpent - cats[0].amount), color: CAT_COLORS[2] },
-        ].filter((d) => d.value > 0)
-      : [];
-
-  const rightLabel  = hasRecurring
-    ? currency(recurringSpent)
-    : cats.length > 0 ? `${cats[0].sharePct}%` : "—";
-  const rightSublabel = hasRecurring
-    ? "bills"
-    : cats.length > 0 ? cats[0].category.toLowerCase() : "";
+  // Donut: all spending categories
+  const catData = cats.slice(0, 6).map((cat, i) => ({
+    name: cat.category,
+    value: cat.amount,
+    color: CAT_COLORS[i % CAT_COLORS.length],
+  })).filter((d) => d.value > 0);
 
   return (
     <div className="space-y-5">
@@ -223,7 +207,7 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
       </section>
 
       {/* ── Spending donuts ──────────────────────────────────────────────── */}
-      {(payMethodData.length > 0 || typeData.length > 0) && (
+      {(payMethodData.length > 0 || catData.length > 0) && (
         <section className="hb-surface-card rounded-[2rem] p-5">
           <div className="flex items-center gap-2 mb-4">
             <Wallet className="h-4 w-4 text-[#245188]" />
@@ -250,18 +234,18 @@ export default function InsightsPage({ insightsBusy, insights, dashboard }) {
               </div>
             )}
 
-            {/* Bills vs Flex — or top category vs rest */}
-            {typeData.length > 0 && (
+            {/* By category donut */}
+            {catData.length > 0 && (
               <div>
                 <DonutChart
-                  data={typeData}
-                  label={rightLabel}
-                  sublabel={rightSublabel}
+                  data={catData}
+                  label={`${cats[0]?.sharePct ?? 0}%`}
+                  sublabel={cats[0]?.category?.toLowerCase() ?? "top"}
                 />
-                <div className="mt-2 flex justify-center gap-3">
-                  {typeData.map((d) => (
+                <div className="mt-2 flex flex-wrap justify-center gap-x-2 gap-y-1">
+                  {catData.map((d) => (
                     <div key={d.name} className="flex items-center gap-1">
-                      <div className="h-2 w-2 rounded-full" style={{ background: d.color }} />
+                      <div className="h-2 w-2 shrink-0 rounded-full" style={{ background: d.color }} />
                       <span className="text-[10px] text-slate-600">{d.name}</span>
                     </div>
                   ))}

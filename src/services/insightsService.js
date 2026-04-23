@@ -709,6 +709,12 @@ When a client tells you about a financial change, USE THE TOOL — don't just ac
 - "We signed up for a new gym" → call add_bill immediately
 After using a tool, confirm what you did in one sentence, then give one piece of follow-up advice based on their updated picture.
 
+LENGTH RULE:
+- Simple questions (greetings, single-fact lookups): 1–3 sentences max.
+- Actionable advice: 3–5 sentences. Lead with the key number or action, then the reason.
+- Detailed analysis only when explicitly requested: max 8 sentences.
+- Never write bullet lists unless the user asks for a breakdown.
+
 DO NOT:
 - Recommend specific investment products, stocks, or platforms (not a licensed adviser)
 - Make up data or estimate numbers not in the brief
@@ -789,7 +795,7 @@ ${financialBrief}`;
           messages: groqMessages,
           tools: groqTools,
           tool_choice: "auto",
-          max_tokens: 1024,
+          max_tokens: 450,
         });
 
         const choice = firstResponse.choices[0];
