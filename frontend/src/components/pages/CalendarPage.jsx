@@ -1,7 +1,10 @@
-import { CalendarDays, ReceiptText, Wallet } from "lucide-react";
+import { useState } from "react";
+import { CalendarDays, ReceiptText, Wallet, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, formatShortDate } from "../../lib/format.js";
 import { Input } from "../ui.jsx";
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function buildMonthGrid(selectedMonth, transactions, users) {
   const [yearText, monthText] = selectedMonth.split("-");
@@ -12,27 +15,132 @@ function buildMonthGrid(selectedMonth, transactions, users) {
   const startWeekday = firstDay.getDay();
   const daysInMonth = lastDay.getDate();
   const spendingDays = new Set(
-    transactions.map((transaction) => Number(transaction.date.slice(8, 10))),
+    transactions.map((t) => Number(t.date.slice(8, 10))),
   );
-  const incomeDays = new Set(users.map((user) => Number(user.incomeDayOfMonth ?? 1)));
+  const incomeDays = new Set(users.map((u) => Number(u.incomeDayOfMonth ?? 1)));
   const cells = [];
 
-  for (let index = 0; index < startWeekday; index += 1) {
-    cells.push(null);
-  }
-
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    cells.push({
-      day,
-      hasIncome: incomeDays.has(day),
-      hasSpend: spendingDays.has(day),
-    });
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({ day, hasIncome: incomeDays.has(day), hasSpend: spendingDays.has(day) });
   }
 
   return {
     label: new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(firstDay),
     cells,
   };
+}
+
+function DayModal({ day, selectedMonth, transactions, users, onClose }) {
+  const [yearText, monthText] = selectedMonth.split("-");
+  const dayTransactions = transactions.filter(
+    (t) => Number(t.date.slice(8, 10)) === day,
+  );
+  const incomeUsers = users.filter(
+    (u) => Number(u.incomeDayOfMonth ?? 1) === day,
+  );
+  const dayLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+  }).format(new Date(Number(yearText), Number(monthText) - 1, day));
+  const totalSpent = dayTransactions.reduce(
+    (sum, t) => sum + Number(t.displayAmount ?? t.amount ?? 0),
+    0,
+  );
+  const hasActivity = incomeUsers.length > 0 || dayTransactions.length > 0;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-h-[80vh] overflow-y-auto rounded-t-[2rem] bg-white px-5 pb-8 pt-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Handle bar */}
+        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200" />
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-lg font-semibold text-slate-900">{dayLabel}</p>
+          <button
+            onClick={onClose}
+            className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Income rows */}
+        {incomeUsers.map((u) => (
+          <div
+            key={u.id}
+            className="mb-2 flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3"
+          >
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-white p-2 shadow-sm">
+                <Wallet className="h-4 w-4 text-emerald-600" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {u.name}&rsquo;s income
+                </p>
+                <p className="text-xs text-slate-500">Monthly salary</p>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-emerald-600">
+              +{currency(u.monthlySalary ?? 0)}
+            </p>
+          </div>
+        ))}
+
+        {/* Transaction rows */}
+        {dayTransactions.map((t) => (
+          <div
+            key={t.id}
+            className="mb-2 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3"
+          >
+            <div className="flex items-center gap-3">
+              <span className="rounded-full bg-white p-2 shadow-sm">
+                <ReceiptText className="h-4 w-4 text-sky-600" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-slate-900">
+                  {t.description}
+                </p>
+                <p className="text-xs text-slate-500">
+                  {t.category} · {t.paymentMethod}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-slate-900">
+              -{currency(t.displayAmount ?? t.amount ?? 0)}
+            </p>
+          </div>
+        ))}
+
+        {/* Empty state */}
+        {!hasActivity && (
+          <p className="py-8 text-center text-sm text-slate-400">
+            No activity on this day.
+          </p>
+        )}
+
+        {/* Day total */}
+        {dayTransactions.length > 0 && (
+          <div className="mt-3 flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              Total spent
+            </p>
+            <p className="text-base font-bold text-slate-900">
+              {currency(totalSpent)}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function CalendarPage({
@@ -43,7 +151,14 @@ function CalendarPage({
   householdUsers,
 }) {
   const { t } = useLanguage();
+  const [selectedDay, setSelectedDay] = useState(null);
   const grid = buildMonthGrid(selectedMonth, monthTransactions, householdUsers);
+
+  // Determine today's day number if we're viewing the current month
+  const today = new Date();
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const todayDay = selectedMonth === currentMonthStr ? today.getDate() : null;
+
   const featuredEvents = [
     ...householdUsers.map((user) => ({
       key: `income-${user.id}`,
@@ -99,27 +214,48 @@ function CalendarPage({
               </span>
             </div>
           </div>
+
+          {/* Day name headers */}
+          <div className="mb-1 grid grid-cols-7 gap-1.5 text-center sm:gap-2">
+            {DAY_NAMES.map((name) => (
+              <div key={name} className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                {name}
+              </div>
+            ))}
+          </div>
+
+          {/* Day cells */}
           <div className="grid grid-cols-7 gap-1.5 text-center sm:gap-2">
             {grid.cells.map((cell, index) =>
               cell ? (
-                <div
+                <button
                   key={`${cell.day}-${index}`}
-                  className="rounded-[0.85rem] bg-white/96 px-1 py-2 text-xs text-slate-700 shadow-sm sm:rounded-xl sm:text-sm"
+                  type="button"
+                  onClick={() => setSelectedDay(cell.day)}
+                  className={`rounded-[0.85rem] px-1 py-2 text-xs shadow-sm transition-transform active:scale-95 sm:rounded-xl sm:text-sm ${
+                    todayDay === cell.day
+                      ? "bg-sky-500 text-white font-semibold"
+                      : "bg-white/96 text-slate-700 hover:bg-sky-50"
+                  }`}
                 >
                   <div>{cell.day}</div>
                   <div className="mt-1 flex justify-center gap-1">
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        cell.hasIncome ? "bg-emerald-500" : "bg-transparent"
+                        cell.hasIncome
+                          ? todayDay === cell.day ? "bg-white" : "bg-emerald-500"
+                          : "bg-transparent"
                       }`}
                     />
                     <span
                       className={`h-1.5 w-1.5 rounded-full ${
-                        cell.hasSpend ? "bg-sky-500" : "bg-transparent"
+                        cell.hasSpend
+                          ? todayDay === cell.day ? "bg-sky-200" : "bg-sky-500"
+                          : "bg-transparent"
                       }`}
                     />
                   </div>
-                </div>
+                </button>
               ) : (
                 <div key={`empty-${index}`} />
               ),
@@ -194,6 +330,17 @@ function CalendarPage({
           </div>
         </section>
       </div>
+
+      {/* Day detail modal */}
+      {selectedDay !== null && (
+        <DayModal
+          day={selectedDay}
+          selectedMonth={selectedMonth}
+          transactions={monthTransactions}
+          users={householdUsers}
+          onClose={() => setSelectedDay(null)}
+        />
+      )}
     </div>
   );
 }
