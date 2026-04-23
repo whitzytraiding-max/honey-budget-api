@@ -136,7 +136,7 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
     requireAuth,
     asyncHandler(async (request, response) => {
       const amount = Number(request.body?.amount);
-      const note = request.body?.note?.trim();
+      const note = request.body?.note?.trim() || "Savings entry";
       const date = request.body?.date;
       const currencyCode = resolveCurrencyCode(
         request.body?.currencyCode || request.user.incomeCurrencyCode || "USD",
@@ -149,10 +149,6 @@ export function createSavingsRoutes({ budgetRepository, exchangeRateService, req
 
       if (!Number.isFinite(amount) || amount <= 0) {
         throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
-      }
-
-      if (!note) {
-        throw new HttpError(400, "VALIDATION_ERROR", "note is required.");
       }
 
       if (!validateIsoDate(date)) {

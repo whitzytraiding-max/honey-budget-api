@@ -2147,12 +2147,6 @@ export default function App() {
       return;
     }
 
-    if (!savingsForm.note.trim()) {
-      setPageError("Add a note for this savings entry.");
-      setSavingsBusy(false);
-      return;
-    }
-
     if (!savingsForm.date) {
       setPageError("Pick the savings date.");
       setSavingsBusy(false);
