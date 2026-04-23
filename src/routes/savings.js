@@ -7,7 +7,7 @@ import express from "express";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolveCurrencyCode } from "../services/currencyConversionService.js";
 import { parseMoney, validateIsoDate } from "../lib/parsers.js";
-import { buildSavingsSummary } from "../lib/builders.js";
+import { buildSavingsSummary, resolvePartnerUser } from "../lib/builders.js";
 
 export function createSavingsRoutes({ budgetRepository, exchangeRateService, requireAuth }) {
   const router = express.Router();
