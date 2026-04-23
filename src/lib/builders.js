@@ -254,6 +254,20 @@ export async function buildMonthlySummary({
   const monthlyTransactions = transactions.filter(
     (transaction) => transaction.date >= from && transaction.date <= to,
   );
+
+  // Fetch savings entries logged in this period
+  const allSavingsEntries = await budgetRepository.listSavingsEntriesForUserIds({
+    userIds: activeUsers.map((u) => u.id),
+    days: Math.max(days + 10, 120),
+  });
+  const periodSavingsEntries = allSavingsEntries.filter(
+    (e) => e.date >= from && e.date <= to,
+  );
+  const totalSaved = periodSavingsEntries.reduce(
+    (sum, e) => sum + converter.convert(e.amount, e.currencyCode),
+    0,
+  );
+
   const householdIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.monthlySalary ?? 0, user.incomeCurrencyCode);
   }, 0);
@@ -283,7 +297,7 @@ export async function buildMonthlySummary({
         : 0)
     );
   }, 0);
-  const remainingBudget = roundCurrency(householdIncome - totalExpenses);
+  const remainingBudget = roundCurrency(householdIncome - totalExpenses - totalSaved);
   const cashRemaining = roundCurrency(cashIncome - cashSpent);
   const cardRemaining = roundCurrency(cardIncome - cardSpent);
   const remainingPct =
@@ -328,6 +342,7 @@ export async function buildMonthlySummary({
     cashIncome: roundCurrency(cashIncome),
     cardIncome: roundCurrency(cardIncome),
     totalExpenses: roundCurrency(totalExpenses),
+    totalSaved: roundCurrency(totalSaved),
     cashSpent: roundCurrency(cashSpent),
     cardSpent: roundCurrency(cardSpent),
     remainingBudget,
