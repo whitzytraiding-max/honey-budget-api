@@ -296,6 +296,8 @@ export function normalizeRecurringBillPayload(payload, currentUser) {
   const endDate = String(payload?.endDate ?? "").trim();
   const isActive = parseBoolean(payload?.isActive, true);
   const autoCreate = parseBoolean(payload?.autoCreate, true);
+  const rawPaidBy = String(payload?.paidBy ?? "joint").trim().toLowerCase();
+  const paidBy = ["joint", "user", "partner"].includes(rawPaidBy) ? rawPaidBy : "joint";
 
   if (!title) {
     throw new HttpError(400, "VALIDATION_ERROR", "title is required.");
@@ -348,6 +350,7 @@ export function normalizeRecurringBillPayload(payload, currentUser) {
     paymentMethod,
     dayOfMonth,
     notes,
+    paidBy,
     currencyCode,
     startDate: new Date(`${startDate}T00:00:00.000Z`),
     endDate: endDate ? new Date(`${endDate}T00:00:00.000Z`) : null,

@@ -272,6 +272,7 @@ function createRecurringBillDraft(bill, fallbackCurrency = "USD") {
     paymentMethod: String(bill?.paymentMethod ?? "card"),
     dayOfMonth: String(bill?.dayOfMonth ?? 1),
     notes: String(bill?.notes ?? ""),
+    paidBy: String(bill?.paidBy ?? "joint"),
     autoCreate: bill?.autoCreate ?? true,
     startDate: String(bill?.startDate ?? getTodayLocalIso()),
     endDate: String(bill?.endDate ?? ""),

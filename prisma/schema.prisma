@@ -242,6 +242,7 @@ model RecurringBill {
   paymentMethod String   @map("payment_method")
   dayOfMonth    Int      @map("day_of_month")
   notes         String?  @map("notes")
+  paidBy        String   @default("joint") @map("paid_by")
   isActive      Boolean  @default(true) @map("is_active")
   autoCreate    Boolean  @default(true) @map("auto_create")
   startDate     DateTime @db.Date @map("start_date")

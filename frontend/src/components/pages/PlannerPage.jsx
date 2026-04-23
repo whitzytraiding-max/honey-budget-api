@@ -133,6 +133,17 @@ function PlannerPage({
                   ]}
                 />
               </div>
+              <Select
+                label="Who pays this bill?"
+                name="paidBy"
+                value={recurringBillForm.paidBy}
+                onChange={onRecurringBillChange}
+                options={[
+                  { value: "joint", label: "Joint — both pay this" },
+                  { value: "user", label: "Mine — I pay this" },
+                  { value: "partner", label: "Partner — they pay this" },
+                ]}
+              />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   label="Start date"
@@ -191,7 +202,24 @@ function PlannerPage({
                   >
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="font-semibold text-slate-900">{bill.title}</p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-slate-900">{bill.title}</p>
+                          {bill.paidBy === "joint" && (
+                            <span className="inline-flex items-center rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-medium text-violet-700">
+                              Joint
+                            </span>
+                          )}
+                          {bill.paidBy === "user" && (
+                            <span className="inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                              {bill.userName ?? "Mine"}
+                            </span>
+                          )}
+                          {bill.paidBy === "partner" && (
+                            <span className="inline-flex items-center rounded-full bg-pink-100 px-2 py-0.5 text-[11px] font-medium text-pink-700">
+                              Partner
+                            </span>
+                          )}
+                        </div>
                         <p className="mt-1 text-sm text-slate-600">
                           {currency(bill.displayAmount)} · {bill.category} · {bill.userName}
                         </p>
