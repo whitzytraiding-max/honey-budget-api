@@ -171,6 +171,13 @@ function AppShell({
         <footer className="mt-6 px-2 text-center text-xs leading-5 text-slate-500">
           <p>{t("legal.ownership")}</p>
           <p>{t("legal.rightsReserved")}</p>
+          <button
+            className="mt-1 underline underline-offset-2 transition hover:text-slate-700"
+            onClick={() => onNavigate("privacy-policy")}
+            type="button"
+          >
+            Privacy Policy
+          </button>
         </footer>
       </div>
 

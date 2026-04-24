@@ -134,8 +134,35 @@ function EmptyState({ title, body, action }) {
   );
 }
 
+function ConfirmDialog({ message, confirmLabel = "Delete", onConfirm, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="hb-surface-card w-full max-w-sm rounded-[2rem] p-6 shadow-xl">
+        <p className="text-base font-medium text-slate-900">{message}</p>
+        <div className="mt-6 flex gap-3">
+          <button
+            className="flex-1 rounded-[1rem] border border-slate-200 bg-white/80 px-4 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            onClick={onCancel}
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            className="flex-1 rounded-[1rem] bg-rose-500 px-4 py-3 text-sm font-medium text-white transition hover:bg-rose-600"
+            onClick={onConfirm}
+            type="button"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export {
   ActionButton,
+  ConfirmDialog,
   EmptyState,
   InsightSkeleton,
   Input,

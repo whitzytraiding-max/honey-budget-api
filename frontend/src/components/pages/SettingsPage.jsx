@@ -30,6 +30,7 @@ function SettingsPage({
   onInvitePartner,
   onUnlinkPartner,
   inviteBusy,
+  onNavigate,
 }) {
   const [activeTab, setActiveTab] = useState("profile");
   const [couponCode, setCouponCode] = useState("");
@@ -483,6 +484,18 @@ function SettingsPage({
           </p>
         )}
       </section>
+
+      {onNavigate && (
+        <div className="flex justify-center pb-2">
+          <button
+            className="text-xs text-slate-400 underline underline-offset-2 transition hover:text-slate-600"
+            onClick={() => onNavigate("privacy-policy")}
+            type="button"
+          >
+            Privacy Policy
+          </button>
+        </div>
+      )}
     </div>
   );
 }

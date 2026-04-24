@@ -22,7 +22,8 @@ import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
 import PaywallPage from "./components/pages/PaywallPage.jsx";
-import { ActionButton, EmptyState } from "./components/ui.jsx";
+import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage.jsx";
+import { ActionButton, ConfirmDialog, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { addBackButtonListener, setStatusBarForTheme } from "./lib/native.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
@@ -107,6 +108,7 @@ const APP_ROUTES = new Set([
   "history",
   "settings",
   "paywall",
+  "privacy-policy",
   "reset-password",
 ]);
 
@@ -434,6 +436,7 @@ export default function App() {
       return new Set();
     }
   });
+  const [confirmDialog, setConfirmDialog] = useState(null);
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
     return new URLSearchParams(hashLocation.query).get("token")?.trim() || "";
@@ -665,6 +668,22 @@ export default function App() {
 
     setAuthMode((current) => (current === "reset" ? "login" : current));
   }, [route, token]);
+
+  function showConfirm(message) {
+    return new Promise((resolve) => {
+      setConfirmDialog({ message, resolve });
+    });
+  }
+
+  function handleConfirmYes() {
+    confirmDialog?.resolve(true);
+    setConfirmDialog(null);
+  }
+
+  function handleConfirmNo() {
+    confirmDialog?.resolve(false);
+    setConfirmDialog(null);
+  }
 
   function clearAuthFeedback() {
     setAuthError("");
@@ -1661,7 +1680,7 @@ export default function App() {
   }
 
   async function handleDeleteTransaction(transaction) {
-    const confirmed = window.confirm(
+    const confirmed = await showConfirm(
       `Delete "${transaction.description}" from ${transaction.date}?`,
     );
 
@@ -1760,7 +1779,7 @@ export default function App() {
   }
 
   async function handleDeleteRecurringBill(bill) {
-    const confirmed = window.confirm(`Delete recurring bill "${bill.title}"?`);
+    const confirmed = await showConfirm(`Delete recurring bill "${bill.title}"?`);
     if (!confirmed) {
       return;
     }
@@ -1848,7 +1867,7 @@ export default function App() {
   }
 
   async function handleDeleteHouseholdRule(rule) {
-    const confirmed = window.confirm(`Delete rule "${rule.title}"?`);
+    const confirmed = await showConfirm(`Delete rule "${rule.title}"?`);
     if (!confirmed) {
       return;
     }
@@ -2109,7 +2128,7 @@ export default function App() {
   }
 
   async function handleDeleteSavingsGoal(goal) {
-    const confirmed = window.confirm(`Delete the savings goal "${goal.title}"?`);
+    const confirmed = await showConfirm(`Delete the savings goal "${goal.title}"?`);
     if (!confirmed) {
       return;
     }
@@ -2154,7 +2173,7 @@ export default function App() {
 
   async function handleDeleteSavingsEntry(entry) {
     const label = entry.note && entry.note !== "Savings entry" ? entry.note : "this savings entry";
-    if (!window.confirm(`Delete ${label}?`)) return;
+    if (!await showConfirm(`Delete ${label}?`)) return;
     setSavingsBusy(true);
     setPageError("");
     try {
@@ -2637,6 +2656,7 @@ export default function App() {
             onInvitePartner={handleInvitePartnerFromSettings}
             onUnlinkPartner={handleUnlinkPartner}
             inviteBusy={linkBusy}
+            onNavigate={navigate}
           />
         );
       case "paywall":
@@ -2650,6 +2670,8 @@ export default function App() {
             onContinueFree={() => navigate("home")}
           />
         );
+      case "privacy-policy":
+        return <PrivacyPolicyPage onBack={() => navigate("settings")} />;
       case "home":
       default:
         return (
@@ -2670,25 +2692,34 @@ export default function App() {
   }
 
   return (
-    <AppShell
-      route={route}
-      onNavigate={navigate}
-      coupleNames={coupleNames}
-      remainingBudget={remainingBudget}
-      showNotifications
-      showCoach={showCoach}
-      showPlanner={showPlanner}
-      showSetup={showSetup}
-      hiddenNavItems={hiddenNavItems}
-      onHideNavItem={toggleHideNavItem}
-      onLogout={handleLogout}
-      pageError={pageError}
-      onDismissError={() => setPageError("")}
-      onRetryLoad={!session ? () => refreshDashboardBundle().catch((error) => setPageError(error.message)) : undefined}
-    >
-      <div key={route} className="hb-page-enter">
-        {renderCurrentPage()}
-      </div>
-    </AppShell>
+    <>
+      <AppShell
+        route={route}
+        onNavigate={navigate}
+        coupleNames={coupleNames}
+        remainingBudget={remainingBudget}
+        showNotifications
+        showCoach={showCoach}
+        showPlanner={showPlanner}
+        showSetup={showSetup}
+        hiddenNavItems={hiddenNavItems}
+        onHideNavItem={toggleHideNavItem}
+        onLogout={handleLogout}
+        pageError={pageError}
+        onDismissError={() => setPageError("")}
+        onRetryLoad={!session ? () => refreshDashboardBundle().catch((error) => setPageError(error.message)) : undefined}
+      >
+        <div key={route} className="hb-page-enter">
+          {renderCurrentPage()}
+        </div>
+      </AppShell>
+      {confirmDialog && (
+        <ConfirmDialog
+          message={confirmDialog.message}
+          onConfirm={handleConfirmYes}
+          onCancel={handleConfirmNo}
+        />
+      )}
+    </>
   );
 }
