@@ -205,13 +205,21 @@ export function createAuthRoutes({
           expiresAt,
         });
 
-        const mailResult = emailService
-          ? await emailService.sendPasswordResetEmail({
+        let mailResult;
+        if (emailService) {
+          try {
+            mailResult = await emailService.sendPasswordResetEmail({
               to: authUser.email,
               name: authUser.name,
               resetUrl,
-            })
-          : { preview: true, resetUrl };
+            });
+          } catch (emailErr) {
+            console.error("[forgot-password] Email send failed:", emailErr?.message ?? emailErr);
+            mailResult = { delivered: false, preview: false };
+          }
+        } else {
+          mailResult = { preview: true, resetUrl };
+        }
 
         if (mailResult.preview && process.env.NODE_ENV !== "production") {
           previewResetUrl = mailResult.resetUrl || resetUrl;
