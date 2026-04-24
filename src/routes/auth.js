@@ -213,14 +213,14 @@ export function createAuthRoutes({
             })
           : { preview: true, resetUrl };
 
-        if (mailResult.preview) {
+        if (mailResult.preview && process.env.NODE_ENV !== "production") {
           previewResetUrl = mailResult.resetUrl || resetUrl;
         }
       }
 
       sendData(response, 200, {
         message: "If that email exists, we sent a password reset link.",
-        previewResetUrl,
+        ...(process.env.NODE_ENV !== "production" && previewResetUrl ? { previewResetUrl } : {}),
       });
     }),
   );

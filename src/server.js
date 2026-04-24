@@ -51,6 +51,10 @@ if (isProduction && !jwtSecret) {
   throw new Error("JWT_SECRET is required in production.");
 }
 
+if (isProduction && !process.env.ADMIN_SECRET?.trim()) {
+  throw new Error("ADMIN_SECRET is required in production.");
+}
+
 if (isProduction && !resetPasswordUrlBase) {
   throw new Error(
     "RESET_PASSWORD_URL_BASE or APP_BASE_URL is required in production.",
@@ -119,6 +123,7 @@ if (isProduction) {
 serverApp.use(
   helmet({
     contentSecurityPolicy: false,
+    hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true } : false,
   }),
 );
 serverApp.use((request, response, next) => {
@@ -159,6 +164,16 @@ serverApp.use(
     max: 300,
     standardHeaders: true,
     legacyHeaders: false,
+  }),
+);
+serverApp.use(
+  /^\/api\/auth\/(login|register|forgot-password)/,
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: { code: "RATE_LIMITED", message: "Too many attempts. Please try again later." } },
   }),
 );
 serverApp.use(express.json({ limit: "10mb" }));

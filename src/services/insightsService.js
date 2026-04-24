@@ -383,7 +383,7 @@ function createInsightsService({
           // Clear mem cache entry so the background call actually fetches fresh data
           memCache.delete(cacheKey);
           getAiInsights({ coupleId, currentUser, partnerUser, days, displayCurrency, coachProfile, trendMonths, snapshot: prebuiltSnapshot })
-            .catch(() => {});
+            .catch((err) => console.error("[insights] background refresh failed:", err?.message ?? err));
         });
         return db.value;
       }

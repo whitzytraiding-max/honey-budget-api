@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import httpMocks from "node-mocks-http";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../src/app.js";
+import { createAuthService } from "../src/lib/auth.js";
 import { HttpError } from "../src/lib/http.js";
 import { createFallbackInsights, createInsightsService } from "../src/services/insightsService.js";
 
@@ -1194,9 +1195,13 @@ describe("Couples Budgeting API", () => {
       jsonParser: (_request, _response, next) => next(),
     });
 
+    const fxUser = await repository.createUser({ name: "FX User", email: "fxuser@example.com", passwordHash: "x", monthlySalary: 1000, incomeCurrencyCode: "USD" });
+    const fxToken = createAuthService({ jwtSecret: "test-secret" }).signAccessToken(fxUser);
+
     const response = await inject(exchangeApp, {
       method: "GET",
       url: "/api/exchange-rate?from=USD&to=EUR",
+      headers: { Authorization: `Bearer ${fxToken}` },
     });
 
     expect(response.status).toBe(200);

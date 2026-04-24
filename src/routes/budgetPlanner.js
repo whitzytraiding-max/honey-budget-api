@@ -15,7 +15,6 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
     requireAuth,
     asyncHandler(async (request, response) => {
       const { data, mimeType, filename } = request.body ?? {};
-      console.log("[budget-planner] parse called, filename:", filename, "mimeType:", mimeType, "dataLen:", data?.length);
 
       if (!data) {
         throw new HttpError(400, "FILE_REQUIRED", "Please upload a spreadsheet file.");
@@ -40,10 +39,8 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
 
       try {
         const { parsedPlan, questions, extractedText } = budgetPlannerService.parseSpreadsheet(buffer, mimeType ?? "");
-        console.log("[budget-planner] parse OK, months:", parsedPlan?.months?.length);
         sendData(response, 200, { parsedPlan, questions, extractedText });
       } catch (err) {
-        console.error("Budget planner parse error:", err?.message ?? err);
         throw new HttpError(500, "PARSE_FAILED", err?.message ?? "Failed to analyse the spreadsheet.");
       }
     }),
@@ -138,7 +135,12 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
 
       // For the most recent plan, compute actuals per month
       const activePlan = plans[0];
-      const parsedPlan = JSON.parse(activePlan.planJson);
+      let parsedPlan;
+      try {
+        parsedPlan = JSON.parse(activePlan.planJson);
+      } catch {
+        throw new HttpError(500, "PLAN_CORRUPT", "Active budget plan data is corrupt. Please re-upload your spreadsheet.");
+      }
       const roadmap = await buildRoadmap({ budgetRepository, userId: request.user.id, parsedPlan });
 
       sendData(response, 200, { plans: plans.map((p) => ({ ...p, planJson: undefined })), activePlan: { ...activePlan, parsedPlan, roadmap } });

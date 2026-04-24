@@ -12,6 +12,7 @@ export function createExchangeRoutes({ budgetRepository, exchangeRateService, re
 
   router.get(
     "/api/exchange-rate",
+    requireAuth,
     asyncHandler(async (request, response) => {
       const from = String(request.query.from ?? "").trim().toUpperCase();
       const to = String(request.query.to ?? "").trim().toUpperCase();
