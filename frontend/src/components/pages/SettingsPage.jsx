@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Settings2, Sparkles, UserMinus, UserPlus, Users } from "lucide-react";
+import { Lock, Settings2, Sparkles, UserMinus, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
 
-const SETTINGS_TABS = ["profile", "display", "mmk"];
+const MMK_UNLOCK_CODE = "YANGON-2026";
 
 function SettingsPage({
   session,
@@ -32,6 +32,10 @@ function SettingsPage({
   inviteBusy,
   onNavigate,
 }) {
+  const [mmkUnlocked, setMmkUnlocked] = useState(() => localStorage.getItem("hb-mmk-unlocked") === "true");
+  const [mmkCodeInput, setMmkCodeInput] = useState("");
+  const [mmkCodeError, setMmkCodeError] = useState("");
+  const SETTINGS_TABS = mmkUnlocked ? ["profile", "display", "mmk"] : ["profile", "display"];
   const [activeTab, setActiveTab] = useState("profile");
   const [couponCode, setCouponCode] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
@@ -484,6 +488,41 @@ function SettingsPage({
           </p>
         )}
       </section>
+
+      {!mmkUnlocked && (
+        <div className="hb-surface-card rounded-[2rem] p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Lock className="h-4 w-4 text-slate-400" />
+            <p className="text-sm font-medium text-slate-400">Feature unlock</p>
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 rounded-[1rem] border border-slate-200 bg-white/92 px-4 py-3 text-sm font-mono uppercase tracking-widest outline-none placeholder:normal-case placeholder:tracking-normal focus:border-amber-300 focus:ring-4 focus:ring-amber-100/20"
+              placeholder="Enter code"
+              value={mmkCodeInput}
+              maxLength={20}
+              onChange={(e) => { setMmkCodeInput(e.target.value.toUpperCase()); setMmkCodeError(""); }}
+            />
+            <button
+              className="hb-button-primary rounded-[1rem] px-4 py-3 text-sm font-medium"
+              type="button"
+              onClick={() => {
+                if (mmkCodeInput.trim() === MMK_UNLOCK_CODE) {
+                  localStorage.setItem("hb-mmk-unlocked", "true");
+                  setMmkUnlocked(true);
+                  setMmkCodeInput("");
+                  setMmkCodeError("");
+                } else {
+                  setMmkCodeError("Invalid code.");
+                }
+              }}
+            >
+              Unlock
+            </button>
+          </div>
+          {mmkCodeError && <p className="mt-2 text-xs text-rose-400">{mmkCodeError}</p>}
+        </div>
+      )}
 
       {onNavigate && (
         <div className="flex justify-center pb-2">
