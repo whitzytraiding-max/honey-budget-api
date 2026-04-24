@@ -3,6 +3,7 @@
  * Copyright (c) 2026 Whitzy. All rights reserved.
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
+import { useState } from "react";
 import { Brain, TrendingUp, Wallet } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -55,6 +56,7 @@ function AuthPanel({
   previewResetUrl,
   resetToken,
 }) {
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const { t, locale } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
   const showResetForm = Boolean(resetToken) || authMode === "reset";
@@ -199,7 +201,28 @@ function AuthPanel({
                 options={currencyOptions}
               />
               <p className="auth-helper-copy text-sm leading-6 text-slate-600">{t("auth.currencySetupHelp")}</p>
-              <ActionButton busy={isSubmitting}>{t("auth.createAccount")}</ActionButton>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                />
+                <span className="text-sm leading-5 text-slate-600">
+                  I agree to the{" "}
+                  <a
+                    className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-700"
+                    href="https://honeybudget.app/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>
+                </span>
+              </label>
+              <ActionButton busy={isSubmitting} disabled={isSubmitting || !termsAccepted}>
+                {t("auth.createAccount")}
+              </ActionButton>
               {onGoogleAuth ? (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-3">
@@ -207,7 +230,11 @@ function AuthPanel({
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />
+                  {termsAccepted ? (
+                    <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />
+                  ) : (
+                    <p className="text-center text-xs text-slate-400">Accept the Privacy Policy above to continue with Google</p>
+                  )}
                 </div>
               ) : null}
             </form>
