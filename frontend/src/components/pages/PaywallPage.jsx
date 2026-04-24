@@ -22,7 +22,7 @@ const PRO_FEATURES = [
   "Your partner gets Pro free",
 ];
 
-function PaywallPage({ onSubscribe, onContinueFree, busy }) {
+function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy }) {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8 text-center">
@@ -40,7 +40,7 @@ function PaywallPage({ onSubscribe, onContinueFree, busy }) {
 
         <div className="hb-panel-highlight mt-6 rounded-[1.5rem] border border-amber-200/40 p-6">
           <p className="text-4xl font-bold text-slate-900">
-            $5
+            $4.99
             <span className="text-lg font-medium text-slate-500"> / month</span>
           </p>
           <p className="mt-1 text-sm text-slate-500">One subscription covers both partners</p>
@@ -48,16 +48,30 @@ function PaywallPage({ onSubscribe, onContinueFree, busy }) {
           <button
             className="mt-5 w-full rounded-[1.2rem] bg-gradient-to-r from-amber-500 to-amber-400 px-6 py-4 text-base font-semibold text-white shadow-md transition hover:from-amber-600 hover:to-amber-500 disabled:opacity-60"
             onClick={onSubscribe}
-            disabled={busy}
+            disabled={busy || restoreBusy}
             type="button"
           >
-            {busy ? "Loading…" : "Subscribe — $5 / month"}
+            {busy ? "Loading…" : "Subscribe — $4.99 / month"}
           </button>
 
           <p className="mt-3 text-xs text-slate-500">
             Cancel anytime · Billed monthly · Partner rides free
           </p>
+          <p className="mt-1 text-xs text-slate-400">
+            Payment processed securely by Apple
+          </p>
         </div>
+
+        {onRestore && (
+          <button
+            className="mt-4 text-sm text-slate-400 underline underline-offset-4 hover:text-slate-600 disabled:opacity-50"
+            onClick={onRestore}
+            disabled={busy || restoreBusy}
+            type="button"
+          >
+            {restoreBusy ? "Restoring…" : "Restore previous purchase"}
+          </button>
+        )}
       </section>
 
       <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">

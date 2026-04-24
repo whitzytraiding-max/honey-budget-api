@@ -26,6 +26,7 @@ import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage.jsx";
 import { ActionButton, ConfirmDialog, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { addBackButtonListener, setStatusBarForTheme } from "./lib/native.js";
+import { initPurchases, purchaseMonthly, restorePurchases } from "./lib/purchases.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
 
 function getTodayLocalIso() {
@@ -413,6 +414,8 @@ export default function App() {
   );
   const [editingRecurringBillId, setEditingRecurringBillId] = useState(null);
   const [recurringBillBusy, setRecurringBillBusy] = useState(false);
+  const [paywallBusy, setPaywallBusy] = useState(false);
+  const [restoreBusy, setRestoreBusy] = useState(false);
   const [householdRuleForm, setHouseholdRuleForm] = useState(() =>
     createHouseholdRuleDraft(null),
   );
@@ -1020,6 +1023,7 @@ export default function App() {
 
   async function refreshDashboardBundle() {
     const me = await fetchHouseholdData();
+    initPurchases(me.user.id).catch(() => {});
     const isSolo = !me.couple && soloMode;
 
     if (me.couple || isSolo) {
@@ -1411,6 +1415,44 @@ export default function App() {
       refreshDashboardBundle().catch(() => {});
     }
     return { reply: data.reply, actions: data.actions ?? [], history: data.history ?? [] };
+  }
+
+  async function handleSubscribeIAP() {
+    setPaywallBusy(true);
+    setPageError("");
+    try {
+      const confirmed = await purchaseMonthly();
+      if (confirmed) {
+        await refreshDashboardBundle().catch(() => {});
+        navigate("insights");
+      }
+    } catch (error) {
+      const msg = error?.message || "";
+      const isCancelled = msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("user_cancel");
+      if (!isCancelled) {
+        setPageError("Purchase failed. Please try again.");
+      }
+    } finally {
+      setPaywallBusy(false);
+    }
+  }
+
+  async function handleRestorePurchases() {
+    setRestoreBusy(true);
+    setPageError("");
+    try {
+      const confirmed = await restorePurchases();
+      if (confirmed) {
+        await refreshDashboardBundle().catch(() => {});
+        navigate("insights");
+      } else {
+        setPageError("No previous purchases found to restore.");
+      }
+    } catch {
+      setPageError("Restore failed. Please try again.");
+    } finally {
+      setRestoreBusy(false);
+    }
   }
 
   async function handleRedeemCoupon(code) {
@@ -2482,8 +2524,11 @@ export default function App() {
         if (!isPro) {
           return (
             <PaywallPage
-              onSubscribe={() => navigate("paywall")}
+              onSubscribe={handleSubscribeIAP}
               onContinueFree={() => navigate("home")}
+              onRestore={handleRestorePurchases}
+              busy={paywallBusy}
+              restoreBusy={restoreBusy}
             />
           );
         }
@@ -2662,12 +2707,11 @@ export default function App() {
       case "paywall":
         return (
           <PaywallPage
-            onSubscribe={() => {
-              // IAP integration goes here (Apple/Google)
-              // For now, navigate back to insights
-              navigate("insights");
-            }}
+            onSubscribe={handleSubscribeIAP}
             onContinueFree={() => navigate("home")}
+            onRestore={handleRestorePurchases}
+            busy={paywallBusy}
+            restoreBusy={restoreBusy}
           />
         );
       case "privacy-policy":

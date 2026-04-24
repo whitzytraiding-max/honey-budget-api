@@ -28,6 +28,7 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@react-oauth/google": "^0.13.5",
+    "@revenuecat/purchases-capacitor": "^13.0.1",
     "lucide-react": "^0.542.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
