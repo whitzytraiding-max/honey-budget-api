@@ -25,7 +25,7 @@ import PaywallPage from "./components/pages/PaywallPage.jsx";
 import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage.jsx";
 import { ActionButton, ConfirmDialog, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
-import { addBackButtonListener, setStatusBarForTheme } from "./lib/native.js";
+import { addBackButtonListener, addUrlOpenListener, setStatusBarForTheme } from "./lib/native.js";
 import { initPurchases, purchaseMonthly, restorePurchases } from "./lib/purchases.js";
 import { useLanguage } from "./i18n/LanguageProvider.jsx";
 
@@ -440,6 +440,7 @@ export default function App() {
     }
   });
   const [confirmDialog, setConfirmDialog] = useState(null);
+  const [pendingDeepLink, setPendingDeepLink] = useState(null);
   const route = hashLocation.route;
   const resetToken = useMemo(() => {
     return new URLSearchParams(hashLocation.query).get("token")?.trim() || "";
@@ -502,6 +503,29 @@ export default function App() {
       theme === "system" ? (mediaQuery?.matches ? "dark" : "light") : theme;
     setStatusBarForTheme(resolvedTheme);
   }, [theme]);
+
+  // Deep link listener — handles honeybudget:// URLs (e.g. from Back Tap shortcut)
+  useEffect(() => {
+    const cleanup = addUrlOpenListener(({ url }) => {
+      if (!url) return;
+      if (url.startsWith("honeybudget://expenses")) {
+        if (token) {
+          navigate("expenses");
+        } else {
+          setPendingDeepLink("expenses");
+        }
+      }
+    });
+    return () => { cleanup.then?.((fn) => fn?.()); };
+  }, [token]);
+
+  // Once session is ready, action any pending deep link from launch
+  useEffect(() => {
+    if (session && pendingDeepLink) {
+      navigate(pendingDeepLink);
+      setPendingDeepLink(null);
+    }
+  }, [session, pendingDeepLink]);
 
   // Wake the Render backend immediately on app load, then keep it alive every 20 s
   useEffect(() => {

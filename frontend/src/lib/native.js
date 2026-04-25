@@ -142,6 +142,24 @@ export async function addBackButtonListener(handler) {
   }
 }
 
+// ─── Deep links ──────────────────────────────────────────────────────────────
+
+export async function addUrlOpenListener(handler) {
+  if (!isNative()) return () => {};
+  try {
+    const { App } = await import("@capacitor/app");
+    const listener = await App.addListener("appUrlOpen", handler);
+
+    // Also check if the app was launched via a URL (e.g. app was killed)
+    const launch = await App.getLaunchUrl().catch(() => null);
+    if (launch?.url) handler({ url: launch.url });
+
+    return () => listener.remove();
+  } catch {
+    return () => {};
+  }
+}
+
 // ─── Init ────────────────────────────────────────────────────────────────────
 
 export async function initNative({ resolvedTheme = "light" } = {}) {
