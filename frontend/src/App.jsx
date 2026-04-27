@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bell, Brain, CalendarDays, ClipboardList,
+  Bell, Brain, CalendarDays, ClipboardList, CreditCard,
   House, ListTodo, Map, PiggyBank, Settings2, ShieldCheck, Sparkles, Wallet,
 } from "lucide-react";
 
@@ -26,6 +26,7 @@ import SavingsPage from "./components/pages/SavingsPage.jsx";
 import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
 import PaywallPage from "./components/pages/PaywallPage.jsx";
+import DebtPage from "./components/pages/DebtPage.jsx";
 import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage.jsx";
 import TermsOfServicePage from "./components/pages/TermsOfServicePage.jsx";
 import { ActionButton, ConfirmDialog, EmptyState } from "./components/ui.jsx";
@@ -45,6 +46,7 @@ import { useSavings } from "./hooks/useSavings.js";
 import { usePlanner } from "./hooks/usePlanner.js";
 import { useSettings } from "./hooks/useSettings.js";
 import { useCoach } from "./hooks/useCoach.js";
+import { useDebt } from "./hooks/useDebt.js";
 import { usePaywall } from "./hooks/usePaywall.js";
 
 const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "MMK"]);
@@ -64,6 +66,7 @@ const ALL_NAV_ITEMS = [
   { key: "history", icon: ClipboardList },
   { key: "planner", icon: ShieldCheck },
   { key: "budget-planner", icon: Map },
+  { key: "debt", icon: CreditCard },
   { key: "coach", icon: Sparkles },
   { key: "setup", icon: ListTodo },
   { key: "settings", icon: Settings2 },
@@ -137,6 +140,7 @@ export default function App() {
   const savings = useSavings({ appData, showConfirm });
   const planner = usePlanner({ appData, showConfirm, route });
   const coach = useCoach({ appData, navigate });
+  const debt = useDebt({ appData, showConfirm });
   const paywall = usePaywall({ appData, navigate });
 
   const isPro = session?.isPro ?? false;
@@ -154,6 +158,12 @@ export default function App() {
     if (!auth.token || !session?.couple) return;
     dataBundle.refreshBudgetViews({ includeNotifications: false }).catch(() => {});
   }, [currencyCode, dataBundle.coachProfile?.completed]);
+
+  // Load debts on first visit to the debt page
+  useEffect(() => {
+    if (!auth.token || route !== "debt" || debt.debtData) return;
+    debt.loadDebts().catch(() => {});
+  }, [auth.token, route]);
 
   // Deep link handler (iOS external URL open)
   useEffect(() => {
@@ -528,6 +538,29 @@ export default function App() {
         );
       case "budget-planner":
         return <BudgetPlannerPage apiBase={API_BASE_URL} token={auth.token} displayCurrency={currencyCode} />;
+      case "debt":
+        return (
+          <DebtPage
+            debtData={debt.debtData}
+            debtBusy={debt.debtBusy}
+            debtForm={debt.debtForm}
+            editingDebtId={debt.editingDebtId}
+            payingDebtId={debt.payingDebtId}
+            paymentForm={debt.paymentForm}
+            currentUserId={session?.user?.id}
+            baseCurrencyCode={baseCurrencyCode}
+            onDebtChange={debt.updateDebtForm}
+            onDebtSubmit={debt.handleDebtSubmit}
+            onEditDebt={debt.startEditingDebt}
+            onDeleteDebt={debt.handleDeleteDebt}
+            onCancelDebtEdit={debt.resetDebtEditor}
+            onPaymentChange={debt.updatePaymentForm}
+            onPaymentSubmit={debt.handlePaymentSubmit}
+            onOpenPayment={debt.openPaymentForm}
+            onClosePayment={debt.closePaymentForm}
+            onDeletePayment={debt.handleDeletePayment}
+          />
+        );
       case "calendar":
         return <CalendarPage selectedMonth={dataBundle.selectedMonth} onMonthChange={dataBundle.setSelectedMonth} monthSummary={dataBundle.monthSummary} monthTransactions={dataBundle.monthTransactions} householdUsers={householdUsers} />;
       case "history":

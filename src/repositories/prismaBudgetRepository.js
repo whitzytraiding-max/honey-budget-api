@@ -304,6 +304,40 @@ function mapCoupleMmkMonthlyRate(rate) {
   };
 }
 
+function mapDebt(debt) {
+  if (!debt) return null;
+  return {
+    id: debt.id,
+    userId: debt.userId,
+    coupleId: debt.coupleId ?? null,
+    ownerName: debt.user?.name ?? null,
+    title: debt.title,
+    originalAmount: toNumber(debt.originalAmount),
+    currentBalance: toNumber(debt.currentBalance),
+    currencyCode: debt.currencyCode ?? "USD",
+    minimumPayment: debt.minimumPayment != null ? toNumber(debt.minimumPayment) : null,
+    paymentMethod: debt.paymentMethod,
+    paidOffAt: debt.paidOffAt?.toISOString?.() ?? null,
+    createdAt: debt.createdAt?.toISOString?.() ?? debt.createdAt,
+    payments: (debt.payments ?? []).map(mapDebtPayment),
+  };
+}
+
+function mapDebtPayment(payment) {
+  if (!payment) return null;
+  return {
+    id: payment.id,
+    debtId: payment.debtId,
+    userId: payment.userId,
+    transactionId: payment.transactionId ?? null,
+    amount: toNumber(payment.amount),
+    currencyCode: payment.currencyCode ?? "USD",
+    note: payment.note ?? "",
+    date: payment.date instanceof Date ? payment.date.toISOString().slice(0, 10) : payment.date,
+    createdAt: payment.createdAt?.toISOString?.() ?? payment.createdAt,
+  };
+}
+
 function sortTransactions(rows) {
   return rows
     .map(mapTransaction)
@@ -1909,6 +1943,113 @@ function createPrismaBudgetRepository({ prisma }) {
       await prisma.budgetPlan.deleteMany({
         where: { id: planId, userId },
       });
+    },
+
+    // ─── Debt tracking ───────────────────────────────────────────────────────
+
+    async listDebtsForUser(userId) {
+      const couple = await prisma.couple.findFirst({
+        where: { OR: [{ userOneId: userId }, { userTwoId: userId }] },
+      });
+      const partnerUserId = couple
+        ? couple.userOneId === userId ? couple.userTwoId : couple.userOneId
+        : null;
+      const userIds = [userId, partnerUserId].filter(Boolean);
+      const debts = await prisma.debt.findMany({
+        where: { userId: { in: userIds } },
+        include: {
+          user: { select: { name: true } },
+          payments: { orderBy: { date: "desc" } },
+        },
+        orderBy: { createdAt: "asc" },
+      });
+      return debts.map(mapDebt);
+    },
+
+    async createDebt({ userId, coupleId, title, originalAmount, currencyCode, minimumPayment, paymentMethod }) {
+      const debt = await prisma.debt.create({
+        data: {
+          userId,
+          coupleId: coupleId ?? null,
+          title,
+          originalAmount,
+          currentBalance: originalAmount,
+          currencyCode,
+          minimumPayment: minimumPayment ?? null,
+          paymentMethod,
+        },
+        include: { user: { select: { name: true } }, payments: true },
+      });
+      return mapDebt(debt);
+    },
+
+    async updateDebt({ debtId, userId, title, minimumPayment, paymentMethod }) {
+      const existing = await prisma.debt.findFirst({ where: { id: debtId, userId } });
+      if (!existing) return null;
+      const debt = await prisma.debt.update({
+        where: { id: debtId },
+        data: {
+          ...(title !== undefined ? { title } : {}),
+          ...(minimumPayment !== undefined ? { minimumPayment: minimumPayment ?? null } : {}),
+          ...(paymentMethod !== undefined ? { paymentMethod } : {}),
+        },
+        include: { user: { select: { name: true } }, payments: { orderBy: { date: "desc" } } },
+      });
+      return mapDebt(debt);
+    },
+
+    async deleteDebt({ debtId, userId }) {
+      const existing = await prisma.debt.findFirst({ where: { id: debtId, userId } });
+      if (!existing) return false;
+      await prisma.debt.delete({ where: { id: debtId } });
+      return true;
+    },
+
+    async createDebtPayment({ debtId, userId, amount, currencyCode, note, date, transactionId }) {
+      return prisma.$transaction(async (tx) => {
+        const debt = await tx.debt.findUnique({ where: { id: debtId } });
+        if (!debt) return null;
+
+        const payment = await tx.debtPayment.create({
+          data: { debtId, userId, amount, currencyCode, note, date: new Date(`${date}T00:00:00.000Z`), transactionId: transactionId ?? null },
+        });
+
+        const newBalance = Math.max(0, Number(debt.currentBalance) - Number(amount));
+        const updatedDebt = await tx.debt.update({
+          where: { id: debtId },
+          data: {
+            currentBalance: newBalance,
+            paidOffAt: newBalance === 0 ? new Date() : (debt.paidOffAt && newBalance > 0 ? null : debt.paidOffAt),
+          },
+          include: { user: { select: { name: true } }, payments: { orderBy: { date: "desc" } } },
+        });
+
+        return { debt: mapDebt(updatedDebt), payment: mapDebtPayment(payment) };
+      });
+    },
+
+    async deleteDebtPayment({ paymentId, userId }) {
+      const payment = await prisma.debtPayment.findFirst({
+        where: { id: paymentId, userId },
+        include: { debt: true },
+      });
+      if (!payment) return null;
+
+      const transactionId = payment.transactionId;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.debtPayment.delete({ where: { id: paymentId } });
+        const restoredBalance = Math.min(
+          Number(payment.debt.currentBalance) + Number(payment.amount),
+          Number(payment.debt.originalAmount),
+        );
+        await tx.debt.update({
+          where: { id: payment.debtId },
+          data: { currentBalance: restoredBalance, paidOffAt: null },
+        });
+      });
+
+      return transactionId;
     },
   };
 }

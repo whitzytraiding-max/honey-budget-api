@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 const APP_ROUTES = new Set([
   "home", "expenses", "savings", "more", "planner", "budget-planner",
   "setup", "coach", "notifications", "calendar", "insights", "history",
-  "settings", "paywall", "privacy-policy", "terms-of-service", "reset-password",
+  "debt", "settings", "paywall", "privacy-policy", "terms-of-service", "reset-password",
 ]);
 
 function parseHash() {

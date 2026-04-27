@@ -44,6 +44,8 @@ model User {
   coupleAsUserTwo     Couple[]      @relation("CoupleUserTwo")
   couponRedemptions   CouponRedemption[]
   budgetPlans         BudgetPlan[]
+  debts               Debt[]
+  debtPayments        DebtPayment[]
 
   @@map("users")
 }
@@ -77,6 +79,7 @@ model Couple {
   recurringBills    RecurringBill[]
   householdRules    HouseholdRule[]
   budgetPlans       BudgetPlan[]
+  debts             Debt[]
 
   @@map("couples")
 }
@@ -317,4 +320,44 @@ model BudgetPlan {
   couple       Couple?  @relation(fields: [coupleId], references: [id], onDelete: Cascade)
 
   @@map("budget_plans")
+}
+
+model Debt {
+  id             Int           @id @default(autoincrement())
+  userId         Int           @map("user_id")
+  coupleId       Int?          @map("couple_id")
+  title          String
+  originalAmount Decimal       @db.Decimal(12, 2) @map("original_amount")
+  currentBalance Decimal       @db.Decimal(12, 2) @map("current_balance")
+  currencyCode   String        @default("USD") @map("currency_code")
+  minimumPayment Decimal?      @db.Decimal(12, 2) @map("minimum_payment")
+  paymentMethod  String        @default("card") @map("payment_method")
+  paidOffAt      DateTime?     @map("paid_off_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  couple         Couple?       @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+  payments       DebtPayment[]
+
+  @@index([userId, createdAt])
+  @@index([coupleId, createdAt])
+  @@map("debts")
+}
+
+model DebtPayment {
+  id            Int      @id @default(autoincrement())
+  debtId        Int      @map("debt_id")
+  userId        Int      @map("user_id")
+  transactionId Int?     @unique @map("transaction_id")
+  amount        Decimal  @db.Decimal(12, 2)
+  currencyCode  String   @default("USD") @map("currency_code")
+  note          String   @default("")
+  date          DateTime @db.Date
+  createdAt     DateTime @default(now()) @map("created_at")
+  debt          Debt     @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([debtId, date])
+  @@index([userId, date])
+  @@map("debt_payments")
 }
