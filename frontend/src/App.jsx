@@ -23,6 +23,7 @@ import SettingsPage from "./components/pages/SettingsPage.jsx";
 import SetupFlowPage from "./components/pages/SetupFlowPage.jsx";
 import PaywallPage from "./components/pages/PaywallPage.jsx";
 import PrivacyPolicyPage from "./components/pages/PrivacyPolicyPage.jsx";
+import TermsOfServicePage from "./components/pages/TermsOfServicePage.jsx";
 import { ActionButton, ConfirmDialog, EmptyState } from "./components/ui.jsx";
 import { setCurrencyConversionPreferences } from "./lib/format.js";
 import { addBackButtonListener, addUrlOpenListener, setStatusBarForTheme } from "./lib/native.js";
@@ -110,6 +111,7 @@ const APP_ROUTES = new Set([
   "settings",
   "paywall",
   "privacy-policy",
+  "terms-of-service",
   "reset-password",
 ]);
 
@@ -2375,6 +2377,14 @@ export default function App() {
     navigate("home");
   }
 
+  if (route === "privacy-policy" && !token) {
+    return <PrivacyPolicyPage />;
+  }
+
+  if (route === "terms-of-service" && !token) {
+    return <TermsOfServicePage />;
+  }
+
   if (!token) {
     return (
       <AuthPanel
@@ -2740,6 +2750,8 @@ export default function App() {
         );
       case "privacy-policy":
         return <PrivacyPolicyPage onBack={() => navigate("settings")} />;
+      case "terms-of-service":
+        return <TermsOfServicePage onBack={() => navigate("settings")} />;
       case "home":
       default:
         return (

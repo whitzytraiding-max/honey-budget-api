@@ -525,13 +525,20 @@ function SettingsPage({
       )}
 
       {onNavigate && (
-        <div className="flex justify-center pb-2">
+        <div className="flex justify-center gap-4 pb-2">
           <button
             className="text-xs text-slate-400 underline underline-offset-2 transition hover:text-slate-600"
             onClick={() => onNavigate("privacy-policy")}
             type="button"
           >
             Privacy Policy
+          </button>
+          <button
+            className="text-xs text-slate-400 underline underline-offset-2 transition hover:text-slate-600"
+            onClick={() => onNavigate("terms-of-service")}
+            type="button"
+          >
+            Terms of Service
           </button>
         </div>
       )}

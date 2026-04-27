@@ -212,11 +212,16 @@ function AuthPanel({
                   I agree to the{" "}
                   <a
                     className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-700"
-                    href="https://honeybudget.app/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href="#/privacy-policy"
                   >
                     Privacy Policy
+                  </a>
+                  {" "}and{" "}
+                  <a
+                    className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-700"
+                    href="#/terms-of-service"
+                  >
+                    Terms of Service
                   </a>
                 </span>
               </label>
