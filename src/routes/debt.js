@@ -102,7 +102,7 @@ export function createDebtRoutes({ budgetRepository, requireAuth }) {
       if (!Number.isInteger(debtId)) throw new HttpError(400, "VALIDATION_ERROR", "Invalid debt id.");
 
       const amount = parseMoney(request.body?.amount);
-      const date = validateIsoDate(request.body?.date);
+      const dateStr = String(request.body?.date ?? "").trim();
       const note = String(request.body?.note ?? "").trim();
       const currencyCode = resolveCurrencyCode(request.body?.currencyCode || request.user.incomeCurrencyCode || "USD");
       const paymentMethod = String(request.body?.paymentMethod ?? "card");
@@ -110,7 +110,8 @@ export function createDebtRoutes({ budgetRepository, requireAuth }) {
       if (!Number.isFinite(amount) || amount <= 0) {
         throw new HttpError(400, "VALIDATION_ERROR", "amount must be a positive number.");
       }
-      if (!date) throw new HttpError(400, "VALIDATION_ERROR", "date is required (YYYY-MM-DD).");
+      if (!validateIsoDate(dateStr)) throw new HttpError(400, "VALIDATION_ERROR", "date is required (YYYY-MM-DD).");
+      const date = dateStr;
 
       // Verify debt is accessible by this user
       const debts = await budgetRepository.listDebtsForUser(request.user.id);

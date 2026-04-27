@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Whitzy. All rights reserved.
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
-import { ChevronLeft, CreditCard, Pencil, Plus, Trash2, X } from "lucide-react";
+import { CreditCard, Pencil, Trash2, X } from "lucide-react";
 import { ActionButton, EmptyState, Input, Select } from "../ui.jsx";
 
 const CURRENCY_OPTIONS = [
@@ -48,7 +48,7 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h3 className="truncate text-base font-semibold text-slate-800">{debt.title}</h3>
+            <h3 className="truncate text-base font-semibold text-slate-700">{debt.title}</h3>
             {isPaidOff && (
               <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Paid off</span>
             )}
@@ -64,10 +64,10 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
         </div>
         {isOwn && (
           <div className="flex shrink-0 gap-1">
-            <button className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600" type="button" onClick={() => onEdit(debt)} aria-label="Edit debt">
+            <button className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700" type="button" onClick={() => onEdit(debt)} aria-label="Edit debt">
               <Pencil className="h-4 w-4" />
             </button>
-            <button className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" type="button" onClick={() => onDelete(debt)} aria-label="Delete debt">
+            <button className="rounded-lg p-1.5 text-slate-500 transition hover:bg-rose-50 hover:text-rose-500" type="button" onClick={() => onDelete(debt)} aria-label="Delete debt">
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
@@ -97,7 +97,7 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
         <form className="mt-4 space-y-3 border-t border-slate-100 pt-4" onSubmit={onPaymentSubmit}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate-700">Log a payment</p>
-            <button type="button" onClick={onClosePayment} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+            <button type="button" onClick={onClosePayment} className="text-slate-500 hover:text-slate-700"><X className="h-4 w-4" /></button>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Amount" name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={paymentForm.amount} onChange={onPaymentChange} placeholder="0.00" required />
@@ -111,19 +111,19 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
 
       {debt.payments.length > 0 && (
         <div className="mt-4 space-y-1 border-t border-slate-100 pt-3">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Payment history</p>
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Payment history</p>
           {debt.payments.slice(0, 5).map((payment) => (
             <div key={payment.id} className="flex items-center justify-between gap-2 rounded-lg px-1 py-1">
               <div className="min-w-0">
                 <p className="truncate text-sm text-slate-700">{payment.note || "Payment"}</p>
-                <p className="text-xs text-slate-400">{payment.date}</p>
+                <p className="text-xs text-slate-500">{payment.date}</p>
               </div>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm font-medium text-rose-500">
+                <span className="text-sm font-medium text-rose-600">
                   -{debt.currencyCode} {Number(payment.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
                 {payment.userId === currentUserId && (
-                  <button className="text-slate-300 transition hover:text-rose-400" type="button" onClick={() => onDeletePayment(debt, payment)} aria-label="Delete payment">
+                  <button className="text-slate-500 transition hover:text-rose-500" type="button" onClick={() => onDeletePayment(debt, payment)} aria-label="Delete payment">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -167,16 +167,16 @@ export default function DebtPage({
       {activeDebts.length > 0 && (
         <div className="hb-hero-panel rounded-2xl p-5">
           <p className="text-sm font-medium text-slate-500">Total remaining debt</p>
-          <p className="mt-1 text-3xl font-bold tracking-tight text-slate-800">
+          <p className="mt-1 text-3xl font-bold tracking-tight text-slate-700">
             {baseCurrencyCode} {totalOwed.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{activeDebts.length} active debt{activeDebts.length !== 1 ? "s" : ""}</p>
+          <p className="mt-1 text-xs text-slate-500">{activeDebts.length} active debt{activeDebts.length !== 1 ? "s" : ""}</p>
         </div>
       )}
 
       {/* Add / Edit debt form */}
       <div className="hb-surface-card rounded-2xl p-5">
-        <h2 className="mb-4 text-base font-semibold text-slate-800">
+        <h2 className="mb-4 text-base font-semibold text-slate-700">
           {editingDebtId ? "Edit debt" : "Add a debt"}
         </h2>
         <form className="space-y-3" onSubmit={onDebtSubmit}>
@@ -207,7 +207,7 @@ export default function DebtPage({
       {/* Active debts */}
       {activeDebts.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Active debts</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Active debts</h2>
           {activeDebts.map((debt) => (
             <DebtCard
               key={debt.id}
@@ -231,7 +231,7 @@ export default function DebtPage({
       {/* Paid off debts */}
       {paidDebts.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Paid off</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Paid off</h2>
           {paidDebts.map((debt) => (
             <DebtCard
               key={debt.id}
@@ -256,7 +256,7 @@ export default function DebtPage({
         <EmptyState
           title="No debts tracked yet"
           body="Add a debt above to start tracking your payoff progress. Each payment will automatically deduct from your monthly budget."
-          icon={<CreditCard className="mx-auto mb-3 h-10 w-10 text-slate-300" />}
+          icon={<CreditCard className="mx-auto mb-3 h-10 w-10 text-slate-500" />}
         />
       )}
     </div>
