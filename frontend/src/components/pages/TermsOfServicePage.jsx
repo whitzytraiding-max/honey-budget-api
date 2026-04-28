@@ -76,7 +76,7 @@ function TermsOfServicePage({ onBack }) {
         </Section>
 
         <Section title="7. AI Features">
-          <p>The Coach Chat and Money Cat features use third-party AI services (Groq, Google Gemini) to generate responses. AI-generated content is for informational and motivational purposes only — it does not constitute certified financial advice. Always consult a qualified financial professional for important financial decisions.</p>
+          <p>Hunny (Coach Chat) and Money Cat features use third-party AI services (Groq, Google Gemini) to generate responses. AI-generated content is for informational and motivational purposes only — it does not constitute certified financial advice. Always consult a qualified financial professional for important financial decisions.</p>
         </Section>
 
         <Section title="8. Prohibited Uses">

@@ -194,7 +194,7 @@ function CoachChat({ onSendMessage, onEditProfile }) {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold" style={{ color: "var(--hb-ink)" }}>Finance Coach</h1>
+              <h1 className="text-xl font-bold" style={{ color: "var(--hb-ink)" }}>Hunny</h1>
               <p className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>Ask anything — I can update your data too</p>
             </div>
           </div>

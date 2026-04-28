@@ -7,7 +7,7 @@ const FREE_FEATURES = [
   { label: "History & calendar view", included: true },
   { label: "Link a partner", included: true },
   { label: "Savings goals", included: false },
-  { label: "AI Finance Coach", included: false },
+  { label: "Hunny AI Coach", included: false },
   { label: "Spending insights & trends", included: false },
   { label: "Ad-free experience", included: false },
 ];
@@ -15,7 +15,7 @@ const FREE_FEATURES = [
 const PRO_FEATURES = [
   "Everything in Free",
   "Savings goals with progress tracking",
-  "AI Finance Coach — personalized advice",
+  "Hunny AI Coach — personalized advice",
   "Deep spending insights & trends",
   "Recurring bill planner",
   "Ad-free experience",
@@ -35,7 +35,7 @@ function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy
           Unlock the full experience
         </h1>
         <p className="mt-3 text-base leading-7 text-slate-600">
-          Get your AI Finance Coach, savings goals, and deep insights — everything you need to actually win with money.
+          Get your Hunny AI Coach, savings goals, and deep insights — everything you need to actually win with money.
         </p>
 
         <div className="hb-panel-highlight mt-6 rounded-[1.5rem] border border-amber-200/40 p-6">

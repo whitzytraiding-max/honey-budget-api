@@ -100,7 +100,7 @@ const translations = {
       dateNightTacos: "Date night tacos",
     },
     insights: {
-      title: "Couples Finance Coach",
+      title: "Hunny — Finance Coach",
       subtitle: "Personalized coaching based on your real spending patterns, savings opportunities, and tension points.",
       mix: "Spending mix",
       mixSubtitle: "A quick read on how money moved before the AI advice was generated.",
@@ -295,20 +295,20 @@ const translations = {
     },
     coach: {
       title: "Couples coach setup",
-      subtitle: "Answer this once as a couple so the finance coach can steer advice toward your real goals, stress points, and weak habits.",
-      soloTitle: "Personal finance coach setup",
+      subtitle: "Answer this once as a couple so the Hunny can steer advice toward your real goals, stress points, and weak habits.",
+      soloTitle: "Personal Hunny setup",
       soloSubtitle: "Answer this once so the coach can focus advice on your real goals, stress points, and spending habits.",
       whyTitle: "Why this matters",
       whyBody:
         "The AI gets much more useful when it knows what you are trying to achieve together and where money tends to go off track.",
       soloWhyBody:
         "The AI gets much more useful when it knows what you are trying to achieve and where your money tends to go off track.",
-      couplesLabel: "Couples Finance Coach",
-      soloLabel: "Personal Finance Coach",
+      couplesLabel: "Hunny — Finance Coach",
+      soloLabel: "Hunny — Finance Coach",
       homeTitle: "Complete your coach setup",
       homeBody:
         "Spend two minutes answering the couple questionnaire so the coach can focus on your real goal, your weak spots, and the habits that usually create tension.",
-      soloHomeTitle: "Set up your personal finance coach",
+      soloHomeTitle: "Set up your personal Hunny",
       soloHomeBody:
         "Spend two minutes answering a few questions so the coach can focus on your real goal, your weak spots, and the habits that usually trip you up.",
       openQuestionnaire: "Open questionnaire",
