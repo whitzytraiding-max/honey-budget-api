@@ -11,6 +11,7 @@ const translations = {
       history: "History",
       planner: "Recurring",
       "budget-planner": "Planner",
+      debt: "Debt",
       coach: "Coach",
       setup: "Setup",
       settings: "Settings",
