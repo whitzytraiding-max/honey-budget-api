@@ -6,7 +6,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell, Brain, CalendarDays, ClipboardList, CreditCard,
-  House, ListTodo, Map, PiggyBank, Settings2, ShieldCheck, Sparkles, Wallet,
+  House, ListTodo, Map, MessageCircle, PiggyBank, Plus,
+  Settings2, ShieldCheck, Sparkles, Target, Wallet,
 } from "lucide-react";
 
 import AppShell from "./components/AppShell.jsx";
@@ -72,12 +73,39 @@ const ALL_NAV_ITEMS = [
   { key: "settings", icon: Settings2 },
 ];
 
+const PAGE_TABS = {
+  expenses: [
+    { key: "log", label: "Log", icon: Plus },
+    { key: "recent", label: "Recent", icon: Wallet },
+    { key: "history", label: "History", icon: ClipboardList },
+  ],
+  savings: [
+    { key: "goals", label: "Goals", icon: Target },
+    { key: "log", label: "Log", icon: PiggyBank },
+    { key: "history", label: "History", icon: ClipboardList },
+  ],
+  debt: [
+    { key: "debts", label: "Debts", icon: CreditCard },
+    { key: "add", label: "Add Debt", icon: Plus },
+    { key: "payments", label: "Payments", icon: ClipboardList },
+  ],
+  coach: [
+    { key: "chat", label: "Chat", icon: MessageCircle },
+    { key: "tips", label: "Tips", icon: Brain },
+  ],
+};
+
+const TAB_DEFAULTS = { expenses: "log", savings: "goals", debt: "debts", coach: "chat" };
+
 export default function App() {
   const { locale } = useLanguage();
 
   // ─── Core hooks (must all be called unconditionally) ──────────────────────
   const { route, query, navigate } = useNavigation();
   const { confirmDialog, showConfirm, handleConfirmYes, handleConfirmNo } = useConfirm();
+
+  const [activeTab, setActiveTab] = useState(TAB_DEFAULTS[route] ?? "");
+  useEffect(() => { setActiveTab(TAB_DEFAULTS[route] ?? ""); }, [route]);
   const { theme, setTheme } = useTheme();
   const auth = useAuth({ navigate });
 
@@ -448,6 +476,7 @@ export default function App() {
       case "expenses":
         return (
           <ExpensesPage
+            activeTab={activeTab}
             expenseForm={expenses.expenseForm}
             onExpenseChange={expenses.updateExpenseForm}
             onExpenseSubmit={expenses.handleExpenseSubmit}
@@ -459,7 +488,7 @@ export default function App() {
             editingTransactionId={expenses.editingTransactionId}
             currentUserId={session?.user?.id}
             householdUsers={householdUsers}
-            onEditTransaction={expenses.handleEditTransaction}
+            onEditTransaction={(t) => { expenses.handleEditTransaction(t); setActiveTab("log"); }}
             onDeleteTransaction={expenses.handleDeleteTransaction}
             onCancelEdit={expenses.resetExpenseEditor}
           />
@@ -467,6 +496,7 @@ export default function App() {
       case "savings":
         return (
           <SavingsPage
+            activeTab={activeTab}
             savingsData={dataBundle.savingsData}
             savingsForm={savings.savingsForm}
             savingsTargetForm={dataBundle.incomeProfileForm}
@@ -510,7 +540,7 @@ export default function App() {
         if (coach.coachEditingProfile) {
           return <CoachSetupPage coachProfileForm={dataBundle.coachProfileForm} onChange={coach.updateCoachProfileForm} onSubmit={async (e) => { await coach.handleCoachProfileSubmit(e, { isPro }); coach.setCoachEditingProfile(false); }} busy={coach.coachProfileBusy} completed soloMode={soloMode} />;
         }
-        return <CoachPage onSendMessage={coach.handleCoachChat} onEditProfile={() => coach.setCoachEditingProfile(true)} />;
+        return <CoachPage activeTab={activeTab} onSendMessage={coach.handleCoachChat} onEditProfile={() => coach.setCoachEditingProfile(true)} />;
       case "planner":
         return (
           <PlannerPage
@@ -541,6 +571,7 @@ export default function App() {
       case "debt":
         return (
           <DebtPage
+            activeTab={activeTab}
             debtData={debt.debtData}
             debtBusy={debt.debtBusy}
             debtForm={debt.debtForm}
@@ -551,9 +582,9 @@ export default function App() {
             baseCurrencyCode={baseCurrencyCode}
             onDebtChange={debt.updateDebtForm}
             onDebtSubmit={debt.handleDebtSubmit}
-            onEditDebt={debt.startEditingDebt}
+            onEditDebt={(d) => { debt.startEditingDebt(d); setActiveTab("add"); }}
             onDeleteDebt={debt.handleDeleteDebt}
-            onCancelDebtEdit={debt.resetDebtEditor}
+            onCancelDebtEdit={() => { debt.resetDebtEditor(); setActiveTab("debts"); }}
             onPaymentChange={debt.updatePaymentForm}
             onPaymentSubmit={debt.handlePaymentSubmit}
             onOpenPayment={debt.openPaymentForm}
@@ -648,6 +679,9 @@ export default function App() {
             ? () => dataBundle.refreshDashboardBundle().catch((e) => setPageError(e.message))
             : undefined
         }
+        pageTabs={PAGE_TABS[route] ?? []}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       >
         <div key={route} className="hb-page-enter">{renderPage()}</div>
       </AppShell>

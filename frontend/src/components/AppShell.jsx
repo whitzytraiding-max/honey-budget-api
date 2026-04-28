@@ -57,6 +57,9 @@ function AppShell({
   pageError,
   onDismissError,
   onRetryLoad,
+  pageTabs = [],
+  activeTab,
+  onTabChange,
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { t } = useLanguage();
@@ -183,37 +186,60 @@ function AppShell({
         </footer>
       </div>
 
-      {/* Mobile bottom nav */}
-      <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
-        <div className="grid grid-cols-3 gap-1.5">
-          {mobileNavItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = route === item.key;
-
-            return (
-              <button
-                key={item.key}
-                className={`flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium transition ${
-                  isActive ? "hb-nav-active" : "text-slate-600"
-                }`}
-                onClick={() => handleNavTap(item.key)}
-                type="button"
-              >
-                <Icon className="h-4 w-4" />
-                <span className="mt-1 truncate">{item.label}</span>
-              </button>
-            );
-          })}
-          <button
-            className="flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium text-slate-600 transition"
-            onClick={() => setSidebarOpen(true)}
-            type="button"
-          >
-            <Menu className="h-4 w-4" />
-            <span className="mt-1">Menu</span>
-          </button>
-        </div>
-      </nav>
+      {/* Mobile bottom nav — page sub-tabs OR default nav */}
+      {pageTabs.length > 0 ? (
+        <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
+          <div className="flex gap-1.5">
+            {pageTabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  className={`flex flex-1 min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1 py-2 text-[10px] font-medium transition ${
+                    isActive ? "hb-nav-active" : "text-slate-600"
+                  }`}
+                  onClick={() => { hapticLight(); onTabChange(tab.key); }}
+                  type="button"
+                >
+                  {Icon && <Icon className="h-4 w-4" />}
+                  <span className="mt-1 truncate">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      ) : (
+        <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
+          <div className="grid grid-cols-3 gap-1.5">
+            {mobileNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = route === item.key;
+              return (
+                <button
+                  key={item.key}
+                  className={`flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium transition ${
+                    isActive ? "hb-nav-active" : "text-slate-600"
+                  }`}
+                  onClick={() => handleNavTap(item.key)}
+                  type="button"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="mt-1 truncate">{item.label}</span>
+                </button>
+              );
+            })}
+            <button
+              className="flex min-h-[56px] flex-col items-center justify-center rounded-[0.95rem] px-1.5 py-2 text-[10px] font-medium text-slate-600 transition"
+              onClick={() => setSidebarOpen(true)}
+              type="button"
+            >
+              <Menu className="h-4 w-4" />
+              <span className="mt-1">Menu</span>
+            </button>
+          </div>
+        </nav>
+      )}
     </div>
   );
 }
