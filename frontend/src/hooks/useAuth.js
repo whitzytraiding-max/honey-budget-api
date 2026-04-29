@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { apiFetch } from "../lib/api.js";
+import { signInWithApple } from "../lib/native.js";
 import { STORAGE_KEYS, readStorage, writeStorage, removeStorage } from "../lib/storage.js";
 
 const REGISTER_FIELDS = {
@@ -124,6 +125,36 @@ export function useAuth({ navigate }) {
     }
   }
 
+  async function handleAppleAuth() {
+    setAuthBusy(true);
+    clearAuthFeedback();
+    setPostAuthFailureMessage("");
+    try {
+      const appleResponse = await signInWithApple();
+      const data = await apiFetch("/api/auth/apple", {
+        auth: false,
+        method: "POST",
+        body: JSON.stringify({
+          identity_token: appleResponse.identityToken,
+          given_name: appleResponse.givenName || "",
+          family_name: appleResponse.familyName || "",
+        }),
+      });
+      if (Number(data.user?.monthlySalary ?? 0) === 0) {
+        removeStorage(STORAGE_KEYS.SOLO_MODE);
+        window.location.hash = "#/settings";
+      }
+      setPostAuthFailureMessage(LOGIN_BOOTSTRAP_ERROR);
+      saveToken(data.accessToken);
+    } catch (error) {
+      if (!error?.message?.toLowerCase().includes("cancel")) {
+        setAuthError(error.message || "Apple sign-in failed. Please try again.");
+      }
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   async function handleForgotPassword(event) {
     event.preventDefault();
     setAuthBusy(true);
@@ -203,6 +234,7 @@ export function useAuth({ navigate }) {
     handleRegister,
     handleLogin,
     handleGoogleAuth,
+    handleAppleAuth,
     handleForgotPassword,
     handleResetPassword,
     authBusy,

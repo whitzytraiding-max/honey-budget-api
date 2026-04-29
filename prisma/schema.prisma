@@ -12,6 +12,7 @@ model User {
   email               String        @unique
   passwordHash        String?       @map("password_hash")
   googleId            String?       @unique @map("google_id")
+  appleId             String?       @unique @map("apple_id")
   monthlySalary       Decimal       @db.Decimal(12, 2) @map("monthly_salary")
   incomeCurrencyCode  String        @default("USD") @map("income_currency_code")
   salaryPaymentMethod String        @map("salary_payment_method")

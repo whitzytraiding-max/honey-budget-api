@@ -104,7 +104,7 @@ function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy
         </div>
       </section>
 
-      <div className="pb-6 text-center">
+      <div className="pb-6 text-center space-y-3">
         <button
           className="text-sm text-slate-500 underline-offset-4 hover:underline"
           onClick={onContinueFree}
@@ -112,6 +112,30 @@ function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy
         >
           Continue with Free — I'll upgrade later
         </button>
+        <p className="text-xs text-slate-400 leading-5">
+          Honey Budget Pro · $4.99/month · Auto-renewing subscription · Cancel anytime
+        </p>
+        <p className="text-xs text-slate-400 leading-5">
+          Payment will be charged to your Apple ID account. Subscription automatically renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel in your Apple ID Account Settings.
+        </p>
+        <div className="flex justify-center gap-4">
+          <a
+            className="text-xs text-slate-400 underline underline-offset-2 hover:text-slate-600"
+            href="https://honey-budget.com/privacy-policy"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Privacy Policy
+          </a>
+          <a
+            className="text-xs text-slate-400 underline underline-offset-2 hover:text-slate-600"
+            href="https://honey-budget.com/terms-of-service"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Terms of Service
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -398,6 +398,39 @@ function createPrismaBudgetRepository({ prisma }) {
       });
     },
 
+    async upsertAppleUser({ appleId, name, email }) {
+      let user = await prisma.user.findUnique({ where: { appleId } });
+      if (user) return mapUser(user);
+
+      if (email) {
+        const existing = await prisma.user.findUnique({ where: { email } });
+        if (existing) {
+          user = await prisma.user.update({ where: { id: existing.id }, data: { appleId } });
+          return mapUser(user);
+        }
+      }
+
+      const emailToUse = email || `apple.${appleId}@privaterelay.appleid.com`;
+      user = await prisma.user.create({
+        data: {
+          name,
+          email: emailToUse,
+          appleId,
+          passwordHash: null,
+          monthlySalary: 0,
+          incomeCurrencyCode: "USD",
+          salaryPaymentMethod: "card",
+          salaryCashAmount: 0,
+          salaryCardAmount: 0,
+          salaryCashAllocationPct: 0,
+          salaryCardAllocationPct: 100,
+          incomeDayOfMonth: 1,
+          monthlySavingsTarget: 0,
+        },
+      });
+      return mapUser(user);
+    },
+
     async upsertGoogleUser({ googleId, name, email }) {
       // Already linked to this Google account
       let user = await prisma.user.findUnique({ where: { googleId } });

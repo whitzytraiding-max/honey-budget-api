@@ -3,6 +3,8 @@
  * Copyright (c) 2026 Whitzy. All rights reserved.
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
+import crypto from "crypto";
+import jwt from "jsonwebtoken";
 import express from "express";
 import { HttpError, asyncHandler, sendData } from "../lib/http.js";
 import { resolveCurrencyCode } from "../services/currencyConversionService.js";
@@ -274,6 +276,48 @@ export function createAuthRoutes({
         user,
         accessToken,
       });
+    }),
+  );
+
+  router.post(
+    "/api/auth/apple",
+    asyncHandler(async (request, response) => {
+      const { identity_token, given_name, family_name } = request.body;
+      if (!identity_token) {
+        throw new HttpError(400, "VALIDATION_ERROR", "identity_token is required.");
+      }
+
+      let payload;
+      try {
+        const [headerB64] = identity_token.split(".");
+        const header = JSON.parse(Buffer.from(headerB64, "base64url").toString());
+
+        const keysRes = await fetch("https://appleid.apple.com/auth/keys");
+        if (!keysRes.ok) throw new Error("Failed to fetch Apple JWKS");
+        const { keys } = await keysRes.json();
+
+        const jwk = keys.find((k) => k.kid === header.kid);
+        if (!jwk) throw new Error("No matching Apple public key");
+
+        const publicKey = crypto.createPublicKey({ key: jwk, format: "jwk" });
+        const pem = publicKey.export({ type: "spki", format: "pem" });
+
+        payload = jwt.verify(identity_token, pem, {
+          algorithms: ["RS256"],
+          issuer: "https://appleid.apple.com",
+          audience: "com.whitzy.honeybudget",
+        });
+      } catch {
+        throw new HttpError(401, "INVALID_APPLE_TOKEN", "Invalid Apple identity token.");
+      }
+
+      const appleId = payload.sub;
+      const email = payload.email || null;
+      const name = [given_name, family_name].filter(Boolean).join(" ") || (email ? email.split("@")[0] : "Apple User");
+
+      const user = await budgetRepository.upsertAppleUser({ appleId, name, email });
+      const accessToken = authService.signAccessToken(user);
+      sendData(response, 200, { user: sanitizeUser(user), accessToken });
     }),
   );
 

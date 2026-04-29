@@ -18,6 +18,7 @@
     "cap:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
     "@capacitor/android": "^8.2.0",
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.2.0",

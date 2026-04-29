@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Lock, Settings2, Sparkles, UserMinus, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
+import { isNative } from "../../lib/native.js";
 import { ActionButton, Input, Select } from "../ui.jsx";
 
 const MMK_UNLOCK_CODE = "YANGON-2026";
@@ -436,8 +437,27 @@ function SettingsPage({
         </div>
       </section>
 
-      {/* Coupon / promo code */}
-      <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
+      {!isPro && onNavigate && (
+        <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            <div>
+              <h2 className="text-2xl font-semibold">Honey Budget Pro</h2>
+              <p className="text-sm text-slate-600">$4.99/month · Unlock AI Coach, savings goals &amp; insights</p>
+            </div>
+          </div>
+          <button
+            className="mt-5 w-full rounded-[1.2rem] bg-gradient-to-r from-amber-500 to-amber-400 px-6 py-4 text-base font-semibold text-white shadow-md transition hover:from-amber-600 hover:to-amber-500"
+            type="button"
+            onClick={() => onNavigate("paywall")}
+          >
+            Upgrade to Pro
+          </button>
+        </section>
+      )}
+
+      {/* Coupon / promo code — web only, not shown on iOS App Store builds */}
+      {!isNative() && <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-amber-500" />
           <div>
@@ -487,7 +507,7 @@ function SettingsPage({
             {couponResult.message}
           </p>
         )}
-      </section>
+      </section>}
 
       {!mmkUnlocked && (
         <div className="hb-surface-card rounded-[2rem] p-6">

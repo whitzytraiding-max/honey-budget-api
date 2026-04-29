@@ -392,6 +392,7 @@ export default function App() {
         onRegister={auth.handleRegister}
         onLogin={auth.handleLogin}
         onGoogleAuth={auth.handleGoogleAuth}
+        onAppleAuth={auth.handleAppleAuth}
         onForgotPassword={auth.handleForgotPassword}
         onResetPassword={(e) => auth.handleResetPassword(e, resetToken)}
         isSubmitting={auth.authBusy}
