@@ -166,12 +166,9 @@ export async function signInWithApple() {
   if (!isNative() || getPlatform() !== "ios") {
     throw new Error("Sign in with Apple is only available on iOS.");
   }
-  const { SignInWithApple } = await import("@capacitor-community/apple-sign-in");
-  const result = await SignInWithApple.authorize({
-    clientId: "com.whitzy.honeybudget",
-    redirectURI: "https://honey-budget.com",
-    scopes: "email name",
-  });
+  const { registerPlugin } = await import("@capacitor/core");
+  const AppleSignIn = registerPlugin("SignInWithApple");
+  const result = await AppleSignIn.authorize();
   return result.response;
 }
 
