@@ -26,6 +26,7 @@ model User {
   subscriptionStatus  String        @default("free") @map("subscription_status")
   subscriptionExpiresAt DateTime?   @map("subscription_expires_at")
   subscriptionProvider String?      @map("subscription_provider")
+  soloMode            Boolean       @default(false) @map("solo_mode")
   createdAt           DateTime      @default(now()) @map("created_at")
   updatedAt           DateTime      @updatedAt @map("updated_at")
   transactions        Transaction[]

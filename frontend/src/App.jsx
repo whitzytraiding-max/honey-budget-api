@@ -113,7 +113,7 @@ export default function App() {
   const [currencyCode, setCurrencyCode] = useState(() => getInitialCurrency(STORAGE_KEYS.CURRENCY));
   const [baseCurrencyCode, setBaseCurrencyCode] = useState(() => getInitialCurrency(STORAGE_KEYS.BASE_CURRENCY));
 
-  // Persistent UI preferences
+  // Persistent UI preferences — localStorage is the runtime source, server is the authoritative source
   const [soloMode, setSoloMode] = useState(() => readStorage(STORAGE_KEYS.SOLO_MODE) === "true");
   const [hiddenNavItems, setHiddenNavItems] = useState(() => {
     try { return new Set(JSON.parse(readStorage(STORAGE_KEYS.HIDDEN_NAV) || "[]")); }
@@ -181,6 +181,15 @@ export default function App() {
     exchangeRate: settings.exchangeRate,
   });
 
+  // Sync solo mode from server on first session load (handles fresh installs / new devices)
+  useEffect(() => {
+    if (!session?.user?.soloMode) return;
+    if (readStorage(STORAGE_KEYS.SOLO_MODE) !== "true") {
+      writeStorage(STORAGE_KEYS.SOLO_MODE, "true");
+      setSoloMode(true);
+    }
+  }, [session?.user?.id]);
+
   // Refresh budget views when display currency or coach completion changes
   useEffect(() => {
     if (!auth.token || !session?.couple) return;
@@ -242,6 +251,7 @@ export default function App() {
   function enableSoloMode() {
     writeStorage(STORAGE_KEYS.SOLO_MODE, "true");
     setSoloMode(true);
+    apiFetch("/api/profile/solo-mode", { method: "PATCH", body: JSON.stringify({ soloMode: true }) }).catch(() => {});
     dataBundle.refreshBudgetViews({
       includeMonth: false, includeInsights: false,
       includeSavings: false, includeNotifications: false,

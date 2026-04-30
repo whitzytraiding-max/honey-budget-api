@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "solo_mode" BOOLEAN NOT NULL DEFAULT false;

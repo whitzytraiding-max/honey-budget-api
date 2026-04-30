@@ -99,7 +99,7 @@ function AppShell({
         onMoreClick={() => onNavigate("more")}
       />
 
-      <div className="mx-auto max-w-6xl pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10">
+      <div className={`mx-auto max-w-6xl ${pageTabs.length > 0 ? "pb-[calc(6.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(6.5rem+env(safe-area-inset-bottom))] md:pb-10"}`}>
         <header className="hb-surface-card hb-header-panel rounded-[1.5rem] p-3.5 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-start gap-3">
@@ -186,9 +186,9 @@ function AppShell({
         </footer>
       </div>
 
-      {/* Mobile bottom nav — page sub-tabs OR default nav */}
+      {/* Bottom nav — page sub-tabs (all screen sizes) OR main nav (mobile only) */}
       {pageTabs.length > 0 ? (
-        <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5 md:hidden">
+        <nav className="hb-surface-strong fixed inset-x-2.5 bottom-[max(0.65rem,env(safe-area-inset-bottom))] z-20 rounded-[1.35rem] p-1.5">
           <div className="flex gap-1.5">
             {pageTabs.map((tab) => {
               const Icon = tab.icon;

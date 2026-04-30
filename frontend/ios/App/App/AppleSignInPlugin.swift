@@ -21,7 +21,22 @@ public class AppleSignInPlugin: CAPPlugin, ASAuthorizationControllerDelegate, AS
     }
 
     public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        return bridge?.viewController?.view.window ?? UIWindow()
+        if let window = bridge?.viewController?.view.window {
+            return window
+        }
+        // Fallback for iPad Stage Manager / multiple scenes (iPadOS 16+)
+        for scene in UIApplication.shared.connectedScenes {
+            if let windowScene = scene as? UIWindowScene,
+               windowScene.activationState == .foregroundActive {
+                if let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                    return keyWindow
+                }
+                if let firstWindow = windowScene.windows.first {
+                    return firstWindow
+                }
+            }
+        }
+        return UIWindow()
     }
 
     public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {

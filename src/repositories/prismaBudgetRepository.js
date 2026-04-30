@@ -51,6 +51,7 @@ function mapUser(user) {
     subscriptionStatus: user.subscriptionStatus ?? "free",
     subscriptionExpiresAt: user.subscriptionExpiresAt?.toISOString?.() ?? user.subscriptionExpiresAt ?? null,
     subscriptionProvider: user.subscriptionProvider ?? null,
+    soloMode: user.soloMode ?? false,
     createdAt: user.createdAt?.toISOString?.() ?? user.createdAt,
   };
 }
@@ -1225,6 +1226,14 @@ function createPrismaBudgetRepository({ prisma }) {
         },
       });
 
+      return mapUser(user);
+    },
+
+    async updateSoloMode({ userId, soloMode }) {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: { soloMode },
+      });
       return mapUser(user);
     },
 

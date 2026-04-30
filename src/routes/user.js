@@ -169,5 +169,18 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     }),
   );
 
+  router.patch(
+    "/api/profile/solo-mode",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const { soloMode } = request.body;
+      const user = await budgetRepository.updateSoloMode({
+        userId: request.user.id,
+        soloMode: Boolean(soloMode),
+      });
+      sendData(response, 200, { user: sanitizeUser(user) });
+    }),
+  );
+
   return router;
 }

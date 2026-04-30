@@ -22,6 +22,7 @@ export function sanitizeUser(user) {
         subscriptionStatus: user.subscriptionStatus ?? "free",
         subscriptionExpiresAt: user.subscriptionExpiresAt ?? null,
         subscriptionProvider: user.subscriptionProvider ?? null,
+        soloMode: user.soloMode ?? false,
         createdAt: user.createdAt,
       }
     : null;
