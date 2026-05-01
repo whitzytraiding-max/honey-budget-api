@@ -12,7 +12,8 @@ class ViewController: CAPBridgeViewController {
         webView?.isOpaque = false
         webView?.scrollView.backgroundColor = appBackground
 
-        // Disable the rubber-band bounce completely
+        // Disable native scroll entirely — all scrolling is handled by CSS overflow containers
+        webView?.scrollView.isScrollEnabled = false
         webView?.scrollView.bounces = false
         webView?.scrollView.alwaysBounceVertical = false
         webView?.scrollView.alwaysBounceHorizontal = false
