@@ -15,7 +15,10 @@ function isIOS() {
   return isNative() && getPlatform() === "ios";
 }
 
-let _configurePromise = null;
+// Resolvable promise — created once, resolved by initPurchases (or immediately if not iOS).
+// waitForConfigure() always has something to await regardless of call order.
+let _configuredResolve;
+const _configuredPromise = new Promise((res) => { _configuredResolve = res; });
 
 async function getPurchases() {
   if (!isIOS() || !IOS_KEY) return null;
@@ -38,17 +41,26 @@ function withTimeout(promise, ms, label) {
 
 export async function initPurchases(userId) {
   const Purchases = await getPurchases();
-  if (!Purchases) return;
-  _configurePromise = withTimeout(
-    Purchases.configure({ apiKey: IOS_KEY, appUserID: String(userId) }),
-    8_000,
-    "configure",
-  ).catch(() => {});
-  await _configurePromise;
+  if (!Purchases) {
+    _configuredResolve();
+    return;
+  }
+  try {
+    await withTimeout(
+      Purchases.configure({ apiKey: IOS_KEY, appUserID: String(userId) }),
+      8_000,
+      "configure",
+    );
+  } catch {
+    // ignore — already configured or key error; getOfferings will surface the real error
+  } finally {
+    _configuredResolve();
+  }
 }
 
+// Wait up to 12s for initPurchases to be called and complete
 async function waitForConfigure() {
-  if (_configurePromise) await _configurePromise.catch(() => {});
+  await withTimeout(_configuredPromise, 12_000, "configure").catch(() => {});
 }
 
 export async function getMonthlyPackage() {

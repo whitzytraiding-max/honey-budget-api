@@ -11,12 +11,12 @@ export function usePaywall({ appData, navigate }) {
   const [purchaseError, setPurchaseError] = useState("");
   const [offeringReady, setOfferingReady] = useState(!isNative());
 
-  // Pre-fetch the offering so we know it's available before the user taps
+  // Warm up RevenueCat in the background. Always unlocks the button when done,
+  // whether or not the offering loaded — errors surface inline when the user taps.
   const prefetchOffering = useCallback(async () => {
     if (!isNative()) return;
-    setOfferingReady(false);
-    const pkg = await getMonthlyPackage();
-    setOfferingReady(Boolean(pkg));
+    await getMonthlyPackage().catch(() => {});
+    setOfferingReady(true);
   }, []);
 
   useEffect(() => {
