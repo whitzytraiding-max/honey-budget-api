@@ -103,6 +103,7 @@ html.is-native body {
 html.is-native #root {
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: none;
 }
 

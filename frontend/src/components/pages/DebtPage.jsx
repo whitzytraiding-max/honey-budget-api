@@ -50,25 +50,25 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-slate-700">{debt.title}</h3>
+              <h3 className="truncate text-base font-semibold" style={{ color: "var(--hb-ink)" }}>{debt.title}</h3>
               {isPaidOff && (
-                <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Paid off</span>
+                <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}>Paid off</span>
               )}
               {!isOwn && (
-                <span className="shrink-0 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700">{debt.ownerName}</span>
+                <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium" style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8" }}>{debt.ownerName}</span>
               )}
             </div>
-            <p className="mt-0.5 text-2xl font-bold text-slate-800">
+            <p className="mt-0.5 text-2xl font-bold" style={{ color: "var(--hb-ink)" }}>
               {debt.currencyCode} {debt.currentBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="ml-2 text-sm font-normal text-slate-400">remaining</span>
+              <span className="ml-2 text-sm font-normal" style={{ color: "var(--hb-ink-soft)" }}>remaining</span>
             </p>
           </div>
           {isOwn && !isPaidOff && (
             <div className="flex shrink-0 gap-1">
-              <button className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" type="button" onClick={() => onEdit(debt)} aria-label="Edit debt">
+              <button className="rounded-lg p-1.5 transition" style={{ color: "var(--hb-ink-soft)" }} type="button" onClick={() => onEdit(debt)} aria-label="Edit debt">
                 <Pencil className="h-4 w-4" />
               </button>
-              <button className="rounded-lg p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-500" type="button" onClick={() => onDelete(debt)} aria-label="Delete debt">
+              <button className="rounded-lg p-1.5 transition hover:text-rose-400" style={{ color: "var(--hb-ink-soft)" }} type="button" onClick={() => onDelete(debt)} aria-label="Delete debt">
                 <Trash2 className="h-4 w-4" />
               </button>
             </div>
@@ -77,7 +77,7 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
 
         <ProgressBar pct={paidPct} />
 
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+        <div className="mt-2 flex items-center justify-between text-xs" style={{ color: "var(--hb-ink-soft)" }}>
           <span>{paidPct.toFixed(0)}% paid off · {debt.currencyCode} {debt.originalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} original</span>
           {estimatedMonths && !isPaidOff && (
             <span>~{estimatedMonths} mo. at min</span>
@@ -102,11 +102,11 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
 
       {/* Payment form */}
       {isPayingThis && (
-        <div className="border-t border-slate-100 bg-sky-50/60 px-5 py-5">
+        <div className="border-t px-5 py-5" style={{ borderColor: "var(--hb-border)", background: "var(--hb-surface-strong)" }}>
           <form onSubmit={onPaymentSubmit} className="space-y-3">
             <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold text-sky-800">Log a payment</p>
-              <button type="button" onClick={onClosePayment} className="text-slate-400 hover:text-slate-600">
+              <p className="text-sm font-semibold" style={{ color: "#38bdf8" }}>Log a payment</p>
+              <button type="button" onClick={onClosePayment} style={{ color: "var(--hb-ink-soft)" }}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -123,21 +123,21 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
 
       {/* Payment history */}
       {debt.payments.length > 0 && (
-        <div className="border-t border-slate-100 px-5 py-4">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Payment history</p>
+        <div className="border-t px-5 py-4" style={{ borderColor: "var(--hb-border)" }}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--hb-ink-soft)" }}>Payment history</p>
           <div className="space-y-1">
             {debt.payments.slice(0, 5).map((payment) => (
               <div key={payment.id} className="flex items-center justify-between gap-2 rounded-lg px-1 py-1">
                 <div className="min-w-0">
-                  <p className="truncate text-sm text-slate-700">{payment.note || "Payment"}</p>
-                  <p className="text-xs text-slate-400">{payment.date}</p>
+                  <p className="truncate text-sm" style={{ color: "var(--hb-ink)" }}>{payment.note || "Payment"}</p>
+                  <p className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>{payment.date}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="text-sm font-semibold text-sky-700">
+                  <span className="text-sm font-semibold" style={{ color: "#38bdf8" }}>
                     -{debt.currencyCode} {Number(payment.amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </span>
                   {payment.userId === currentUserId && (
-                    <button className="text-slate-400 transition hover:text-rose-500" type="button" onClick={() => onDeletePayment(debt, payment)} aria-label="Delete payment">
+                    <button className="transition hover:text-rose-400" style={{ color: "var(--hb-ink-soft)" }} type="button" onClick={() => onDeletePayment(debt, payment)} aria-label="Delete payment">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   )}

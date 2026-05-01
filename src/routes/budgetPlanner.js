@@ -181,8 +181,9 @@ async function buildRoadmap({ budgetRepository, userId, parsedPlan }) {
     let actualTotal = 0;
     for (const tx of transactions) {
       const cat = tx.category ?? "Other";
-      actualByCategory[cat] = (actualByCategory[cat] ?? 0) + Number(tx.amount ?? 0);
-      actualTotal += Number(tx.amount ?? 0);
+      const amt = Number(tx.convertedAmount ?? tx.amount ?? 0);
+      actualByCategory[cat] = (actualByCategory[cat] ?? 0) + amt;
+      actualTotal += amt;
     }
 
     const actualSavings = Math.max(0, monthPlan.income - actualTotal);
