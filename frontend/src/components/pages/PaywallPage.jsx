@@ -22,9 +22,7 @@ const PRO_FEATURES = [
   "Your partner gets Pro free",
 ];
 
-function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy, purchaseError, offeringReady }) {
-  const canPurchase = offeringReady !== false;
-
+function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy, purchaseError }) {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8 text-center">
@@ -50,10 +48,10 @@ function PaywallPage({ onSubscribe, onContinueFree, onRestore, busy, restoreBusy
           <button
             className="mt-5 w-full rounded-[1.2rem] bg-gradient-to-r from-amber-500 to-amber-400 px-6 py-4 text-base font-semibold text-white shadow-md transition hover:from-amber-600 hover:to-amber-500 disabled:opacity-50"
             onClick={onSubscribe}
-            disabled={busy || restoreBusy || !canPurchase}
+            disabled={busy || restoreBusy}
             type="button"
           >
-            {busy ? "Processing…" : !canPurchase ? "Checking availability…" : "Subscribe — $4.99 / month"}
+            {busy ? "Processing…" : "Subscribe — $4.99 / month"}
           </button>
 
           {purchaseError ? (
