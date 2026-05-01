@@ -5,6 +5,8 @@
  */
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Mic, MicOff, Send, Sparkles, Settings } from "lucide-react";
+import { SpeechRecognition as NativeSpeech } from "@capacitor-community/speech-recognition";
+import { isNative } from "../../lib/native.js";
 
 const CHAT_SUGGESTIONS = [
   "How are we tracking this month?",
@@ -71,19 +73,67 @@ function CoachChat({ onSendMessage, onEditProfile }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history, busy]);
 
-  const toggleVoice = useCallback(() => {
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setError("Voice input isn't supported in this browser. Try Chrome.");
-      return;
-    }
-
+  const toggleVoice = useCallback(async () => {
+    // Stop if already listening
     if (listening) {
       recognitionRef.current?.stop();
       return;
     }
 
+    setError(null);
     committedRef.current = message;
+
+    if (isNative()) {
+      // --- Native iOS path via SFSpeechRecognizer ---
+      let perm;
+      try {
+        perm = await NativeSpeech.requestPermission();
+      } catch {
+        setError("Couldn't request microphone permission.");
+        return;
+      }
+      if (perm?.speechRecognition !== "granted" || perm?.microphone !== "granted") {
+        setError("Microphone denied. Enable it in Settings → Honey Budget.");
+        return;
+      }
+
+      const partialListener = await NativeSpeech.addListener("partialResults", (data) => {
+        const text = data.matches?.[0] ?? "";
+        if (text) {
+          setMessage((committedRef.current + " " + text).trim());
+          setInterim(text);
+        }
+      });
+
+      const cleanup = async () => {
+        partialListener.remove();
+        await NativeSpeech.stop().catch(() => {});
+        setListening(false);
+        setInterim("");
+        recognitionRef.current = null;
+        inputRef.current?.focus();
+      };
+
+      recognitionRef.current = { stop: cleanup };
+      setListening(true);
+
+      try {
+        await NativeSpeech.start({ language: "en-US", maxResults: 1, partialResults: true, popup: false });
+        // start() resolves when recognition ends naturally
+        await cleanup();
+      } catch {
+        await cleanup();
+        setError("Voice input stopped. Tap the mic to try again.");
+      }
+      return;
+    }
+
+    // --- Web path (Chrome / Safari desktop) ---
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      setError("Voice input isn't supported in this browser. Try Chrome.");
+      return;
+    }
 
     const rec = new SR();
     rec.lang = "en-US";

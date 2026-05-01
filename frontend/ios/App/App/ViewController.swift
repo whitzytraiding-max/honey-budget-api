@@ -20,5 +20,6 @@ class ViewController: CAPBridgeViewController {
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AppleSignInPlugin())
+        bridge?.registerPluginInstance(SpeechRecognitionPlugin())
     }
 }

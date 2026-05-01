@@ -49,6 +49,10 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Honey Budget uses your microphone so you can speak to Hunny, your AI financial coach.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Honey Budget uses speech recognition to convert your voice into text when chatting with Hunny.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

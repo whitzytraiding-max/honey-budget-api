@@ -114,6 +114,7 @@ html.is-native * {
   -webkit-touch-callout: none; /* no long-press callout */
   -webkit-user-select: none;
   user-select: none;
+  overscroll-behavior: none; /* no rubber-band on any inner scroll container */
 }
 
 html.is-native input,
