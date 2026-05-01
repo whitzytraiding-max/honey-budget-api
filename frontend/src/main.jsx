@@ -3,8 +3,13 @@ import { createRoot } from "react-dom/client";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import App from "./App.jsx";
 import { LanguageProvider } from "./i18n/LanguageProvider.jsx";
-import { initNative } from "./lib/native.js";
+import { isNative, initNative } from "./lib/native.js";
 import "./styles.css";
+
+// Lock the native UI scale and prevent element dragging
+if (isNative()) {
+  document.documentElement.classList.add("is-native");
+}
 
 initNative();
 

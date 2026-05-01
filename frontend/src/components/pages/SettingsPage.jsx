@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Lock, Settings2, Sparkles, UserMinus, UserPlus, Users } from "lucide-react";
+import { Lock, LogOut, Settings2, Sparkles, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { isNative } from "../../lib/native.js";
@@ -32,6 +32,8 @@ function SettingsPage({
   onUnlinkPartner,
   inviteBusy,
   onNavigate,
+  onLogout,
+  onDeleteAccount,
 }) {
   const [mmkUnlocked, setMmkUnlocked] = useState(() => localStorage.getItem("hb-mmk-unlocked") === "true");
   const [mmkCodeInput, setMmkCodeInput] = useState("");
@@ -44,6 +46,8 @@ function SettingsPage({
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponResult, setCouponResult] = useState(null); // { ok: bool, message: string }
   const [confirmUnlink, setConfirmUnlink] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const { locale, setLocale, supportedLocales, t } = useLanguage();
   const currencyOptions = getCurrencyOptions(locale);
   const user = session?.user;
@@ -542,6 +546,65 @@ function SettingsPage({
           </div>
           {mmkCodeError && <p className="mt-2 text-xs text-rose-400">{mmkCodeError}</p>}
         </div>
+      )}
+
+      {/* Logout — shown on native (desktop has it in the header) */}
+      {onLogout && isNative() && (
+        <button
+          className="flex w-full items-center justify-center gap-2 rounded-[1.5rem] border border-slate-200/40 bg-white/10 px-4 py-4 text-sm font-medium text-slate-300 transition hover:bg-white/20"
+          onClick={onLogout}
+          type="button"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </button>
+      )}
+
+      {/* Delete account */}
+      {onDeleteAccount && (
+        <section className="hb-surface-card rounded-[2rem] p-6">
+          <div className="flex items-center gap-3">
+            <Trash2 className="h-4 w-4 text-rose-500" />
+            <h2 className="text-base font-semibold text-slate-900">Delete Account</h2>
+          </div>
+
+          {confirmDelete ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm leading-6 text-rose-700">
+                This will permanently delete your account and all data — transactions, savings, debts, and partner links. This cannot be undone.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50"
+                  disabled={deleteBusy}
+                  onClick={async () => {
+                    setDeleteBusy(true);
+                    await onDeleteAccount();
+                  }}
+                  type="button"
+                >
+                  {deleteBusy ? "Deleting…" : "Yes, delete everything"}
+                </button>
+                <button
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-slate-700"
+                  onClick={() => setConfirmDelete(false)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100"
+              onClick={() => setConfirmDelete(true)}
+              type="button"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete my account
+            </button>
+          )}
+        </section>
       )}
 
       {onNavigate && (

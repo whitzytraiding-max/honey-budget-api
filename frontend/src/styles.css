@@ -93,6 +93,24 @@ html {
   min-height: 100vh;
 }
 
+/* ─── Native iOS app overrides ───────────────────────────────────────────── */
+html.is-native {
+  font-size: 13.6px; /* 16px × 0.85 — scales all Tailwind rem/spacing 15% smaller */
+}
+
+html.is-native * {
+  -webkit-touch-callout: none; /* no long-press callout */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html.is-native input,
+html.is-native textarea,
+html.is-native [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 @media (max-width: 640px) {
   html {
     font-size: 15px;

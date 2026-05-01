@@ -248,6 +248,15 @@ export default function App() {
     navigate("home");
   }
 
+  async function handleDeleteAccount() {
+    try {
+      await apiFetch("/api/auth/account", { method: "DELETE" });
+    } catch {
+      // proceed with logout even if the request fails
+    }
+    handleLogout();
+  }
+
   function enableSoloMode() {
     writeStorage(STORAGE_KEYS.SOLO_MODE, "true");
     setSoloMode(true);
@@ -643,6 +652,8 @@ export default function App() {
             onUnlinkPartner={handleUnlinkPartner}
             inviteBusy={linkBusy}
             onNavigate={navigate}
+            onLogout={handleLogout}
+            onDeleteAccount={handleDeleteAccount}
           />
         );
       case "paywall":

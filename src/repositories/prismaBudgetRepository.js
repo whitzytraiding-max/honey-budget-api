@@ -1229,6 +1229,12 @@ function createPrismaBudgetRepository({ prisma }) {
       return mapUser(user);
     },
 
+    async deleteUser(userId) {
+      // Clear any partner's FK reference to this user before deleting
+      await prisma.user.updateMany({ where: { partnerId: userId }, data: { partnerId: null } });
+      await prisma.user.delete({ where: { id: userId } });
+    },
+
     async updateSoloMode({ userId, soloMode }) {
       const user = await prisma.user.update({
         where: { id: userId },

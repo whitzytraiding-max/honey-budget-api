@@ -182,5 +182,14 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     }),
   );
 
+  router.delete(
+    "/api/auth/account",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      await budgetRepository.deleteUser(request.user.id);
+      sendData(response, 200, { message: "Account deleted." });
+    }),
+  );
+
   return router;
 }
