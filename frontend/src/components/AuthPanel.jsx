@@ -246,14 +246,14 @@ function AuthPanel({
               <ActionButton busy={isSubmitting} disabled={isSubmitting || !termsAccepted}>
                 {t("auth.createAccount")}
               </ActionButton>
-              {(onGoogleAuth || showApple) ? (
+              {((onGoogleAuth && !isNative()) || showApple) ? (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-slate-200" />
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  {onGoogleAuth && (
+                  {onGoogleAuth && !isNative() && (
                     termsAccepted ? (
                       <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />
                     ) : (
@@ -296,14 +296,14 @@ function AuthPanel({
               >
                 {t("auth.forgotPassword")}
               </button>
-              {(onGoogleAuth || showApple) ? (
+              {((onGoogleAuth && !isNative()) || showApple) ? (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-slate-200" />
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  {onGoogleAuth && <GoogleButton onAuth={onGoogleAuth} label="Sign in with Google" />}
+                  {onGoogleAuth && !isNative() && <GoogleButton onAuth={onGoogleAuth} label="Sign in with Google" />}
                   {showApple && <AppleButton onAuth={onAppleAuth} label="Sign in with Apple" />}
                 </div>
               ) : null}
