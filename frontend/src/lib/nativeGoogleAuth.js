@@ -7,8 +7,10 @@ import { Browser } from "@capacitor/browser";
 import { App } from "@capacitor/app";
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_NATIVE_CLIENT_ID || "";
-const CLIENT_SECRET = import.meta.env.VITE_GOOGLE_NATIVE_CLIENT_SECRET || "";
-const REDIRECT_URI = "honeybudget://google-auth";
+// iOS OAuth clients are public clients — no secret needed, PKCE provides security
+const REDIRECT_URI = CLIENT_ID
+  ? "com.googleusercontent.apps." + CLIENT_ID.replace(".apps.googleusercontent.com", "") + ":/"
+  : "";
 
 function generateVerifier() {
   const array = new Uint8Array(32);
@@ -80,7 +82,6 @@ export async function nativeGoogleSignIn() {
           body: new URLSearchParams({
             code,
             client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
             redirect_uri: REDIRECT_URI,
             grant_type: "authorization_code",
             code_verifier: verifier,

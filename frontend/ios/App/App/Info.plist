@@ -59,6 +59,14 @@
 			<key>CFBundleURLName</key>
 			<string>com.whitzy.honeybudget</string>
 		</dict>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.128249413113-dqimuuf4492pot0hv1gsi4p53vgqebom</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.googleusercontent.apps.128249413113-dqimuuf4492pot0hv1gsi4p53vgqebom</string>
+		</dict>
 	</array>
 </dict>
 </plist>
