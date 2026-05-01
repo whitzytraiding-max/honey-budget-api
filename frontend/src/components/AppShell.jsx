@@ -125,7 +125,7 @@ function AppShell({
               </div>
             </div>
 
-            {route !== "home" && (
+            {route !== "home" && route !== "paywall" && route !== "insights" && (
               <div className="flex flex-col items-stretch gap-2.5 sm:flex-row sm:items-center">
                 <div className="hb-summary-chip min-w-0 flex-1 rounded-[1.35rem] px-4 py-3 shadow-sm sm:min-w-[220px] sm:flex-none sm:rounded-[1.5rem] sm:px-5 sm:py-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs">
