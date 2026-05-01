@@ -94,6 +94,18 @@ html {
 }
 
 /* ─── Native iOS app overrides ───────────────────────────────────────────── */
+html.is-native,
+html.is-native body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.is-native #root {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: none;
+}
+
 html.is-native {
   font-size: 13.6px; /* 16px × 0.85 — scales all Tailwind rem/spacing 15% smaller */
 }

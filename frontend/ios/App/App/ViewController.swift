@@ -17,4 +17,8 @@ class ViewController: CAPBridgeViewController {
         webView?.scrollView.alwaysBounceVertical = false
         webView?.scrollView.alwaysBounceHorizontal = false
     }
+
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(AppleSignInPlugin())
+    }
 }
