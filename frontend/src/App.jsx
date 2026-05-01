@@ -551,7 +551,7 @@ export default function App() {
           return <CoachSetupPage coachProfileForm={dataBundle.coachProfileForm} onChange={coach.updateCoachProfileForm} onSubmit={(e) => coach.handleCoachProfileSubmit(e, { isPro })} busy={coach.coachProfileBusy} completed={Boolean(dataBundle.coachProfile?.completed)} soloMode={soloMode} />;
         }
         if (!isPro) {
-          return <PaywallPage onSubscribe={paywall.handleSubscribeIAP} onContinueFree={() => navigate("home")} onRestore={paywall.handleRestorePurchases} busy={paywall.paywallBusy} restoreBusy={paywall.restoreBusy} />;
+          return <PaywallPage onSubscribe={paywall.handleSubscribeIAP} onContinueFree={() => navigate("home")} onRestore={paywall.handleRestorePurchases} busy={paywall.paywallBusy} restoreBusy={paywall.restoreBusy} purchaseError={paywall.purchaseError} offeringReady={paywall.offeringReady} />;
         }
         return <InsightsPage insightsBusy={dataBundle.insightsBusy} insights={dataBundle.insightData?.insights} dashboard={dashboard} />;
       case "coach":
@@ -658,7 +658,7 @@ export default function App() {
           />
         );
       case "paywall":
-        return <PaywallPage onSubscribe={paywall.handleSubscribeIAP} onContinueFree={() => navigate("home")} onRestore={paywall.handleRestorePurchases} busy={paywall.paywallBusy} restoreBusy={paywall.restoreBusy} />;
+        return <PaywallPage onSubscribe={paywall.handleSubscribeIAP} onContinueFree={() => navigate("home")} onRestore={paywall.handleRestorePurchases} busy={paywall.paywallBusy} restoreBusy={paywall.restoreBusy} purchaseError={paywall.purchaseError} offeringReady={paywall.offeringReady} />;
       case "privacy-policy":
         return <PrivacyPolicyPage onBack={() => navigate("settings")} />;
       case "terms-of-service":

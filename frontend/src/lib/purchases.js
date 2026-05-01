@@ -4,21 +4,18 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 
-/**
- * RevenueCat in-app purchase wrapper.
- * All functions are safe to call on web — they no-op gracefully.
- */
-
 import { isNative, getPlatform } from "./native.js";
 
 const IOS_KEY = import.meta.env.VITE_REVENUECAT_IOS_KEY || "";
 const PRO_ENTITLEMENT = "pro";
-const OFFERINGS_TIMEOUT_MS = 15_000;
-const PURCHASE_TIMEOUT_MS = 60_000;
+const OFFERINGS_TIMEOUT_MS = 10_000;
+const PURCHASE_TIMEOUT_MS = 25_000;
 
 function isIOS() {
   return isNative() && getPlatform() === "ios";
 }
+
+let _configurePromise = null;
 
 async function getPurchases() {
   if (!isIOS() || !IOS_KEY) return null;
@@ -34,7 +31,7 @@ function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s.`)), ms),
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms),
     ),
   ]);
 }
@@ -42,17 +39,23 @@ function withTimeout(promise, ms, label) {
 export async function initPurchases(userId) {
   const Purchases = await getPurchases();
   if (!Purchases) return;
-  try {
-    await Purchases.configure({ apiKey: IOS_KEY, appUserID: String(userId) });
-  } catch {
-    // ignore — already configured or unsupported
-  }
+  _configurePromise = withTimeout(
+    Purchases.configure({ apiKey: IOS_KEY, appUserID: String(userId) }),
+    8_000,
+    "configure",
+  ).catch(() => {});
+  await _configurePromise;
+}
+
+async function waitForConfigure() {
+  if (_configurePromise) await _configurePromise.catch(() => {});
 }
 
 export async function getMonthlyPackage() {
   const Purchases = await getPurchases();
   if (!Purchases) return null;
   try {
+    await waitForConfigure();
     const { current } = await withTimeout(
       Purchases.getOfferings(),
       OFFERINGS_TIMEOUT_MS,
@@ -66,25 +69,35 @@ export async function getMonthlyPackage() {
 
 export async function purchaseMonthly() {
   const Purchases = await getPurchases();
-  if (!Purchases) throw new Error("Purchases not available on this platform.");
+  if (!Purchases) throw new Error("In-app purchases are not available on this device.");
+  await waitForConfigure();
   const pkg = await getMonthlyPackage();
-  if (!pkg) throw new Error("Subscription not available right now. Please check your connection and try again.");
-  const { customerInfo } = await withTimeout(
-    Purchases.purchasePackage({ aPackage: pkg }),
-    PURCHASE_TIMEOUT_MS,
-    "purchasePackage",
-  );
-  return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
+  if (!pkg) throw new Error("Subscription product unavailable. Please check your connection and try again.");
+  try {
+    const { customerInfo } = await withTimeout(
+      Purchases.purchasePackage({ aPackage: pkg }),
+      PURCHASE_TIMEOUT_MS,
+      "purchase",
+    );
+    return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
+  } catch (err) {
+    const msg = String(err?.message ?? err ?? "");
+    if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("user_cancel")) {
+      throw err;
+    }
+    throw new Error("Purchase could not be completed. Please try again.");
+  }
 }
 
 export async function restorePurchases() {
   const Purchases = await getPurchases();
   if (!Purchases) return false;
   try {
+    await waitForConfigure();
     const { customerInfo } = await withTimeout(
       Purchases.restorePurchases(),
       PURCHASE_TIMEOUT_MS,
-      "restorePurchases",
+      "restore",
     );
     return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
   } catch {

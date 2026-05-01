@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "../lib/api.js";
-import { purchaseMonthly, restorePurchases } from "../lib/purchases.js";
+import { purchaseMonthly, restorePurchases, getMonthlyPackage } from "../lib/purchases.js";
+import { isNative } from "../lib/native.js";
 
 export function usePaywall({ appData, navigate }) {
-  const { refreshDashboardBundle, setPageError } = appData;
+  const { refreshDashboardBundle } = appData;
 
   const [paywallBusy, setPaywallBusy] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
+  const [purchaseError, setPurchaseError] = useState("");
+  const [offeringReady, setOfferingReady] = useState(!isNative());
+
+  // Pre-fetch the offering so we know it's available before the user taps
+  const prefetchOffering = useCallback(async () => {
+    if (!isNative()) return;
+    setOfferingReady(false);
+    const pkg = await getMonthlyPackage();
+    setOfferingReady(Boolean(pkg));
+  }, []);
+
+  useEffect(() => {
+    prefetchOffering();
+  }, [prefetchOffering]);
 
   async function handleSubscribeIAP() {
     setPaywallBusy(true);
-    setPageError("");
+    setPurchaseError("");
     try {
       const confirmed = await purchaseMonthly();
       if (confirmed) {
@@ -20,7 +35,7 @@ export function usePaywall({ appData, navigate }) {
     } catch (err) {
       const msg = err?.message || "";
       const cancelled = msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("user_cancel");
-      if (!cancelled) setPageError("Purchase failed. Please try again.");
+      if (!cancelled) setPurchaseError(msg || "Purchase failed. Please try again.");
     } finally {
       setPaywallBusy(false);
     }
@@ -28,17 +43,17 @@ export function usePaywall({ appData, navigate }) {
 
   async function handleRestorePurchases() {
     setRestoreBusy(true);
-    setPageError("");
+    setPurchaseError("");
     try {
       const confirmed = await restorePurchases();
       if (confirmed) {
         await refreshDashboardBundle().catch(() => {});
         navigate("insights");
       } else {
-        setPageError("No previous purchases found to restore.");
+        setPurchaseError("No previous purchases found for this Apple ID.");
       }
     } catch {
-      setPageError("Restore failed. Please try again.");
+      setPurchaseError("Restore failed. Please try again.");
     } finally {
       setRestoreBusy(false);
     }
@@ -53,5 +68,13 @@ export function usePaywall({ appData, navigate }) {
     return data;
   }
 
-  return { paywallBusy, restoreBusy, handleSubscribeIAP, handleRestorePurchases, handleRedeemCoupon };
+  return {
+    paywallBusy,
+    restoreBusy,
+    purchaseError,
+    offeringReady,
+    handleSubscribeIAP,
+    handleRestorePurchases,
+    handleRedeemCoupon,
+  };
 }
