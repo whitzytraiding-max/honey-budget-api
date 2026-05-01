@@ -245,6 +245,7 @@ export default function App() {
     dataBundle.resetAll();
     settings.resetMmkRate();
     setPageError("");
+    document.getElementById("root")?.scrollTo(0, 0);
     navigate("home");
   }
 

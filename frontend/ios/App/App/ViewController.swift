@@ -1,7 +1,7 @@
 import UIKit
 import Capacitor
 
-class ViewController: CAPBridgeViewController {
+class ViewController: CAPBridgeViewController, UIScrollViewDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -17,10 +17,21 @@ class ViewController: CAPBridgeViewController {
         webView?.scrollView.bounces = false
         webView?.scrollView.alwaysBounceVertical = false
         webView?.scrollView.alwaysBounceHorizontal = false
+
+        // Lock zoom so keyboard/layout events cannot change the viewport scale
+        webView?.scrollView.minimumZoomScale = 1.0
+        webView?.scrollView.maximumZoomScale = 1.0
+        webView?.scrollView.zoomScale = 1.0
     }
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(AppleSignInPlugin())
         bridge?.registerPluginInstance(SpeechRecognitionPlugin())
+        webView?.scrollView.delegate = self
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        // Snap back to 1.0 if anything tries to zoom the WKWebView (e.g. keyboard layout changes)
+        scrollView.setZoomScale(1.0, animated: false)
     }
 }
