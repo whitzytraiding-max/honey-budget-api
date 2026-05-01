@@ -9,28 +9,52 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getCurrencyOptions } from "../lib/format.js";
 import { isNative, getPlatform } from "../lib/native.js";
+import { nativeGoogleSignIn } from "../lib/nativeGoogleAuth.js";
 import { ActionButton, Input, Select } from "./ui.jsx";
 
+const GOOGLE_SVG = (
+  <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.09 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.22l7.1 5.52C12.46 13.47 17.76 9.5 24 9.5z"/>
+    <path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.42-4.74H24v9h12.7c-.55 2.96-2.2 5.47-4.67 7.16l7.18 5.58C43.46 37.23 46.52 31.34 46.52 24.5z"/>
+    <path fill="#FBBC05" d="M10.74 28.26A14.55 14.55 0 0 1 9.5 24c0-1.48.26-2.91.72-4.26l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.92 7.52 2.54 10.74l8.2-6.48z"/>
+    <path fill="#34A853" d="M24 47c5.5 0 10.12-1.82 13.5-4.96l-7.18-5.58C28.5 38.04 26.38 38.5 24 38.5c-6.24 0-11.54-3.97-13.26-9.76l-8.2 6.48C6.07 43.52 14.53 47 24 47z"/>
+  </svg>
+);
+
 function GoogleButton({ onAuth, label }) {
-  const login = useGoogleLogin({
+  const [busy, setBusy] = useState(false);
+  const webLogin = useGoogleLogin({
     onSuccess: (response) => onAuth(response.access_token),
     onError: () => {},
     flow: "implicit",
   });
 
+  async function handleClick() {
+    if (isNative()) {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const accessToken = await nativeGoogleSignIn();
+        onAuth(accessToken);
+      } catch {
+        // user cancelled — do nothing
+      } finally {
+        setBusy(false);
+      }
+    } else {
+      webLogin();
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={() => login()}
-      className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20"
+      onClick={handleClick}
+      disabled={busy}
+      className="flex w-full items-center justify-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20 disabled:opacity-50"
     >
-      <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-        <path fill="#EA4335" d="M24 9.5c3.14 0 5.95 1.08 8.17 2.86l6.1-6.1C34.46 3.09 29.5 1 24 1 14.82 1 7.07 6.48 3.64 14.22l7.1 5.52C12.46 13.47 17.76 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.52 24.5c0-1.64-.15-3.22-.42-4.74H24v9h12.7c-.55 2.96-2.2 5.47-4.67 7.16l7.18 5.58C43.46 37.23 46.52 31.34 46.52 24.5z"/>
-        <path fill="#FBBC05" d="M10.74 28.26A14.55 14.55 0 0 1 9.5 24c0-1.48.26-2.91.72-4.26l-7.1-5.52A23.94 23.94 0 0 0 0 24c0 3.87.92 7.52 2.54 10.74l8.2-6.48z"/>
-        <path fill="#34A853" d="M24 47c5.5 0 10.12-1.82 13.5-4.96l-7.18-5.58C28.5 38.04 26.38 38.5 24 38.5c-6.24 0-11.54-3.97-13.26-9.76l-8.2 6.48C6.07 43.52 14.53 47 24 47z"/>
-      </svg>
-      {label}
+      {GOOGLE_SVG}
+      {busy ? "Signing in…" : label}
     </button>
   );
 }
@@ -246,14 +270,14 @@ function AuthPanel({
               <ActionButton busy={isSubmitting} disabled={isSubmitting || !termsAccepted}>
                 {t("auth.createAccount")}
               </ActionButton>
-              {((onGoogleAuth && !isNative()) || showApple) ? (
+              {(onGoogleAuth || showApple) ? (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-slate-200" />
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  {onGoogleAuth && !isNative() && (
+                  {onGoogleAuth && (
                     termsAccepted ? (
                       <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />
                     ) : (
@@ -296,14 +320,14 @@ function AuthPanel({
               >
                 {t("auth.forgotPassword")}
               </button>
-              {((onGoogleAuth && !isNative()) || showApple) ? (
+              {(onGoogleAuth || showApple) ? (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-slate-200" />
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  {onGoogleAuth && !isNative() && <GoogleButton onAuth={onGoogleAuth} label="Sign in with Google" />}
+                  {onGoogleAuth && <GoogleButton onAuth={onGoogleAuth} label="Sign in with Google" />}
                   {showApple && <AppleButton onAuth={onAppleAuth} label="Sign in with Apple" />}
                 </div>
               ) : null}
