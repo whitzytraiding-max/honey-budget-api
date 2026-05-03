@@ -702,6 +702,11 @@ export default function App() {
             ? () => dataBundle.refreshDashboardBundle().catch((e) => setPageError(e.message))
             : undefined
         }
+        onRefresh={
+          session
+            ? () => dataBundle.refreshDashboardBundle().catch(() => {})
+            : undefined
+        }
         pageTabs={PAGE_TABS[route] ?? []}
         activeTab={activeTab}
         onTabChange={setActiveTab}

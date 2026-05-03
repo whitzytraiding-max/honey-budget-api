@@ -4,6 +4,7 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { useState } from "react";
+import PullToRefresh from "./PullToRefresh.jsx";
 import {
   Bell,
   Brain,
@@ -57,6 +58,7 @@ function AppShell({
   pageError,
   onDismissError,
   onRetryLoad,
+  onRefresh,
   pageTabs = [],
   activeTab,
   onTabChange,
@@ -171,7 +173,11 @@ function AppShell({
           </div>
         ) : null}
 
-        <div className="mt-4 sm:mt-6">{children}</div>
+        <div className="mt-4 sm:mt-6">
+          {onRefresh ? (
+            <PullToRefresh onRefresh={onRefresh}>{children}</PullToRefresh>
+          ) : children}
+        </div>
 
         <footer className="mt-6 px-2 text-center text-xs leading-5 text-slate-500">
           <p>{t("legal.ownership")}</p>

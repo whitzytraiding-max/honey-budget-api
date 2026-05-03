@@ -23,8 +23,11 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 pb-3">
+        {/* Header — padded below status bar on iOS */}
+        <div
+          className="flex items-center justify-between px-4 pb-3"
+          style={{ paddingTop: "max(1rem, var(--safe-top))" }}
+        >
           <div className="hb-brand-pill inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em]">
             <img alt="Honey Budget" className="h-4 w-4" src="/icons/brand-mark.svg" />
             Honey Budget
@@ -35,7 +38,7 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
             type="button"
             aria-label="Close sidebar"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
@@ -50,7 +53,7 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
               {items.map(({ key, label, icon: Icon }) => (
                 <div key={key} className="group flex items-center gap-1">
                   <button
-                    className={`flex flex-1 items-center gap-3 rounded-[1rem] px-4 py-3 text-sm font-medium transition ${
+                    className={`flex flex-1 items-center gap-3 rounded-[1rem] px-4 py-4 text-base font-medium transition ${
                       route === key ? "hb-nav-active" : "hb-nav-idle"
                     }`}
                     onClick={() => {
@@ -60,7 +63,7 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
                     }}
                     type="button"
                   >
-                    <Icon className="h-4 w-4 shrink-0" />
+                    <Icon className="h-5 w-5 shrink-0" />
                     {label}
                   </button>
                   {key !== "home" && (
@@ -70,7 +73,7 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
                       title="Hide — move to More"
                       type="button"
                     >
-                      <EyeOff className="h-3.5 w-3.5" />
+                      <EyeOff className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -80,10 +83,10 @@ function Sidebar({ open, onClose, items, onNavigate, onHideItem, route, hiddenCo
         </nav>
 
         {/* Footer */}
-        <div className="space-y-2 p-3">
+        <div className="space-y-2 p-3" style={{ paddingBottom: "max(0.75rem, var(--safe-bottom))" }}>
           {hiddenCount > 0 && (
             <button
-              className="hb-nav-idle w-full rounded-[1rem] px-4 py-3 text-left text-sm font-medium transition"
+              className="hb-nav-idle w-full rounded-[1rem] px-4 py-4 text-left text-base font-medium transition"
               onClick={() => {
                 hapticLight();
                 onMoreClick();
