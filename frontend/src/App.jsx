@@ -49,6 +49,7 @@ import { useSettings } from "./hooks/useSettings.js";
 import { useCoach } from "./hooks/useCoach.js";
 import { useDebt } from "./hooks/useDebt.js";
 import { usePaywall } from "./hooks/usePaywall.js";
+import OnboardingTour, { isTourDone, markTourDone } from "./components/OnboardingTour.jsx";
 
 const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "MMK"]);
 
@@ -143,6 +144,12 @@ export default function App() {
   });
 
   const { session, pageError, setPageError } = dataBundle;
+
+  const [tourVisible, setTourVisible] = useState(false);
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (uid && !isTourDone(uid)) setTourVisible(true);
+  }, [session?.user?.id]);
 
   const settings = useSettings({
     currencyCode,
@@ -718,6 +725,12 @@ export default function App() {
           message={confirmDialog.message}
           onConfirm={handleConfirmYes}
           onCancel={handleConfirmNo}
+        />
+      )}
+      {tourVisible && (
+        <OnboardingTour
+          userId={session?.user?.id}
+          onDone={() => setTourVisible(false)}
         />
       )}
     </>
