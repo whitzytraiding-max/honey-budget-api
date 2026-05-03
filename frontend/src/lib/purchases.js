@@ -17,6 +17,9 @@ function isIOS() {
 let _configured = false;
 let _configuredUserId = null;
 
+// Cache the offerings fetch so preload and purchase share the same network call
+let _offeringsPromise = null;
+
 async function getPurchases() {
   if (!isIOS() || !IOS_KEY) return null;
   try {
@@ -73,20 +76,39 @@ async function ensureConfigured() {
   _configured = true;
 }
 
+async function fetchOfferings() {
+  const Purchases = await getPurchases();
+  if (!Purchases) return null;
+  await ensureConfigured();
+  const { current } = await withTimeout(Purchases.getOfferings(), 15_000, "getOfferings");
+  return current?.monthly ?? null;
+}
+
+// Call this when the paywall page mounts so the package is ready before the user taps.
+export async function preloadOfferings() {
+  if (!isIOS() || !IOS_KEY) return;
+  if (!_offeringsPromise) {
+    _offeringsPromise = fetchOfferings().catch(() => {
+      _offeringsPromise = null; // allow retry
+      return null;
+    });
+  }
+  await _offeringsPromise;
+}
+
 export async function purchaseMonthly() {
   const Purchases = await getPurchases();
   if (!Purchases) throw new Error("In-app purchases are not available on this device.");
 
-  await ensureConfigured();
-
   let pkg;
   try {
-    const { current } = await withTimeout(
-      Purchases.getOfferings(),
-      15_000,
-      "getOfferings",
-    );
-    pkg = current?.monthly ?? null;
+    if (!_offeringsPromise) {
+      _offeringsPromise = fetchOfferings().catch(() => {
+        _offeringsPromise = null;
+        return null;
+      });
+    }
+    pkg = await _offeringsPromise;
   } catch {
     throw new Error("Could not load subscription. Check your connection and try again.");
   }
@@ -98,7 +120,7 @@ export async function purchaseMonthly() {
   try {
     const { customerInfo } = await withTimeout(
       Purchases.purchasePackage({ aPackage: pkg }),
-      90_000,
+      30_000,
       "purchase",
     );
     return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);

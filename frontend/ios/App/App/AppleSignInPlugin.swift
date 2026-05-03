@@ -3,7 +3,13 @@ import Capacitor
 import AuthenticationServices
 
 @objc(AppleSignInPlugin)
-public class AppleSignInPlugin: CAPPlugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+public class AppleSignInPlugin: CAPPlugin, CAPBridgedPlugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+
+    public let identifier = "AppleSignInPlugin"
+    public let jsName = "SignInWithApple"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "authorize", returnType: CAPPluginReturnPromise),
+    ]
 
     private var pluginCall: CAPPluginCall?
 
@@ -24,7 +30,6 @@ public class AppleSignInPlugin: CAPPlugin, ASAuthorizationControllerDelegate, AS
         if let window = bridge?.viewController?.view.window {
             return window
         }
-        // Fallback for iPad Stage Manager / multiple scenes (iPadOS 16+)
         for scene in UIApplication.shared.connectedScenes {
             if let windowScene = scene as? UIWindowScene,
                windowScene.activationState == .foregroundActive {

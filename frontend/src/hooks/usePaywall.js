@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api.js";
-import { purchaseMonthly, restorePurchases } from "../lib/purchases.js";
+import { purchaseMonthly, restorePurchases, preloadOfferings } from "../lib/purchases.js";
 
 export function usePaywall({ appData, navigate }) {
   const { refreshDashboardBundle } = appData;
 
   const [paywallBusy, setPaywallBusy] = useState(false);
+
+  useEffect(() => {
+    preloadOfferings();
+  }, []);
   const [restoreBusy, setRestoreBusy] = useState(false);
   const [purchaseError, setPurchaseError] = useState("");
 
@@ -50,7 +54,12 @@ export function usePaywall({ appData, navigate }) {
       method: "POST",
       body: JSON.stringify({ code }),
     });
-    await refreshDashboardBundle().catch(() => {});
+    try {
+      await refreshDashboardBundle();
+    } catch {
+      // Budget views failed — still navigate so the user sees Pro is active
+    }
+    navigate("insights");
     return data;
   }
 
