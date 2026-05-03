@@ -4,6 +4,7 @@ import {
   createCurrencyConverter,
   roundCurrency,
 } from "./currencyConversionService.js";
+import { getBudgetWindowForUsers } from "../lib/helpers.js";
 
 function roundPercent(value) {
   return Number(Number(value).toFixed(1));
@@ -36,7 +37,6 @@ async function buildBudgetSnapshot({
   budgetRepository,
   exchangeRateService,
   coupleId,
-  days = 30,
   displayCurrency = null,
 }) {
   const couple = await budgetRepository.getCoupleById(coupleId);
@@ -45,8 +45,9 @@ async function buildBudgetSnapshot({
     throw new HttpError(404, "COUPLE_NOT_FOUND", "Couple not found.");
   }
 
-  const transactions = await budgetRepository.listCoupleTransactions({ coupleId, days });
   const users = [couple.userOne, couple.userTwo];
+  const { from, to, end, anchorDay, label } = getBudgetWindowForUsers(users);
+  const transactions = await budgetRepository.listCoupleTransactions({ coupleId, fromDate: from, toDate: to });
   const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
   const converter = await createCurrencyConverter({
     exchangeRateService,
@@ -116,11 +117,7 @@ async function buildBudgetSnapshot({
 
   return {
     coupleId,
-    period: {
-      days,
-      from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      to: new Date().toISOString().slice(0, 10),
-    },
+    period: { from, to, end, anchorDay, label },
     users: users.map((user) => ({
       id: user.id,
       name: user.name,
@@ -176,21 +173,18 @@ async function buildBudgetSnapshotForUsers({
   exchangeRateService,
   currentUser,
   partnerUser,
-  days = 30,
   displayCurrency = null,
-  fromDate = null,
-  toDate = null,
 }) {
   if (!currentUser) {
     throw new HttpError(404, "COUPLE_NOT_FOUND", "User not found.");
   }
 
   const users = [currentUser, partnerUser].filter(Boolean);
+  const { from, to, end, anchorDay, label } = getBudgetWindowForUsers(users);
   const transactions = await budgetRepository.listTransactionsForUserIds({
     userIds: users.map((user) => user.id),
-    days,
-    fromDate,
-    toDate,
+    fromDate: from,
+    toDate: to,
   });
   const couple = partnerUser ? await budgetRepository.getCoupleForUser(currentUser.id) : null;
   const resolvedDisplayCurrency = displayCurrency || users[0]?.incomeCurrencyCode || "USD";
@@ -262,11 +256,7 @@ async function buildBudgetSnapshotForUsers({
 
   return {
     coupleId: couple?.id ?? null,
-    period: {
-      days,
-      from: new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      to: new Date().toISOString().slice(0, 10),
-    },
+    period: { from, to, end, anchorDay, label },
     users: users.map((user) => ({
       id: user.id,
       name: user.name,

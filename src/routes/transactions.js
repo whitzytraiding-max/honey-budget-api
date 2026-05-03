@@ -36,18 +36,15 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
     "/api/dashboard",
     requireAuth,
     asyncHandler(async (request, response) => {
-      const days = Number(request.query.days ?? 30);
       const displayCurrency = request.query.displayCurrency?.trim();
       const couple = await budgetRepository.getCoupleForUser(request.user.id);
 
       if (!couple) {
-        const partnerUser = null;
         const snapshot = await buildBudgetSnapshotForUsers({
           budgetRepository,
           exchangeRateService,
           currentUser: request.user,
-          partnerUser,
-          days: Number.isFinite(days) && days > 0 ? days : 30,
+          partnerUser: null,
           displayCurrency,
         });
         return sendData(response, 200, {
@@ -73,7 +70,6 @@ export function createTransactionRoutes({ budgetRepository, exchangeRateService,
         budgetRepository,
         exchangeRateService,
         coupleId: couple.id,
-        days: Number.isFinite(days) && days > 0 ? days : 30,
         displayCurrency,
       });
 
