@@ -7,7 +7,7 @@
 import { isNative, getPlatform } from "./native.js";
 
 const IOS_KEY = import.meta.env.VITE_REVENUECAT_IOS_KEY || "";
-const PRO_ENTITLEMENT = "pro";
+const PRO_ENTITLEMENT = "honey budget Pro";
 
 function isIOS() {
   return isNative() && getPlatform() === "ios";
