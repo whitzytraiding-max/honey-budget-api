@@ -13,11 +13,8 @@ function isIOS() {
   return isNative() && getPlatform() === "ios";
 }
 
-// Track configure state so we never double-configure
 let _configured = false;
 let _configuredUserId = null;
-
-// Cache the offerings fetch so preload and purchase share the same network call
 let _offeringsPromise = null;
 
 async function getPurchases() {
@@ -34,12 +31,17 @@ function withTimeout(promise, ms, label) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`${label} timed out`)), ms),
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
     ),
   ]);
 }
 
-// Called when user data loads — sets up RevenueCat with the real user ID
+function isAlreadyConfiguredError(err) {
+  const msg = String(err?.message ?? "").toLowerCase();
+  return msg.includes("already configured") || msg.includes("already been configured");
+}
+
+// Called once user session loads — configures RevenueCat with the real user ID.
 export async function initPurchases(userId) {
   const Purchases = await getPurchases();
   if (!Purchases) return;
@@ -51,15 +53,19 @@ export async function initPurchases(userId) {
     );
     _configured = true;
     _configuredUserId = String(userId);
-  } catch {
-    // Already configured, or key error — mark as done either way
-    _configured = true;
+    _offeringsPromise = null; // reset cache so next fetch uses the correct user
+  } catch (err) {
+    if (isAlreadyConfiguredError(err)) {
+      // SDK is already running — treat as success
+      _configured = true;
+    }
+    // Any other error (timeout, network, bad key) — leave _configured false
+    // so ensureConfigured() can retry before the next purchase attempt.
   }
 }
 
-// Ensures RevenueCat is configured before any StoreKit calls.
-// If initPurchases hasn't been called yet, configures anonymously
-// so getOfferings() can still work (user ID gets merged on logIn later).
+// Ensures RevenueCat is configured before any StoreKit call.
+// Falls back to anonymous configure if initPurchases hasn't run yet.
 async function ensureConfigured() {
   if (_configured) return;
   const Purchases = await getPurchases();
@@ -70,26 +76,32 @@ async function ensureConfigured() {
       10_000,
       "configure",
     );
-  } catch {
-    // ignore — already configured or network issue
+    _configured = true;
+  } catch (err) {
+    if (isAlreadyConfiguredError(err)) {
+      _configured = true;
+    }
+    // On any other failure, leave _configured false so the next call retries.
   }
-  _configured = true;
 }
 
 async function fetchOfferings() {
   const Purchases = await getPurchases();
   if (!Purchases) return null;
   await ensureConfigured();
+  if (!_configured) throw new Error("RevenueCat could not be initialised. Check your connection and try again.");
   const { current } = await withTimeout(Purchases.getOfferings(), 15_000, "getOfferings");
-  return current?.monthly ?? null;
+  if (!current) throw new Error("No active offering found. Check RevenueCat dashboard configuration.");
+  return current.monthly ?? null;
 }
 
-// Call this when the paywall page mounts so the package is ready before the user taps.
+// Preload on paywall mount so the package is ready before the user taps.
 export async function preloadOfferings() {
   if (!isIOS() || !IOS_KEY) return;
   if (!_offeringsPromise) {
-    _offeringsPromise = fetchOfferings().catch(() => {
-      _offeringsPromise = null; // allow retry
+    _offeringsPromise = fetchOfferings().catch((err) => {
+      console.error("[RevenueCat] preloadOfferings failed:", err?.message ?? err);
+      _offeringsPromise = null;
       return null;
     });
   }
@@ -100,36 +112,49 @@ export async function purchaseMonthly() {
   const Purchases = await getPurchases();
   if (!Purchases) throw new Error("In-app purchases are not available on this device.");
 
+  // Ensure we have offerings (fetch if preload hasn't run or failed)
+  if (!_offeringsPromise) {
+    _offeringsPromise = fetchOfferings().catch((err) => {
+      console.error("[RevenueCat] fetchOfferings failed:", err?.message ?? err);
+      _offeringsPromise = null;
+      return null;
+    });
+  }
+
   let pkg;
   try {
-    if (!_offeringsPromise) {
-      _offeringsPromise = fetchOfferings().catch(() => {
-        _offeringsPromise = null;
-        return null;
-      });
-    }
     pkg = await _offeringsPromise;
-  } catch {
-    throw new Error("Could not load subscription. Check your connection and try again.");
+  } catch (err) {
+    console.error("[RevenueCat] awaiting offerings failed:", err?.message ?? err);
+    throw new Error("Could not load subscription products. Check your connection and try again.");
   }
 
   if (!pkg) {
-    throw new Error("Subscription product not available. Please try again later.");
+    throw new Error(
+      "Subscription product not available. Make sure the product is approved in App Store Connect and the offering is configured in RevenueCat.",
+    );
   }
 
   try {
     const { customerInfo } = await withTimeout(
       Purchases.purchasePackage({ aPackage: pkg }),
-      30_000,
-      "purchase",
+      60_000, // 60s — user may take time to authenticate with Face ID / Apple ID
+      "purchasePackage",
     );
-    return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
+    const isPro = Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
+    return isPro;
   } catch (err) {
     const msg = String(err?.message ?? err ?? "");
-    if (msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("user_cancel")) {
-      throw err;
+    const isUserCancel =
+      msg.toLowerCase().includes("user_cancel") ||
+      msg === "The operation couldn't be completed. (SKErrorDomain error 2.)";
+
+    console.error("[RevenueCat] purchasePackage error:", msg, "| userCancel:", isUserCancel);
+
+    if (isUserCancel) {
+      throw err; // caller will suppress the error UI for genuine cancels
     }
-    throw new Error("Purchase could not be completed. Please try again.");
+    throw new Error(`Purchase failed: ${msg || "Unknown StoreKit error"}`);
   }
 }
 
@@ -141,10 +166,11 @@ export async function restorePurchases() {
     const { customerInfo } = await withTimeout(
       Purchases.restorePurchases(),
       30_000,
-      "restore",
+      "restorePurchases",
     );
     return Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
-  } catch {
+  } catch (err) {
+    console.error("[RevenueCat] restorePurchases error:", err?.message ?? err);
     return false;
   }
 }

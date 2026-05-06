@@ -21,11 +21,18 @@ export function usePaywall({ appData, navigate }) {
       if (confirmed) {
         await refreshDashboardBundle().catch(() => {});
         navigate("insights");
+      } else {
+        // Purchase completed but entitlement wasn't granted — unusual, surface it
+        setPurchaseError("Subscription not activated. Please restore purchases or contact support.");
       }
     } catch (err) {
       const msg = err?.message || "";
-      const cancelled = msg.toLowerCase().includes("cancel") || msg.toLowerCase().includes("user_cancel");
-      if (!cancelled) setPurchaseError(msg || "Purchase failed. Please try again.");
+      const isUserCancel =
+        msg.toLowerCase().includes("user_cancel") ||
+        msg === "The operation couldn't be completed. (SKErrorDomain error 2.)";
+      if (!isUserCancel) {
+        setPurchaseError(msg || "Purchase failed. Please try again.");
+      }
     } finally {
       setPaywallBusy(false);
     }
