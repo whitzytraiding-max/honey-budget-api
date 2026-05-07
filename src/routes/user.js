@@ -191,5 +191,16 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     }),
   );
 
+  // Called by the iOS app immediately after RevenueCat confirms a successful purchase.
+  // Updates the DB without waiting for the RevenueCat webhook (which may arrive seconds later).
+  router.post(
+    "/api/subscription/activate",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      await budgetRepository.activateIAPSubscription(request.user.id);
+      sendData(response, 200, { ok: true });
+    }),
+  );
+
   return router;
 }

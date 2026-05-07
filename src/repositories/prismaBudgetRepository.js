@@ -2099,6 +2099,17 @@ function createPrismaBudgetRepository({ prisma }) {
 
       return transactionId;
     },
+
+    async activateIAPSubscription(userId) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          subscriptionStatus: "pro",
+          subscriptionProvider: "revenuecat_ios",
+          // Leave subscriptionExpiresAt unchanged — the RevenueCat webhook sets the real expiry
+        },
+      });
+    },
   };
 }
 

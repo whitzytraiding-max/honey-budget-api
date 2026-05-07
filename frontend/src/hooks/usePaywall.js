@@ -19,6 +19,8 @@ export function usePaywall({ appData, navigate }) {
     try {
       const confirmed = await purchaseMonthly();
       if (confirmed) {
+        // Tell the backend immediately — don't wait for the RevenueCat webhook
+        await apiFetch("/api/subscription/activate", { method: "POST" }).catch(() => {});
         await refreshDashboardBundle().catch(() => {});
         navigate("insights");
       } else {

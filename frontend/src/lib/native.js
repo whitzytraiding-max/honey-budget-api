@@ -21,53 +21,58 @@ export function getPlatform() {
 
 // ─── Haptics ─────────────────────────────────────────────────────────────────
 
-async function getHaptics() {
-  if (!isNative()) return null;
+// Cached module reference — never returned from an async function.
+// Returning a Capacitor plugin proxy from async causes the Promise machinery to
+// call .then() on the proxy, which fails with "Haptics.then() is not implemented on ios".
+let _hapticsModule = null;
+let _hapticsLoadAttempted = false;
+
+async function ensureHapticsLoaded() {
+  if (_hapticsLoadAttempted) return;
+  _hapticsLoadAttempted = true;
+  if (!isNative()) return;
   try {
-    const { Haptics } = await import("@capacitor/haptics");
-    return Haptics;
+    _hapticsModule = await import("@capacitor/haptics");
   } catch {
-    return null;
+    // stays null
   }
 }
 
 export async function hapticLight() {
-  const Haptics = await getHaptics();
-  if (!Haptics) return;
+  await ensureHapticsLoaded();
+  if (!_hapticsModule) return;
   try {
-    const { ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Light });
+    await _hapticsModule.Haptics.impact({ style: _hapticsModule.ImpactStyle.Light });
   } catch {
     // ignore
   }
 }
 
 export async function hapticMedium() {
-  const Haptics = await getHaptics();
-  if (!Haptics) return;
+  await ensureHapticsLoaded();
+  if (!_hapticsModule) return;
   try {
-    const { ImpactStyle } = await import("@capacitor/haptics");
-    await Haptics.impact({ style: ImpactStyle.Medium });
+    await _hapticsModule.Haptics.impact({ style: _hapticsModule.ImpactStyle.Medium });
   } catch {
     // ignore
   }
 }
 
 export async function hapticSuccess() {
-  if (!isNative()) return;
+  await ensureHapticsLoaded();
+  if (!_hapticsModule) return;
   try {
-    const { Haptics, NotificationType } = await import("@capacitor/haptics");
-    await Haptics.notification({ type: NotificationType.Success });
+    await _hapticsModule.Haptics.notification({ type: _hapticsModule.NotificationType.Success });
   } catch {
     // ignore
   }
 }
 
 export async function hapticError() {
-  if (!isNative()) return;
+  await ensureHapticsLoaded();
+  if (!_hapticsModule) return;
   try {
-    const { Haptics, NotificationType } = await import("@capacitor/haptics");
-    await Haptics.notification({ type: NotificationType.Error });
+    await _hapticsModule.Haptics.notification({ type: _hapticsModule.NotificationType.Error });
   } catch {
     // ignore
   }
