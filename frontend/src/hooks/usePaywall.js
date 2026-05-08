@@ -58,26 +58,11 @@ export function usePaywall({ appData, navigate }) {
     }
   }
 
-  async function handleRedeemCoupon(code) {
-    const data = await apiFetch("/api/coupons/redeem", {
-      method: "POST",
-      body: JSON.stringify({ code }),
-    });
-    try {
-      await refreshDashboardBundle();
-    } catch {
-      // Budget views failed — still navigate so the user sees Pro is active
-    }
-    navigate("insights");
-    return data;
-  }
-
   return {
     paywallBusy,
     restoreBusy,
     purchaseError,
     handleSubscribeIAP,
     handleRestorePurchases,
-    handleRedeemCoupon,
   };
 }

@@ -654,7 +654,6 @@ export default function App() {
             onBaseCurrencyChange={settings.handleBaseCurrencyChange}
             onMmkRateChange={settings.handleMmkRateChange}
             onMmkRateSubmit={settings.handleMmkRateSubmit}
-            onRedeemCoupon={paywall.handleRedeemCoupon}
             isPro={isPro}
             onInvitePartner={handleInvitePartnerFromSettings}
             onUnlinkPartner={handleUnlinkPartner}

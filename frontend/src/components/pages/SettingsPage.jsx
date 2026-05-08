@@ -26,7 +26,6 @@ function SettingsPage({
   onBaseCurrencyChange,
   onMmkRateChange,
   onMmkRateSubmit,
-  onRedeemCoupon,
   isPro,
   onInvitePartner,
   onUnlinkPartner,
@@ -40,11 +39,8 @@ function SettingsPage({
   const [mmkCodeError, setMmkCodeError] = useState("");
   const SETTINGS_TABS = mmkUnlocked ? ["profile", "display", "mmk"] : ["profile", "display"];
   const [activeTab, setActiveTab] = useState("profile");
-  const [couponCode, setCouponCode] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteResult, setInviteResult] = useState(null); // { ok: bool, message: string }
-  const [couponBusy, setCouponBusy] = useState(false);
-  const [couponResult, setCouponResult] = useState(null); // { ok: bool, message: string }
   const [confirmUnlink, setConfirmUnlink] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -460,58 +456,6 @@ function SettingsPage({
         </section>
       )}
 
-      {/* Coupon / promo code — web only, not shown on iOS App Store builds */}
-      {!isNative() && <section className="hb-surface-card rounded-[2rem] p-6 sm:p-8">
-        <div className="flex items-center gap-3">
-          <Sparkles className="h-5 w-5 text-amber-500" />
-          <div>
-            <h2 className="text-2xl font-semibold">Redeem a code</h2>
-            <p className="text-sm text-slate-600">
-              {isPro ? "You already have Pro. Codes still stack on top." : "Have a promo or beta code? Enter it below."}
-            </p>
-          </div>
-        </div>
-
-        <form
-          className="mt-5 flex flex-col gap-3 sm:flex-row"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!couponCode.trim()) return;
-            setCouponBusy(true);
-            setCouponResult(null);
-            try {
-              const result = await onRedeemCoupon(couponCode.trim());
-              setCouponResult({ ok: true, message: result.message });
-              setCouponCode("");
-            } catch (err) {
-              setCouponResult({ ok: false, message: err.message || "Invalid code." });
-            } finally {
-              setCouponBusy(false);
-            }
-          }}
-        >
-          <input
-            className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3 font-mono uppercase tracking-widest outline-none placeholder:normal-case placeholder:tracking-normal focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
-            placeholder="Enter code"
-            value={couponCode}
-            onChange={(e) => {
-              setCouponCode(e.target.value.toUpperCase());
-              setCouponResult(null);
-            }}
-            disabled={couponBusy}
-            maxLength={32}
-          />
-          <ActionButton busy={couponBusy} className="sm:w-auto">
-            Redeem
-          </ActionButton>
-        </form>
-
-        {couponResult && (
-          <p className={`mt-3 text-sm font-medium ${couponResult.ok ? "text-emerald-700" : "text-rose-600"}`}>
-            {couponResult.message}
-          </p>
-        )}
-      </section>}
 
       {!mmkUnlocked && (
         <div className="hb-surface-card rounded-[2rem] p-6">
