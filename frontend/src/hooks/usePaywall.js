@@ -17,16 +17,11 @@ export function usePaywall({ appData, navigate }) {
     setPaywallBusy(true);
     setPurchaseError("");
     try {
-      const confirmed = await purchaseMonthly();
-      if (confirmed) {
-        // Tell the backend immediately — don't wait for the RevenueCat webhook
-        await apiFetch("/api/subscription/activate", { method: "POST" }).catch(() => {});
-        await refreshDashboardBundle().catch(() => {});
-        navigate("insights");
-      } else {
-        // Purchase completed but entitlement wasn't granted — unusual, surface it
-        setPurchaseError("Subscription not activated. Please restore purchases or contact support.");
-      }
+      await purchaseMonthly();
+      // purchaseMonthly throws on failure/cancel, so reaching here means StoreKit confirmed the transaction
+      await apiFetch("/api/subscription/activate", { method: "POST" }).catch(() => {});
+      await refreshDashboardBundle().catch(() => {});
+      navigate("insights");
     } catch (err) {
       const msg = err?.message || "";
       const isUserCancel =

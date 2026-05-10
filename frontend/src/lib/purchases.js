@@ -141,8 +141,11 @@ export async function purchaseMonthly() {
       60_000,
       "purchasePackage",
     );
+    // If purchasePackage returned without throwing, StoreKit confirmed the transaction.
+    // Treat it as success regardless of entitlement propagation delay from RevenueCat.
     const isPro = Boolean(customerInfo?.entitlements?.active?.[PRO_ENTITLEMENT]);
-    return isPro;
+    console.log("[RevenueCat] purchase complete — entitlement active:", isPro);
+    return true;
   } catch (err) {
     const msg = String(err?.message ?? err ?? "");
     const isUserCancel =
