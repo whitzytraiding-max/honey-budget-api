@@ -3,7 +3,7 @@ import { apiFetch } from "../lib/api.js";
 import { purchaseMonthly, restorePurchases, preloadOfferings } from "../lib/purchases.js";
 
 export function usePaywall({ appData, navigate }) {
-  const { refreshDashboardBundle } = appData;
+  const { refreshDashboardBundle, setSession } = appData;
 
   const [paywallBusy, setPaywallBusy] = useState(false);
 
@@ -21,6 +21,9 @@ export function usePaywall({ appData, navigate }) {
       // purchaseMonthly throws on failure/cancel, so reaching here means StoreKit confirmed the transaction
       await apiFetch("/api/subscription/activate", { method: "POST" }).catch(() => {});
       await refreshDashboardBundle().catch(() => {});
+      // Optimistic update: set isPro=true after the refresh so Render cold-start latency
+      // never leaves the user stuck on the paywall after a confirmed purchase.
+      setSession((prev) => (prev ? { ...prev, isPro: true } : prev));
       navigate("insights");
     } catch (err) {
       const msg = err?.message || "";
