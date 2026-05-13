@@ -251,6 +251,7 @@ function ExpensesPage({
   return (
     <form onSubmit={onExpenseSubmit} className="flex flex-col gap-3">
       <input type="hidden" name="amount" value={numStr || "0"} readOnly />
+      <input type="hidden" name="currencyCode" value={expenseForm.currencyCode || ""} readOnly />
 
       {/* Editing banner */}
       {editingTransactionId ? (
@@ -491,7 +492,6 @@ function ExpensesPage({
                   Currency
                 </span>
                 <select
-                  name="currencyCode"
                   value={expenseForm.currencyCode}
                   onChange={onExpenseChange}
                   className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
