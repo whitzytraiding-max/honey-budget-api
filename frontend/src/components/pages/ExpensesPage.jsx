@@ -264,28 +264,26 @@ function ExpensesPage({
         </div>
       ) : null}
 
-      {/* Expense currency toggle */}
-      {expenseCurrencies.length > 1 && (
-        <div
-          className="flex gap-1 p-1 rounded-full"
-          style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
-        >
-          {expenseCurrencies.map((cur) => (
-            <button
-              key={cur}
-              type="button"
-              className="flex-1 py-2.5 rounded-full text-sm font-bold tracking-wider transition"
-              style={{
-                background: activeCurrency === cur ? "#D4870A" : "transparent",
-                color: activeCurrency === cur ? "#fff" : "rgba(212, 135, 10, 0.5)",
-              }}
-              onClick={() => { hapticLight(); onExpenseChange({ target: { name: "currencyCode", value: cur } }); }}
-            >
-              {cur}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Card / Cash toggle */}
+      <div
+        className="flex gap-1 p-1 rounded-full"
+        style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+      >
+        {[{ label: "Card", value: "card" }, { label: "Cash", value: "cash" }].map(({ label, value }) => (
+          <button
+            key={value}
+            type="button"
+            className="flex-1 py-2.5 rounded-full text-sm font-semibold transition"
+            style={{
+              background: (expenseForm.paymentMethod || "card") === value ? "#D4870A" : "transparent",
+              color: (expenseForm.paymentMethod || "card") === value ? "#fff" : "rgba(212, 135, 10, 0.5)",
+            }}
+            onClick={() => { hapticLight(); onExpenseChange({ target: { name: "paymentMethod", value } }); }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
           {/* Date row */}
           <label
@@ -351,9 +349,27 @@ function ExpensesPage({
             style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
           >
             <div className="flex items-baseline gap-1.5">
-              <span className="text-lg font-medium" style={{ color: "rgba(212, 135, 10, 0.6)" }}>
-                {expenseForm.currencyCode || baseCurrencyCode}
-              </span>
+              <button
+                type="button"
+                className="text-lg font-medium transition active:opacity-60"
+                style={{
+                  color: "rgba(212, 135, 10, 0.6)",
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  textDecoration: expenseCurrencies.length > 1 ? "underline dotted" : "none",
+                  textUnderlineOffset: "3px",
+                }}
+                onClick={() => {
+                  if (expenseCurrencies.length < 2) return;
+                  hapticLight();
+                  const idx = expenseCurrencies.indexOf(activeCurrency);
+                  const next = expenseCurrencies[(idx + 1) % expenseCurrencies.length];
+                  onExpenseChange({ target: { name: "currencyCode", value: next } });
+                }}
+              >
+                {activeCurrency}
+              </button>
               <span
                 className="text-4xl font-bold tracking-tight"
                 style={{ color: numStr ? "#f0e0c0" : "rgba(240, 210, 160, 0.3)" }}
