@@ -362,8 +362,8 @@ function ExpensesPage({
               {/* Currency dropdown */}
               {showCurrencyPicker && (
                 <div
-                  className="absolute left-0 top-full mt-2 z-30 rounded-2xl overflow-hidden"
-                  style={{ background: "rgba(28, 16, 4, 0.97)", border: "1px solid rgba(212, 135, 10, 0.35)", minWidth: "160px", boxShadow: "0 8px 32px -8px rgba(0,0,0,0.6)" }}
+                  className="absolute left-0 top-full mt-2 z-30 rounded-2xl overflow-y-auto"
+                  style={{ background: "rgba(28, 16, 4, 0.97)", border: "1px solid rgba(212, 135, 10, 0.35)", minWidth: "160px", maxHeight: "220px", boxShadow: "0 8px 32px -8px rgba(0,0,0,0.6)" }}
                 >
                   {currencyOptions.map((opt) => (
                     <button
