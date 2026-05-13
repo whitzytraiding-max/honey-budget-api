@@ -4,11 +4,10 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { useRef, useState } from "react";
-import { Sparkles } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
-import { currency, getRemainingTone } from "../../lib/format.js";
+import { currency } from "../../lib/format.js";
 import { MoneyCat } from "../MoneyCat.jsx";
-import { ActionButton, ProgressBar } from "../ui.jsx";
+import { hapticLight } from "../../lib/native.js";
 
 const CAT_HINTS = [
   "How are we tracking this month?",
@@ -25,7 +24,7 @@ const ACTION_LABELS = {
 };
 
 function CatChat({ onSendMessage, remainingPct }) {
-  const [bubble, setBubble] = useState(null);   // { text, actions }
+  const [bubble, setBubble] = useState(null);
   const [busy, setBusy] = useState(false);
   const [recording, setRecording] = useState(false);
   const [error, setError] = useState(null);
@@ -63,8 +62,6 @@ function CatChat({ onSendMessage, remainingPct }) {
       return;
     }
 
-    // Pre-warm mic permission — on iOS, SpeechRecognition.start() fires not-allowed
-    // even after the user grants permission unless getUserMedia has already resolved first.
     if (navigator.mediaDevices?.getUserMedia) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -74,9 +71,9 @@ function CatChat({ onSendMessage, remainingPct }) {
           window.navigator.standalone === true ||
           window.matchMedia("(display-mode: standalone)").matches;
         if (isStandalone) {
-          setError("Tap to open: iOS Settings → Honey Budget → enable Microphone, then come back and try again.");
+          setError("Go to iOS Settings → Honey Budget → enable Microphone.");
         } else {
-          setError("Microphone access denied. Tap the lock icon in your browser's address bar to allow microphone access.");
+          setError("Microphone access denied. Allow it in your browser settings.");
         }
         return;
       }
@@ -114,9 +111,7 @@ function CatChat({ onSendMessage, remainingPct }) {
       const captured = capturedRef.current;
       recognitionRef.current = null;
       setRecording(false);
-      if (wasReleased && captured) {
-        sendText(captured);
-      }
+      if (wasReleased && captured) sendText(captured);
     };
 
     try {
@@ -138,113 +133,113 @@ function CatChat({ onSendMessage, remainingPct }) {
 
   function handleCatTap() {
     if (busy) return;
-    if (recording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
+    hapticLight();
+    if (recording) stopRecording();
+    else startRecording();
   }
 
   const isIdle = !bubble && !busy && !error && !recording;
 
   return (
-    <div className="pt-4">
-      <div className="flex flex-col items-center gap-0">
-
-        {/* Speech bubble — sits above the cat with a downward tail */}
-        <div className="relative w-full max-w-xs mx-auto mb-1">
-          <div
-            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm transition-all ${
-              error
-                ? "bg-rose-50 border border-rose-200 text-rose-600"
-                : "bg-white/95 border border-slate-100 text-slate-700"
-            }`}
-          >
-            {busy ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "0ms" }} />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "150ms" }} />
-                <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "300ms" }} />
-              </span>
-            ) : recording ? (
-              <span className="flex items-center gap-2 font-medium text-amber-600">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
-                Listening… tap me again to send
-              </span>
-            ) : error ? (
-              error
-            ) : bubble ? (
-              <>
-                {bubble.text}
-                {bubble.actions?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {bubble.actions.map((a, i) => (
-                      <span
-                        key={i}
-                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200"
-                      >
-                        ✓ {ACTION_LABELS[a.tool] ?? a.tool}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Idle hint */
-              <span className="text-slate-500">
-                <span className="font-semibold text-slate-700">Tap me to chat!</span> Try saying:{" "}
-                {CAT_HINTS.map((h, i) => (
-                  <span key={h}>
-                    <button
-                      type="button"
-                      onClick={() => sendText(h)}
-                      className="text-amber-600 font-medium hover:underline focus:outline-none"
-                    >
-                      "{h}"
-                    </button>
-                    {i < CAT_HINTS.length - 1 ? ", " : ""}
-                  </span>
-                ))}
-              </span>
-            )}
-          </div>
-          {/* Bubble tail */}
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[10px] w-0 h-0"
-            style={{
-              borderLeft: "10px solid transparent",
-              borderRight: "10px solid transparent",
-              borderTop: error ? "11px solid #fecaca" : "11px solid #e2e8f0",
-            }}
-          />
-          <div className="absolute left-1/2 -translate-x-1/2 -bottom-[8px] w-0 h-0"
-            style={{
-              borderLeft: "9px solid transparent",
-              borderRight: "9px solid transparent",
-              borderTop: error ? "10px solid #fff1f2" : "10px solid #fffffff2",
-            }}
-          />
-        </div>
-
-        {/* Cat */}
-        <button
-          type="button"
-          onClick={handleCatTap}
-          disabled={busy}
-          className={`relative mt-3 cursor-pointer select-none transition-transform active:scale-95 disabled:opacity-60 ${recording ? "drop-shadow-[0_0_24px_rgba(251,191,36,0.9)]" : "hover:drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]"}`}
-          style={{ background: "none", border: "none", padding: 0, WebkitTouchCallout: "none" }}
-          onContextMenu={(e) => e.preventDefault()}
+    <div className="flex flex-col items-center gap-0 pt-3">
+      {/* Speech bubble */}
+      <div className="relative w-full max-w-xs mx-auto mb-1">
+        <div
+          className="rounded-2xl px-4 py-3 text-sm leading-relaxed"
+          style={{
+            background: error ? "rgba(80, 14, 18, 0.9)" : "rgba(50, 30, 8, 0.9)",
+            border: error ? "1px solid rgba(248, 113, 113, 0.35)" : "1px solid rgba(100, 65, 20, 0.4)",
+            color: error ? "#fca5a5" : "#f0e0c0",
+          }}
         >
-          {recording && (
-            <span className="absolute inset-0 -m-4 animate-ping rounded-full bg-amber-400/25 pointer-events-none" />
+          {busy ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-amber-400" style={{ animationDelay: "300ms" }} />
+            </span>
+          ) : recording ? (
+            <span className="flex items-center gap-2 font-medium" style={{ color: "#D4870A" }}>
+              <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+              Listening… tap me again to send
+            </span>
+          ) : error ? (
+            error
+          ) : bubble ? (
+            <>
+              {bubble.text}
+              {bubble.actions?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {bubble.actions.map((a, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium"
+                      style={{ background: "rgba(6, 60, 30, 0.8)", color: "#86efac", border: "1px solid rgba(52, 211, 153, 0.3)" }}
+                    >
+                      ✓ {ACTION_LABELS[a.tool] ?? a.tool}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <span style={{ color: "rgba(240, 210, 160, 0.7)" }}>
+              <span className="font-semibold" style={{ color: "#f0e0c0" }}>Tap me to chat!</span>{" "}
+              {CAT_HINTS.map((h, i) => (
+                <span key={h}>
+                  <button
+                    type="button"
+                    onClick={() => sendText(h)}
+                    className="font-medium hover:underline focus:outline-none"
+                    style={{ color: "#D4870A" }}
+                  >
+                    "{h}"
+                  </button>
+                  {i < CAT_HINTS.length - 1 ? ", " : ""}
+                </span>
+              ))}
+            </span>
           )}
-          <MoneyCat remainingPct={remainingPct} size={148} />
-        </button>
-
-        <p className="mt-1 text-[11px] font-medium text-white/40 tracking-wide text-center">
-          {busy ? "Thinking…" : isIdle ? "Tap to speak" : ""}
-        </p>
-
+        </div>
+        {/* Bubble tail */}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -bottom-[10px] w-0 h-0"
+          style={{
+            borderLeft: "10px solid transparent",
+            borderRight: "10px solid transparent",
+            borderTop: error ? "11px solid rgba(248, 113, 113, 0.35)" : "11px solid rgba(100, 65, 20, 0.4)",
+          }}
+        />
+        <div
+          className="absolute left-1/2 -translate-x-1/2 -bottom-[8px] w-0 h-0"
+          style={{
+            borderLeft: "9px solid transparent",
+            borderRight: "9px solid transparent",
+            borderTop: error ? "10px solid rgba(80, 14, 18, 0.9)" : "10px solid rgba(50, 30, 8, 0.9)",
+          }}
+        />
       </div>
+
+      {/* Cat */}
+      <button
+        type="button"
+        onClick={handleCatTap}
+        disabled={busy}
+        className={`relative mt-3 cursor-pointer select-none transition-transform active:scale-95 disabled:opacity-60 ${
+          recording ? "drop-shadow-[0_0_24px_rgba(212,135,10,0.9)]" : "hover:drop-shadow-[0_0_12px_rgba(212,135,10,0.4)]"
+        }`}
+        style={{ background: "none", border: "none", padding: 0, WebkitTouchCallout: "none" }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {recording && (
+          <span className="absolute inset-0 -m-4 animate-ping rounded-full pointer-events-none" style={{ background: "rgba(212, 135, 10, 0.2)" }} />
+        )}
+        <MoneyCat remainingPct={remainingPct} size={148} />
+      </button>
+
+      <p className="mt-1 text-[11px] font-medium tracking-wide text-center" style={{ color: "rgba(212, 135, 10, 0.35)" }}>
+        {busy ? "Thinking…" : isIdle ? "Tap to speak" : ""}
+      </p>
     </div>
   );
 }
@@ -264,90 +259,121 @@ function HomePage({
   const { t } = useLanguage();
   const setupRemaining = setupChecklist.filter((item) => !item.completed).length;
   const householdIncome = Number(summaryData?.householdIncome ?? 0);
+  const totalSpent = Number(summaryData?.totalExpenses ?? 0);
   const remainingBudget = Number(summaryData?.remainingBudget ?? 0);
   const remainingPct = Number(summaryData?.remainingPct ?? 50);
-  const summaryTone = getRemainingTone(remainingBudget, householdIncome);
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4">
 
       {/* Setup prompt */}
       {setupRemaining > 0 ? (
-        <section className="hb-panel-soft rounded-[1.35rem] border border-sky-100/80 p-4 shadow-[0_18px_50px_-28px_rgba(21,50,65,0.28)] sm:rounded-[1.5rem] sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="inline-flex rounded-full bg-white/90 p-2 text-sky-700 shadow-sm">
-                <Sparkles className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="hb-kicker">{soloMode ? t("setup.personalLabel") : t("setup.householdLabel")}</p>
-                <h2 className="mt-1 text-lg font-semibold text-slate-900 sm:text-2xl">
-                  {soloMode ? t("setup.personalTitle") : t("setup.sharedTitle")}
-                </h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">
-                  {setupRemaining} step{setupRemaining === 1 ? "" : "s"} still need attention.{" "}
-                  {soloMode ? t("setup.personalBody") : t("setup.sharedBody")}
-                </p>
-              </div>
+        <section
+          className="rounded-[1.35rem] p-4"
+          style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(212, 135, 10, 0.3)" }}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+                {soloMode ? t("setup.personalLabel") : t("setup.householdLabel")}
+              </p>
+              <h2 className="mt-1 text-lg font-semibold" style={{ color: "#f0e0c0" }}>
+                {setupRemaining} step{setupRemaining === 1 ? "" : "s"} remaining
+              </h2>
             </div>
-            <ActionButton className="sm:w-auto sm:min-w-[220px]" onClick={onNavigateToSetup} type="button">
+            <button
+              className="shrink-0 rounded-2xl px-4 py-2.5 text-sm font-semibold transition"
+              style={{ background: "#D4870A", color: "#fff" }}
+              onClick={onNavigateToSetup}
+              type="button"
+            >
               {t("setup.openChecklist")}
-            </ActionButton>
+            </button>
           </div>
         </section>
       ) : null}
 
       {/* Budget hero */}
-      <section className="hb-surface-card rounded-[1.35rem] p-3.5 sm:rounded-[1.5rem] sm:p-6">
-        <div className="hb-hero-panel rounded-[1.2rem] px-4 py-4 text-white sm:rounded-[1.4rem] sm:px-6 sm:py-5">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/70 sm:text-xs">
-              {t("home.remaining")}
-            </p>
-            <p className="hb-stat-emphasis mt-2 text-[2.35rem] font-semibold tracking-tight sm:text-6xl">
-              {currency(remainingBudget)}
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <div className="hb-brand-pill inline-flex rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] sm:text-xs">
-                {t("shell.totalHouseholdIncome")}
+      <section
+        className="rounded-[1.35rem] p-4 sm:p-6"
+        style={{ background: "rgba(38, 24, 8, 0.88)", border: "1px solid rgba(100, 65, 20, 0.4)" }}
+      >
+        {/* Primary stat */}
+        <div
+          className="rounded-[1.1rem] px-4 py-5"
+          style={{
+            background: "linear-gradient(180deg, #3a2208 0%, #2a1808 60%, #1e1208 100%)",
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
+          }}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: "rgba(212, 135, 10, 0.6)" }}>
+            Total spent
+          </p>
+          <p className="mt-1 text-[2.6rem] font-bold leading-none tracking-tight" style={{ color: "#D4870A" }}>
+            {currency(totalSpent)}
+          </p>
+          <p className="mt-1 text-sm" style={{ color: "rgba(212, 135, 10, 0.5)" }}>
+            {summaryData?.period?.label ?? "This month"}
+          </p>
+
+          {householdIncome > 0 && (
+            <div className="mt-3 flex items-center gap-3">
+              <div className="flex-1">
+                <div className="flex justify-between text-[10px] mb-1" style={{ color: "rgba(212, 135, 10, 0.55)" }}>
+                  <span>Budget remaining</span>
+                  <span>{currency(remainingBudget)}</span>
+                </div>
+                <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(50, 28, 6, 0.8)" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.max(0, 100 - remainingPct)}%`,
+                      background: remainingPct < 15 ? "#ef4444" : remainingPct < 50 ? "#D4870A" : "#22b36b",
+                    }}
+                  />
+                </div>
               </div>
-              <p className="text-lg font-semibold text-white/90 sm:text-xl">
-                {currency(householdIncome)}
-              </p>
             </div>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-              {summaryData
-                ? `${currency(summaryData.totalExpenses)} spent in ${summaryData.period.label}.`
-                : "Calculating your current budget window."}
+          )}
+        </div>
+
+        {/* No expenses state */}
+        {totalSpent === 0 && !dashboardBusy && (
+          <div className="mt-4 text-center py-6">
+            <p className="text-sm" style={{ color: "rgba(212, 135, 10, 0.55)" }}>
+              No expenses yet!<br />Start adding to see your spending here.
             </p>
+            <span className="mt-2 block text-2xl">🐾</span>
           </div>
-        </div>
+        )}
 
-        <div className="hb-progress-track mt-4 h-3 overflow-hidden rounded-full shadow-inner">
-          <div
-            className={`hb-progress-fill h-full rounded-full bg-gradient-to-r transition-all duration-500 ${summaryTone.bar}`}
-            style={{ width: `${remainingPct}%` }}
-          />
-        </div>
-
+        {/* Cat chat */}
         {onSendMessage && (
           <CatChat onSendMessage={onSendMessage} remainingPct={remainingPct} />
         )}
 
-        {dashboard && !dashboardBusy && (
-          <div className="mt-4 space-y-3">
-            {dashboard.fairSplit.map((person, index) => {
-              const user = dashboard.users.find((entry) => entry.id === person.userId);
+        {/* Per-person split */}
+        {dashboard && !dashboardBusy && dashboard.fairSplit?.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {dashboard.fairSplit.map((person) => {
+              const user = dashboard.users?.find((u) => u.id === person.userId);
+              const salary = user?.monthlySalary || person.monthlySalary || 0;
               return (
-                <ProgressBar
-                  key={person.userId}
-                  label={person.name}
-                  percentage={person.sharePct}
-                  salary={user?.monthlySalary || person.monthlySalary}
-                  cashAmount={user?.salaryCashAmount ?? 0}
-                  cardAmount={user?.salaryCardAmount ?? user?.monthlySalary ?? 0}
-                  tone={index === 0 ? "mint" : "sky"}
-                />
+                <div key={person.userId}>
+                  <div className="flex justify-between text-xs mb-1" style={{ color: "rgba(212, 135, 10, 0.6)" }}>
+                    <span className="font-medium">{person.name}</span>
+                    <span>{currency(salary)}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(50, 28, 6, 0.8)" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, person.sharePct)}%`,
+                        background: "#22b36b",
+                      }}
+                    />
+                  </div>
+                </div>
               );
             })}
           </div>
