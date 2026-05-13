@@ -110,7 +110,6 @@ function AppShell({
             >
               honey budget
             </span>
-            <span className="text-base leading-none">🐝</span>
           </div>
           <p className="text-[11px] mt-0.5" style={{ color: "rgba(212, 135, 10, 0.5)" }}>
             Save sweetly, live happily. ♥

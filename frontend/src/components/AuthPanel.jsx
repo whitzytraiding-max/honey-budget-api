@@ -7,10 +7,9 @@ import { useState } from "react";
 import { Brain, TrendingUp, Wallet } from "lucide-react";
 import { useGoogleLogin } from "@react-oauth/google";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
-import { getCurrencyOptions } from "../lib/format.js";
 import { isNative, getPlatform } from "../lib/native.js";
 import { nativeGoogleSignIn } from "../lib/nativeGoogleAuth.js";
-import { ActionButton, Input, Select } from "./ui.jsx";
+import { ActionButton, Input } from "./ui.jsx";
 
 const GOOGLE_SVG = (
   <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
@@ -98,8 +97,7 @@ function AuthPanel({
   resetToken,
 }) {
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const { t, locale } = useLanguage();
-  const currencyOptions = getCurrencyOptions(locale);
+  const { t } = useLanguage();
   const showResetForm = Boolean(resetToken) || authMode === "reset";
   const showForgotPassword = authMode === "forgot" && !showResetForm;
   const showApple = isNative() && getPlatform() === "ios" && Boolean(onAppleAuth);
@@ -213,36 +211,9 @@ function AuthPanel({
                 onChange={onRegisterChange}
                 placeholder="At least 8 characters"
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label={t("auth.monthlySalary")}
-                  name="monthlySalary"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={registerForm.monthlySalary}
-                  onChange={onRegisterChange}
-                  placeholder="4200"
-                />
-                <Select
-                  label={t("auth.salaryPaymentMethod")}
-                  name="salaryPaymentMethod"
-                  value={registerForm.salaryPaymentMethod}
-                  onChange={onRegisterChange}
-                  options={[
-                    { label: t("auth.card"), value: "card" },
-                    { label: t("auth.cash"), value: "cash" },
-                  ]}
-                />
-              </div>
-              <Select
-                label={t("settings.incomeCurrency")}
-                name="incomeCurrencyCode"
-                value={registerForm.incomeCurrencyCode}
-                onChange={onRegisterChange}
-                options={currencyOptions}
-              />
-              <p className="auth-helper-copy text-sm leading-6 text-slate-600">{t("auth.currencySetupHelp")}</p>
+              <p className="auth-helper-copy text-sm leading-5 text-slate-500">
+                You'll set up your income and currency in the app after signing in.
+              </p>
               <label className="flex cursor-pointer items-start gap-3">
                 <input
                   className="mt-0.5 h-4 w-4 shrink-0 accent-amber-500"

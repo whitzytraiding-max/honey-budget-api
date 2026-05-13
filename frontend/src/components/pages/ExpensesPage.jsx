@@ -316,20 +316,6 @@ function ExpensesPage({
             />
           </label>
 
-          {/* Description / Note */}
-          <input
-            name="description"
-            value={expenseForm.description}
-            onChange={onExpenseChange}
-            placeholder="Note (e.g. Date night tacos)"
-            className="rounded-[1.2rem] px-4 py-3 text-sm outline-none transition"
-            style={{
-              background: "rgba(42, 26, 8, 0.85)",
-              border: "1px solid rgba(100, 65, 20, 0.3)",
-              color: "#f0e0c0",
-            }}
-          />
-
           {/* Category grid */}
           <div>
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
@@ -442,6 +428,21 @@ function ExpensesPage({
               className="rounded-[1.35rem] p-4 space-y-4"
               style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
             >
+              {/* Note */}
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+                  Note
+                </span>
+                <input
+                  name="description"
+                  value={expenseForm.description}
+                  onChange={onExpenseChange}
+                  placeholder="e.g. Date night tacos"
+                  className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
+                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "#f0e0c0" }}
+                />
+              </label>
+
               {/* Full category select */}
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>

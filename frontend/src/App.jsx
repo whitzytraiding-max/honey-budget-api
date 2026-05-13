@@ -51,7 +51,7 @@ import { useDebt } from "./hooks/useDebt.js";
 import { usePaywall } from "./hooks/usePaywall.js";
 import OnboardingTour, { isTourDone, markTourDone } from "./components/OnboardingTour.jsx";
 
-const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "MMK"]);
+const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "SGD", "NZD", "ZAR", "INR", "THB", "AED", "MMK"]);
 
 function getInitialCurrency(key) {
   const saved = readStorage(key);
@@ -365,6 +365,9 @@ export default function App() {
         }),
       });
       await dataBundle.refreshDashboardBundle();
+      const checklist = dataBundle.plannerData?.setupChecklist ?? session?.setupChecklist ?? [];
+      const hasIncomplete = checklist.some((item) => !item.completed);
+      if (hasIncomplete) navigate("setup");
     } catch (err) {
       setPageError(err.message);
     } finally {

@@ -5,7 +5,6 @@ import { STORAGE_KEYS, readStorage, writeStorage, removeStorage } from "../lib/s
 
 const REGISTER_FIELDS = {
   name: "", email: "", password: "",
-  monthlySalary: "", incomeCurrencyCode: "USD", salaryPaymentMethod: "card",
 };
 const LOGIN_FIELDS = { email: "", password: "" };
 const FORGOT_PASSWORD_FIELDS = { email: "" };
@@ -66,13 +65,14 @@ export function useAuth({ navigate }) {
       const data = await apiFetch("/api/auth/register", {
         auth: false,
         method: "POST",
-        body: JSON.stringify({ ...registerForm, email, monthlySalary: Number(registerForm.monthlySalary) }),
+        body: JSON.stringify({ ...registerForm, email, monthlySalary: 0 }),
       });
       setPostAuthFailureMessage(REGISTER_BOOTSTRAP_ERROR);
       setLoginForm({ email, password: registerForm.password });
       setAuthMode("login");
       setRegisterForm(REGISTER_FIELDS);
       saveToken(data.accessToken);
+      navigate("settings");
     } catch (error) {
       setAuthError(error.message);
     } finally {

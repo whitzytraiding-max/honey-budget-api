@@ -4,6 +4,14 @@ const SUPPORTED_CURRENCIES = [
   { value: "GBP" },
   { value: "CAD" },
   { value: "AUD" },
+  { value: "JPY" },
+  { value: "CHF" },
+  { value: "SGD" },
+  { value: "NZD" },
+  { value: "ZAR" },
+  { value: "INR" },
+  { value: "THB" },
+  { value: "AED" },
   { value: "MMK" },
 ];
 
