@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
-import { hapticLight } from "../../lib/native.js";
+import { hapticLight, hapticSuccess } from "../../lib/native.js";
 
 /* Full category list kept for advanced picker / existing data display */
 const CATEGORIES = [
@@ -123,6 +123,7 @@ function ExpensesPage({
   onExpenseChange,
   onExpenseSubmit,
   expenseBusy,
+  expenseSuccessCount = 0,
   transactions,
   baseCurrencyCode,
   currencyCode,
@@ -142,6 +143,7 @@ function ExpensesPage({
   const [numStr, setNumStr] = useState(expenseForm.amount ? String(expenseForm.amount) : "");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
+  const [loggedFlash, setLoggedFlash] = useState(false);
 
   /* Available expense currencies derived from the user's two configured currencies */
   const expenseCurrencies = [...new Set([baseCurrencyCode, currencyCode].filter(Boolean))];
@@ -155,6 +157,16 @@ function ExpensesPage({
       setNumStr("");
     }
   }, [editingTransactionId]);
+
+  /* Flash success and reset numpad after a new expense is logged */
+  useEffect(() => {
+    if (expenseSuccessCount === 0) return;
+    hapticSuccess();
+    setNumStr("");
+    setLoggedFlash(true);
+    const t = setTimeout(() => setLoggedFlash(false), 1400);
+    return () => clearTimeout(t);
+  }, [expenseSuccessCount]);
 
   function handleNumKey(key) {
     let next = numStr;
@@ -389,10 +401,10 @@ function ExpensesPage({
                 </div>
               )}
               <span
-                className="text-4xl font-bold tracking-tight"
-                style={{ color: numStr ? "#f0e0c0" : "rgba(240, 210, 160, 0.3)" }}
+                className="text-4xl font-bold tracking-tight transition-all duration-300"
+                style={{ color: loggedFlash ? "#4ade80" : numStr ? "#f0e0c0" : "rgba(240, 210, 160, 0.3)" }}
               >
-                {numStr ? displayAmount() : "0.00"}
+                {loggedFlash ? "Logged ✓" : numStr ? displayAmount() : "0.00"}
               </span>
             </div>
             {showMmkHelper && mmkRateText ? (

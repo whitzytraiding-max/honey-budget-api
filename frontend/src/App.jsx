@@ -512,6 +512,7 @@ export default function App() {
             onExpenseChange={expenses.updateExpenseForm}
             onExpenseSubmit={expenses.handleExpenseSubmit}
             expenseBusy={expenses.expenseBusy}
+            expenseSuccessCount={expenses.expenseSuccessCount}
             transactions={transactions}
             baseCurrencyCode={baseCurrencyCode}
             currencyCode={currencyCode}

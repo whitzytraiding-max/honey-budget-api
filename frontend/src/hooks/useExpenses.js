@@ -34,6 +34,7 @@ export function useExpenses({ appData, showConfirm, navigate }) {
   }));
   const [expenseBusy, setExpenseBusy] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState(null);
+  const [expenseSuccessCount, setExpenseSuccessCount] = useState(0);
 
   function updateExpenseForm(event) {
     setPageError("");
@@ -137,6 +138,7 @@ export function useExpenses({ appData, showConfirm, navigate }) {
       resetExpenseEditor();
       setSelectedMonth(monthKey);
       await refreshBudgetViews({ monthKey, includeMonth: true, includeNotifications: true });
+      if (!editingTransactionId) setExpenseSuccessCount((c) => c + 1);
     } catch (err) {
       setPageError(err.message);
     } finally {
@@ -148,6 +150,7 @@ export function useExpenses({ appData, showConfirm, navigate }) {
     expenseForm,
     expenseBusy,
     editingTransactionId,
+    expenseSuccessCount,
     updateExpenseForm,
     resetExpenseEditor,
     handleEditTransaction,
