@@ -250,6 +250,7 @@ function ExpensesPage({
 
   return (
     <form onSubmit={onExpenseSubmit} className="flex flex-col gap-3">
+      <input type="hidden" name="amount" value={numStr || "0"} readOnly />
 
       {/* Editing banner */}
       {editingTransactionId ? (
