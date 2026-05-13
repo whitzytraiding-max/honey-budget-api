@@ -103,9 +103,9 @@ function AuthPanel({
   const showApple = isNative() && getPlatform() === "ios" && Boolean(onAppleAuth);
 
   return (
-    <section className="auth-shell mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-10 sm:px-6">
+    <section className="auth-shell mx-auto flex min-h-screen w-full max-w-6xl items-center px-4 py-6 sm:px-6 lg:py-10">
       <div className="grid w-full gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="auth-hero-panel relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(18,37,66,0.96),rgba(25,54,94,0.94),rgba(16,37,63,0.98))] p-8 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur">
+        <div className="hidden lg:block auth-hero-panel relative overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,rgba(18,37,66,0.96),rgba(25,54,94,0.94),rgba(16,37,63,0.98))] p-8 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur">
           <div className="auth-hero-glow-left pointer-events-none absolute -left-12 top-8 h-36 w-36 rounded-full bg-amber-200/40 blur-3xl" />
           <div className="auth-hero-glow-right pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-sky-300/30 blur-3xl" />
 
@@ -155,6 +155,15 @@ function AuthPanel({
         </div>
 
         <div className="auth-form-panel rounded-[2rem] border border-white/70 bg-white/88 p-6 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)] backdrop-blur sm:p-8">
+          {/* Compact brand — mobile only */}
+          <div className="lg:hidden flex items-center gap-3 mb-5 pb-5 border-b border-slate-200">
+            <img alt="Honey Budget" className="h-10 w-10" src="/icons/brand-mark.svg" />
+            <div>
+              <p className="text-lg font-bold text-slate-900">Honey Budget</p>
+              <p className="text-xs text-slate-500">Smart budgeting for couples</p>
+            </div>
+          </div>
+
           {!showResetForm && !showForgotPassword ? (
             <div className="auth-tab-bar inline-flex rounded-full bg-slate-100 p-1 text-sm font-medium text-slate-600">
               <button
@@ -248,17 +257,12 @@ function AuthPanel({
                     <span className="text-xs font-medium text-slate-400">or</span>
                     <div className="h-px flex-1 bg-slate-200" />
                   </div>
-                  {onGoogleAuth && (
-                    termsAccepted ? (
-                      <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />
-                    ) : (
-                      <p className="text-center text-xs text-slate-400">Accept the Privacy Policy above to continue with Google</p>
-                    )
-                  )}
-                  {showApple && (
-                    termsAccepted ? (
-                      <AppleButton onAuth={onAppleAuth} label="Continue with Apple" />
-                    ) : null
+                  <div className={`space-y-3 transition-opacity duration-200 ${termsAccepted ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                    {onGoogleAuth && <GoogleButton onAuth={onGoogleAuth} label="Continue with Google" />}
+                    {showApple && <AppleButton onAuth={onAppleAuth} label="Continue with Apple" />}
+                  </div>
+                  {!termsAccepted && (
+                    <p className="text-center text-xs text-slate-400">Accept the Privacy Policy above to enable these options</p>
                   )}
                 </div>
               ) : null}
