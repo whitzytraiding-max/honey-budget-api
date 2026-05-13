@@ -140,8 +140,11 @@ function ExpensesPage({
 
   /* Numpad amount state — synced to expenseForm.amount */
   const [numStr, setNumStr] = useState(expenseForm.amount ? String(expenseForm.amount) : "");
-  const [expenseType, setExpenseType] = useState("expense"); // "expense" | "income"
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  /* Available expense currencies derived from the user's two configured currencies */
+  const expenseCurrencies = [...new Set([baseCurrencyCode, currencyCode].filter(Boolean))];
+  const activeCurrency = expenseForm.currencyCode || baseCurrencyCode;
 
   /* Sync numStr from parent when editing a transaction */
   useEffect(() => {
@@ -261,41 +264,29 @@ function ExpensesPage({
         </div>
       ) : null}
 
-      {/* Expenses / Income toggle */}
-      <div
-        className="flex gap-1 p-1 rounded-full"
-        style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
-      >
-        {["expense", "income"].map((type) => (
-          <button
-            key={type}
-            type="button"
-            className="flex-1 py-2.5 rounded-full text-sm font-semibold capitalize transition"
-            style={{
-              background: expenseType === type ? "#D4870A" : "transparent",
-              color: expenseType === type ? "#fff" : "rgba(212, 135, 10, 0.5)",
-            }}
-            onClick={() => setExpenseType(type)}
-          >
-            {type === "expense" ? "Expenses" : "Income"}
-          </button>
-        ))}
-      </div>
-
-      {expenseType === "income" ? (
+      {/* Expense currency toggle */}
+      {expenseCurrencies.length > 1 && (
         <div
-          className="rounded-[1.5rem] px-5 py-8 text-center"
+          className="flex gap-1 p-1 rounded-full"
           style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
         >
-          <p className="text-sm" style={{ color: "rgba(212, 135, 10, 0.7)" }}>
-            Income is managed in <strong style={{ color: "#D4870A" }}>Settings → Income Setup</strong>.
-          </p>
-          <p className="mt-1 text-xs" style={{ color: "rgba(156, 120, 85, 0.6)" }}>
-            Go to More → Settings to update your monthly income.
-          </p>
+          {expenseCurrencies.map((cur) => (
+            <button
+              key={cur}
+              type="button"
+              className="flex-1 py-2.5 rounded-full text-sm font-bold tracking-wider transition"
+              style={{
+                background: activeCurrency === cur ? "#D4870A" : "transparent",
+                color: activeCurrency === cur ? "#fff" : "rgba(212, 135, 10, 0.5)",
+              }}
+              onClick={() => { hapticLight(); onExpenseChange({ target: { name: "currencyCode", value: cur } }); }}
+            >
+              {cur}
+            </button>
+          ))}
         </div>
-      ) : (
-        <>
+      )}
+
           {/* Date row */}
           <label
             className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer transition"
@@ -561,8 +552,6 @@ function ExpensesPage({
               })()}
             </div>
           )}
-        </>
-      )}
     </form>
   );
 }
