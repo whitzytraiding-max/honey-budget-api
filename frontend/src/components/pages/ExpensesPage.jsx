@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ChevronDown, Delete, Pencil, Trash2, Wallet, X } from "lucide-react";
+import {
+  CalendarDays, Car, ChevronDown, Coffee, Cookie, Delete,
+  Heart, Home, Pencil, Plane, ShoppingBag, ShoppingBasket,
+  Sparkles, Trash2, Utensils, Wallet, X,
+} from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { hapticLight } from "../../lib/native.js";
@@ -15,16 +19,16 @@ const CATEGORIES = [
 
 /* Quick-pick grid shown on the add form */
 const CATEGORY_GRID = [
-  { label: "Others",    emoji: "✨", value: "Others" },
-  { label: "Dining",    emoji: "🍽️", value: "Dining" },
-  { label: "Transport", emoji: "🚗", value: "Transport" },
-  { label: "Drinks",    emoji: "☕", value: "Drinks" },
-  { label: "Groceries", emoji: "🍎", value: "Groceries" },
-  { label: "Snacks",    emoji: "🍟", value: "Snacks" },
-  { label: "Shopping",  emoji: "👕", value: "Shopping" },
-  { label: "Housing",   emoji: "🏠", value: "Housing" },
-  { label: "Medical",   emoji: "💊", value: "Medical" },
-  { label: "Travel",    emoji: "✈️", value: "Travel" },
+  { label: "Others",    icon: Sparkles,       value: "Others" },
+  { label: "Dining",    icon: Utensils,        value: "Dining" },
+  { label: "Transport", icon: Car,             value: "Transport" },
+  { label: "Drinks",    icon: Coffee,          value: "Drinks" },
+  { label: "Groceries", icon: ShoppingBasket,  value: "Groceries" },
+  { label: "Snacks",    icon: Cookie,          value: "Snacks" },
+  { label: "Shopping",  icon: ShoppingBag,     value: "Shopping" },
+  { label: "Housing",   icon: Home,            value: "Housing" },
+  { label: "Medical",   icon: Heart,           value: "Medical" },
+  { label: "Travel",    icon: Plane,           value: "Travel" },
 ];
 
 function formatDateDisplay(isoDate) {
@@ -348,7 +352,10 @@ function ExpensesPage({
                       onExpenseChange({ target: { name: "category", value: cat.value } });
                     }}
                   >
-                    <span className="text-xl leading-none">{cat.emoji}</span>
+                    <cat.icon
+                      className="h-5 w-5"
+                      style={{ color: isSelected ? "#D4870A" : "rgba(212, 135, 10, 0.55)", strokeWidth: 1.75 }}
+                    />
                     <span
                       className="text-[9px] font-medium leading-none text-center"
                       style={{ color: isSelected ? "#D4870A" : "rgba(212, 135, 10, 0.6)" }}

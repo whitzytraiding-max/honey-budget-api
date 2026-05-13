@@ -124,13 +124,18 @@ function AppShell({
             style={{ imageRendering: "crisp-edges" }}
           />
           <button
-            className="p-2 rounded-xl transition"
-            style={{ color: "rgba(212, 135, 10, 0.5)" }}
+            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition active:opacity-70"
+            style={{
+              background: "rgba(42, 26, 8, 0.9)",
+              border: "1px solid rgba(212, 135, 10, 0.35)",
+              color: "#D4870A",
+            }}
             onClick={() => setSidebarOpen(true)}
             type="button"
             aria-label="Open navigation"
           >
             <Menu className="h-5 w-5" />
+            <span className="text-[9px] font-semibold tracking-wide">More</span>
           </button>
         </div>
       </div>
@@ -217,8 +222,8 @@ function AppShell({
       <div
         className={`mx-auto max-w-6xl px-4 md:px-6 ${
           pageTabs.length > 0
-            ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
-            : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10"
+            ? "pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-[calc(6.5rem+env(safe-area-inset-bottom))]"
+            : "pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-10"
         }`}
       >
         {pageError ? (
