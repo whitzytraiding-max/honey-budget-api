@@ -3,6 +3,7 @@
     {
       "source": "/(.*)",
       "headers": [
+        { "key": "Access-Control-Allow-Origin",  "value": "https://honey-budget.com" },
         { "key": "X-Frame-Options",        "value": "SAMEORIGIN" },
         { "key": "X-Content-Type-Options",  "value": "nosniff" },
         { "key": "Referrer-Policy",         "value": "strict-origin-when-cross-origin" },
