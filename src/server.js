@@ -122,7 +122,12 @@ if (isProduction) {
 
 serverApp.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
     hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true } : false,
   }),
 );
@@ -130,29 +135,26 @@ serverApp.use((request, response, next) => {
   response.setHeader("X-Product-Name", "Honey Budget");
   response.setHeader("X-Code-Owner", "Whitzy");
   response.setHeader("X-Whitzy-Signature", "whitzy:honey-budget:2026");
+  response.setHeader(
+    "Permissions-Policy",
+    "camera=(), geolocation=(), payment=(), usb=(), display-capture=(), microphone=()",
+  );
 
   const origin = request.headers.origin;
-
-  if (
+  const originAllowed =
     origin &&
     (allowedCorsOrigins.has(origin) ||
-      (!isProduction && isPrivateNetworkOrigin(origin)))
-  ) {
+      (!isProduction && isPrivateNetworkOrigin(origin)));
+
+  if (originAllowed) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
+    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   }
 
-  response.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, Authorization",
-  );
-  response.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-  );
-
   if (request.method === "OPTIONS") {
-    response.status(204).end();
+    response.status(originAllowed ? 204 : 403).end();
     return;
   }
 
