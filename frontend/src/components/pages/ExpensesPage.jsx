@@ -498,67 +498,27 @@ function ExpensesPage({
                 </select>
               </label>
 
-              {/* Currency */}
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
-                  Currency
-                </span>
-                <select
-                  value={expenseForm.currencyCode}
-                  onChange={onExpenseChange}
-                  className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
-                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "#f0e0c0" }}
-                >
-                  {currencyOptions.map((o) => (
-                    <option key={o.value} value={o.value}>{o.label}</option>
+              {/* Type */}
+              <div>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Type</p>
+                <div className="flex gap-1">
+                  {[{ label: t("expenses.oneTime"), value: "one-time" }, { label: t("expenses.recurring"), value: "recurring" }].map((o) => (
+                    <button
+                      key={o.value}
+                      type="button"
+                      className="flex-1 rounded-xl py-2 text-xs font-medium transition"
+                      style={{
+                        background: expenseForm.type === o.value ? "#D4870A" : "rgba(30, 16, 4, 0.9)",
+                        color: expenseForm.type === o.value ? "#fff" : "rgba(212, 135, 10, 0.6)",
+                        border: "1px solid rgba(100, 65, 20, 0.35)",
+                      }}
+                      onClick={() => onExpenseChange({ target: { name: "type", value: o.value } })}
+                    >
+                      {o.label}
+                    </button>
                   ))}
-                </select>
-              </label>
-
-              {/* Type + Method */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Type</p>
-                  <div className="flex gap-1">
-                    {[{ label: t("expenses.oneTime"), value: "one-time" }, { label: t("expenses.recurring"), value: "recurring" }].map((o) => (
-                      <button
-                        key={o.value}
-                        type="button"
-                        className="flex-1 rounded-xl py-2 text-xs font-medium transition"
-                        style={{
-                          background: expenseForm.type === o.value ? "#D4870A" : "rgba(30, 16, 4, 0.9)",
-                          color: expenseForm.type === o.value ? "#fff" : "rgba(212, 135, 10, 0.6)",
-                          border: "1px solid rgba(100, 65, 20, 0.35)",
-                        }}
-                        onClick={() => onExpenseChange({ target: { name: "type", value: o.value } })}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Method</p>
-                  <div className="flex gap-1">
-                    {[{ label: "Card", value: "card" }, { label: "Cash", value: "cash" }].map((o) => (
-                      <button
-                        key={o.value}
-                        type="button"
-                        className="flex-1 rounded-xl py-2 text-xs font-medium transition"
-                        style={{
-                          background: expenseForm.paymentMethod === o.value ? "#D4870A" : "rgba(30, 16, 4, 0.9)",
-                          color: expenseForm.paymentMethod === o.value ? "#fff" : "rgba(212, 135, 10, 0.6)",
-                          border: "1px solid rgba(100, 65, 20, 0.35)",
-                        }}
-                        onClick={() => onExpenseChange({ target: { name: "paymentMethod", value: o.value } })}
-                      >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
               </div>
-
               {/* Log as (couples) */}
               {!editingTransactionId && householdUsers?.length >= 2 && (() => {
                 const partner = householdUsers.find((u) => u.id !== currentUserId);
