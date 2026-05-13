@@ -141,6 +141,7 @@ function ExpensesPage({
   /* Numpad amount state — synced to expenseForm.amount */
   const [numStr, setNumStr] = useState(expenseForm.amount ? String(expenseForm.amount) : "");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
   /* Available expense currencies derived from the user's two configured currencies */
   const expenseCurrencies = [...new Set([baseCurrencyCode, currencyCode].filter(Boolean))];
@@ -345,31 +346,46 @@ function ExpensesPage({
 
           {/* Amount display */}
           <div
-            className="flex items-center justify-between rounded-[1.2rem] px-5 py-4"
+            className="relative flex items-center justify-between rounded-[1.2rem] px-5 py-4"
             style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
           >
             <div className="flex items-baseline gap-1.5">
               <button
                 type="button"
-                className="text-lg font-medium transition active:opacity-60"
-                style={{
-                  color: "rgba(212, 135, 10, 0.6)",
-                  background: "none",
-                  border: "none",
-                  padding: 0,
-                  textDecoration: expenseCurrencies.length > 1 ? "underline dotted" : "none",
-                  textUnderlineOffset: "3px",
-                }}
-                onClick={() => {
-                  if (expenseCurrencies.length < 2) return;
-                  hapticLight();
-                  const idx = expenseCurrencies.indexOf(activeCurrency);
-                  const next = expenseCurrencies[(idx + 1) % expenseCurrencies.length];
-                  onExpenseChange({ target: { name: "currencyCode", value: next } });
-                }}
+                className="flex items-center gap-1 text-lg font-medium transition active:opacity-60"
+                style={{ color: "rgba(212, 135, 10, 0.8)", background: "none", border: "none", padding: 0 }}
+                onClick={() => { hapticLight(); setShowCurrencyPicker((v) => !v); }}
               >
                 {activeCurrency}
+                <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)", marginBottom: "-2px" }} />
               </button>
+              {/* Currency dropdown */}
+              {showCurrencyPicker && (
+                <div
+                  className="absolute left-0 top-full mt-2 z-30 rounded-2xl overflow-hidden"
+                  style={{ background: "rgba(28, 16, 4, 0.97)", border: "1px solid rgba(212, 135, 10, 0.35)", minWidth: "160px", boxShadow: "0 8px 32px -8px rgba(0,0,0,0.6)" }}
+                >
+                  {currencyOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className="flex w-full items-center justify-between px-4 py-2.5 text-sm transition hover:bg-white/5"
+                      style={{
+                        color: activeCurrency === opt.value ? "#D4870A" : "#f0e0c0",
+                        fontWeight: activeCurrency === opt.value ? 600 : 400,
+                      }}
+                      onClick={() => {
+                        hapticLight();
+                        onExpenseChange({ target: { name: "currencyCode", value: opt.value } });
+                        setShowCurrencyPicker(false);
+                      }}
+                    >
+                      <span>{opt.value}</span>
+                      {activeCurrency === opt.value && <span style={{ color: "#D4870A" }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               <span
                 className="text-4xl font-bold tracking-tight"
                 style={{ color: numStr ? "#f0e0c0" : "rgba(240, 210, 160, 0.3)" }}
