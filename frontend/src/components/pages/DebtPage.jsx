@@ -3,8 +3,8 @@
  * Copyright (c) 2026 Whitzy. All rights reserved.
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
-import { CheckCircle, CreditCard, Pencil, Trash2, X } from "lucide-react";
-import { ActionButton, EmptyState, Input, Select } from "../ui.jsx";
+import { CalendarDays, CheckCircle, ChevronDown, CreditCard, Pencil, Trash2, X } from "lucide-react";
+import { EmptyState } from "../ui.jsx";
 
 const CURRENCY_OPTIONS = [
   { value: "USD", label: "USD" },
@@ -89,8 +89,8 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
       {!isPaidOff && !isPayingThis && (
         <div className="px-5 pb-5">
           <button
-            className="mt-1 w-full rounded-xl py-3 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98]"
-            style={{ background: "linear-gradient(135deg, #0284c7, #0369a1)" }}
+            className="mt-1 w-full rounded-[1.2rem] py-3 text-sm font-bold text-white transition active:scale-[0.98]"
+            style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}
             type="button"
             onClick={() => onPay(debt.id)}
           >
@@ -102,21 +102,50 @@ function DebtCard({ debt, currentUserId, onPay, onEdit, onDelete, onDeletePaymen
 
       {/* Payment form */}
       {isPayingThis && (
-        <div className="border-t px-5 py-5" style={{ borderColor: "var(--hb-border)", background: "var(--hb-surface-strong)" }}>
-          <form onSubmit={onPaymentSubmit} className="space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold" style={{ color: "#38bdf8" }}>Log a payment</p>
-              <button type="button" onClick={onClosePayment} style={{ color: "var(--hb-ink-soft)" }}>
-                <X className="h-4 w-4" />
-              </button>
+        <div className="border-t px-4 py-4" style={{ borderColor: "rgba(100, 65, 20, 0.3)" }}>
+          <form onSubmit={onPaymentSubmit} className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold" style={{ color: "#D4870A" }}>Log a payment</p>
+              <button type="button" onClick={onClosePayment} style={{ color: "rgba(212, 135, 10, 0.6)" }}><X className="h-4 w-4" /></button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Amount" name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={paymentForm.amount} onChange={onPaymentChange} placeholder="0.00" required />
-              <Input label="Date" name="date" type="date" value={paymentForm.date} onChange={onPaymentChange} required />
+            {/* Amount */}
+            <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+              <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
+              <input name="amount" type="number" inputMode="decimal" min="0.01" step="0.01" value={paymentForm.amount} onChange={onPaymentChange} placeholder="0.00" required className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
             </div>
-            <Input label="Note (optional)" name="note" value={paymentForm.note} onChange={onPaymentChange} placeholder="e.g. January payment" />
-            <Select label="Method" name="paymentMethod" value={paymentForm.paymentMethod} onChange={onPaymentChange} options={PAYMENT_METHOD_OPTIONS} />
-            <ActionButton busy={debtBusy} className="w-full">Save payment</ActionButton>
+            {/* Date */}
+            <label className="flex items-center gap-2.5 rounded-[1.0rem] px-3 py-2.5 cursor-pointer" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+              <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
+              <span className="flex-1 text-sm" style={{ color: paymentForm.date ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+                {paymentForm.date ? new Date(paymentForm.date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Select date"}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+              <input type="date" name="date" value={paymentForm.date} onChange={onPaymentChange} required className="sr-only" />
+            </label>
+            {/* Note */}
+            <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+              <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Note (optional)</p>
+              <input name="note" value={paymentForm.note} onChange={onPaymentChange} placeholder="e.g. January payment" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+            </div>
+            {/* Payment method pill toggle */}
+            <div>
+              <p className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Method</p>
+              <div className="flex gap-1 p-1 rounded-full" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+                {PAYMENT_METHOD_OPTIONS.map(({ value, label }) => (
+                  <button key={value} type="button"
+                    className="flex-1 py-2 rounded-full text-xs font-semibold transition"
+                    style={{ background: paymentForm.paymentMethod === value ? "#D4870A" : "transparent", color: paymentForm.paymentMethod === value ? "#fff" : "rgba(212, 135, 10, 0.5)" }}
+                    onClick={() => onPaymentChange({ target: { name: "paymentMethod", value } })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button type="submit" disabled={debtBusy}
+              className="w-full rounded-[1.0rem] py-3 text-sm font-bold text-white transition disabled:opacity-40"
+              style={{ background: "#D4870A", boxShadow: "0 6px 18px -6px rgba(180, 100, 5, 0.5)" }}>
+              {debtBusy ? "Saving…" : "Save payment 🐾"}
+            </button>
           </form>
         </div>
       )}
@@ -231,34 +260,59 @@ export default function DebtPage({
   // "add" tab — add/edit form
   if (activeTab === "add") {
     return (
-      <div className="hb-surface-card rounded-2xl p-5">
-        <h2 className="mb-4 text-base font-semibold text-slate-700">
-          {editingDebtId ? "Edit debt" : "Add a debt"}
-        </h2>
-        <form className="space-y-3" onSubmit={onDebtSubmit}>
-          <Input label="Debt name" name="title" value={debtForm.title} onChange={onDebtChange} placeholder="e.g. Visa card, student loan" required />
-          {!editingDebtId && (
-            <div className="grid grid-cols-2 gap-3">
-              <Input label="Total owed" name="originalAmount" type="number" inputMode="decimal" min="0.01" step="0.01" value={debtForm.originalAmount} onChange={onDebtChange} placeholder="0.00" required />
-              <Select label="Currency" name="currencyCode" value={debtForm.currencyCode} onChange={onDebtChange} options={CURRENCY_OPTIONS} />
-            </div>
-          )}
+      <form className="flex flex-col gap-3" onSubmit={onDebtSubmit}>
+        {editingDebtId && (
+          <div className="flex items-center justify-between gap-3 rounded-[1.2rem] px-4 py-3 text-sm"
+            style={{ background: "rgba(50, 30, 8, 0.85)", border: "1px solid rgba(212, 135, 10, 0.35)", color: "#fde68a" }}>
+            <p>Editing debt</p>
+            <button type="button" onClick={onCancelDebtEdit} className="inline-flex items-center gap-1 font-semibold"><X className="h-4 w-4" /> Cancel</button>
+          </div>
+        )}
+        {/* Debt name */}
+        <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Debt name</p>
+          <input name="title" value={debtForm.title} onChange={onDebtChange} placeholder="e.g. Visa card, student loan" required className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+        </div>
+        {/* Total owed + Currency */}
+        {!editingDebtId && (
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Min. payment (optional)" name="minimumPayment" type="number" inputMode="decimal" min="0" step="0.01" value={debtForm.minimumPayment} onChange={onDebtChange} placeholder="0.00" />
-            <Select label="Payment method" name="paymentMethod" value={debtForm.paymentMethod} onChange={onDebtChange} options={PAYMENT_METHOD_OPTIONS} />
+            <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Total owed</p>
+              <input name="originalAmount" type="number" inputMode="decimal" min="0.01" step="0.01" value={debtForm.originalAmount} onChange={onDebtChange} placeholder="0.00" required className="w-full bg-transparent text-2xl font-bold outline-none" style={{ color: "#f0e0c0" }} />
+            </div>
+            <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Currency</p>
+              <select name="currencyCode" value={debtForm.currencyCode} onChange={onDebtChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+                {CURRENCY_OPTIONS.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1108" }}>{o.label}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <ActionButton busy={debtBusy} className="flex-1">
-              {editingDebtId ? "Save changes" : "Add debt"}
-            </ActionButton>
-            {editingDebtId && (
-              <button type="button" className="hb-button-secondary rounded-xl px-4 py-2 text-sm font-medium" onClick={onCancelDebtEdit}>
-                Cancel
+        )}
+        {/* Min payment */}
+        <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Min. payment (optional)</p>
+          <input name="minimumPayment" type="number" inputMode="decimal" min="0" step="0.01" value={debtForm.minimumPayment} onChange={onDebtChange} placeholder="0.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+        </div>
+        {/* Payment method pill */}
+        <div>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Payment method</p>
+          <div className="flex gap-1 p-1 rounded-full" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            {PAYMENT_METHOD_OPTIONS.map(({ value, label }) => (
+              <button key={value} type="button"
+                className="flex-1 py-2.5 rounded-full text-sm font-semibold transition"
+                style={{ background: debtForm.paymentMethod === value ? "#D4870A" : "transparent", color: debtForm.paymentMethod === value ? "#fff" : "rgba(212, 135, 10, 0.5)" }}
+                onClick={() => onDebtChange({ target: { name: "paymentMethod", value } })}>
+                {label}
               </button>
-            )}
+            ))}
           </div>
-        </form>
-      </div>
+        </div>
+        <button type="submit" disabled={debtBusy}
+          className="w-full rounded-[1.2rem] py-3.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-40"
+          style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}>
+          {debtBusy ? "Saving…" : editingDebtId ? "Save changes" : "Add debt 🐾"}
+        </button>
+      </form>
     );
   }
 

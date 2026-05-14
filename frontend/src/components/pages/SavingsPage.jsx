@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { ArrowDownLeft, Check, Pencil, PiggyBank, Plus, Target, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, CalendarDays, Check, ChevronDown, Pencil, PiggyBank, Plus, Target, Trash2, X } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
-import { ActionButton, Input, Select } from "../ui.jsx";
 
 function GoalProgress({ goal }) {
   const pct = goal.progressPct ?? 0;
@@ -138,69 +137,124 @@ export default function SavingsPage({
   // "log" tab
   if (activeTab === "log") {
     return (
-      <div className="space-y-5">
-        <section className="hb-panel-multi rounded-[2rem] border border-sky-200/70 p-5 shadow-[0_20px_60px_-24px_rgba(21,50,65,0.35)]">
-          <div className="flex items-center gap-2.5 mb-4">
-            <PiggyBank className="h-5 w-5 text-emerald-600 shrink-0" />
-            <h2 className="text-lg font-semibold text-slate-900">
-              {editingSavingsEntryId ? "Edit Savings Entry" : "Log a Saving"}
-            </h2>
-            {editingSavingsEntryId && (
-              <button type="button" onClick={onCancelSavingsEntryEdit} className="ml-auto inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 transition">
-                <X className="h-3.5 w-3.5" /> Cancel edit
-              </button>
-            )}
+      <div className="flex flex-col gap-3">
+        {editingSavingsEntryId && (
+          <div
+            className="flex items-center justify-between gap-3 rounded-[1.2rem] px-4 py-3 text-sm"
+            style={{ background: "rgba(50, 30, 8, 0.85)", border: "1px solid rgba(212, 135, 10, 0.35)", color: "#fde68a" }}
+          >
+            <p>Editing savings entry</p>
+            <button className="inline-flex items-center gap-1 font-semibold" onClick={onCancelSavingsEntryEdit} type="button">
+              <X className="h-4 w-4" /> Cancel
+            </button>
           </div>
-          <form onSubmit={onSavingsSubmit} className="space-y-3">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="col-span-2 sm:col-span-1">
-                <Input label="Amount" name="amount" type="number" min="0" step="0.01" value={savingsForm.amount} onChange={onSavingsChange} placeholder="0.00" />
-              </div>
-              <div className="col-span-2 sm:col-span-1">
-                <Input label="Date" name="date" type="date" value={savingsForm.date} onChange={onSavingsChange} />
-              </div>
-              <div className="col-span-2">
-                <Select label="Goal (optional)" name="savingsGoalId" value={savingsForm.savingsGoalId} onChange={onSavingsChange} options={goalOptions} />
-              </div>
-            </div>
-            <Input label="Note (optional)" name="note" value={savingsForm.note} onChange={onSavingsChange} placeholder="Payday transfer, side income…" />
-            <ActionButton busy={savingsBusy} className="w-full sm:w-auto">
-              {editingSavingsEntryId ? "Update Entry" : "Log Saving"}
-            </ActionButton>
-          </form>
-        </section>
+        )}
 
-        <section className="hb-surface-card rounded-[2rem] p-5">
-          <div className="flex items-center justify-between mb-3">
+        <form onSubmit={onSavingsSubmit} className="flex flex-col gap-3">
+          {/* Amount */}
+          <div className="rounded-[1.2rem] px-5 py-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
+            <input
+              name="amount" type="number" min="0" step="0.01"
+              value={savingsForm.amount} onChange={onSavingsChange} placeholder="0.00"
+              className="w-full bg-transparent text-2xl font-bold outline-none"
+              style={{ color: "#f0e0c0" }}
+            />
+          </div>
+
+          {/* Date */}
+          <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
+            <span className="flex-1 text-sm font-medium" style={{ color: savingsForm.date ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+              {savingsForm.date ? new Date(savingsForm.date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Select date"}
+            </span>
+            <ChevronDown className="h-4 w-4" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+            <input type="date" name="date" value={savingsForm.date} onChange={onSavingsChange} className="sr-only" />
+          </label>
+
+          {/* Goal */}
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Goal (optional)</p>
+            <select name="savingsGoalId" value={savingsForm.savingsGoalId} onChange={onSavingsChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+              {goalOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1108" }}>{o.label}</option>)}
+            </select>
+          </div>
+
+          {/* Note */}
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Note (optional)</p>
+            <input
+              name="note" value={savingsForm.note} onChange={onSavingsChange}
+              placeholder="Payday transfer, side income…"
+              className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}
+            />
+          </div>
+
+          <button type="submit" disabled={savingsBusy}
+            className="w-full rounded-[1.2rem] py-3.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-40"
+            style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}>
+            {savingsBusy ? "Saving…" : editingSavingsEntryId ? "Update Entry" : "Log Saving 🐾"}
+          </button>
+        </form>
+
+        {/* Transfer to Current */}
+        <div className="rounded-[1.35rem] p-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <ArrowDownLeft className="h-5 w-5 text-amber-500 shrink-0" />
-              <h2 className="text-lg font-semibold text-slate-900">Transfer to Current</h2>
+              <ArrowDownLeft className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
+              <p className="text-sm font-semibold" style={{ color: "#f0e0c0" }}>Transfer to Current</p>
             </div>
             {!showWithdrawForm && (
-              <button type="button" onClick={() => setShowWithdrawForm(true)} className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100 transition">
-                <Plus className="h-3.5 w-3.5" /> Withdraw
+              <button type="button" onClick={() => setShowWithdrawForm(true)}
+                className="rounded-full px-3 py-1.5 text-xs font-semibold transition"
+                style={{ background: "rgba(212, 135, 10, 0.15)", color: "#D4870A", border: "1px solid rgba(212, 135, 10, 0.3)" }}>
+                Withdraw
               </button>
             )}
           </div>
           {showWithdrawForm ? (
-            <form onSubmit={handleWithdrawSubmit} className="space-y-3">
-              <p className="text-xs text-slate-500">Moves money back to your current balance. It will appear as a negative savings entry.</p>
+            <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-3 mt-4">
+              <p className="text-xs" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Moves money back to your current balance as a negative savings entry.</p>
               <div className="grid grid-cols-2 gap-3">
-                <Input label="Amount to withdraw" name="amount" type="number" min="0" step="0.01" value={withdrawForm.amount} onChange={(e) => setWithdrawForm((f) => ({ ...f, amount: e.target.value }))} placeholder="0.00" />
-                <Select label="From goal (optional)" name="savingsGoalId" value={withdrawForm.savingsGoalId} onChange={(e) => setWithdrawForm((f) => ({ ...f, savingsGoalId: e.target.value }))} options={goalOptions} />
+                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
+                  <input type="number" min="0" step="0.01" value={withdrawForm.amount}
+                    onChange={(e) => setWithdrawForm((f) => ({ ...f, amount: e.target.value }))}
+                    placeholder="0.00" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+                </div>
+                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>From goal</p>
+                  <select value={withdrawForm.savingsGoalId}
+                    onChange={(e) => setWithdrawForm((f) => ({ ...f, savingsGoalId: e.target.value }))}
+                    className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+                    {goalOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1108" }}>{o.label}</option>)}
+                  </select>
+                </div>
               </div>
-              <Input label="Note (optional)" name="note" value={withdrawForm.note} onChange={(e) => setWithdrawForm((f) => ({ ...f, note: e.target.value }))} placeholder="Emergency repair, medical bill…" />
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Note (optional)</p>
+                <input value={withdrawForm.note}
+                  onChange={(e) => setWithdrawForm((f) => ({ ...f, note: e.target.value }))}
+                  placeholder="Emergency repair, medical bill…"
+                  className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              </div>
               <div className="flex gap-2">
-                <ActionButton busy={withdrawBusy} className="w-full sm:w-auto">Transfer to Current</ActionButton>
-                <button type="button" onClick={() => { setShowWithdrawForm(false); setWithdrawForm(WITHDRAW_EMPTY); }} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 transition">
-                  <X className="h-4 w-4" /> Cancel
+                <button type="submit" disabled={withdrawBusy}
+                  className="flex-1 rounded-[1.0rem] py-3 text-sm font-bold text-white transition disabled:opacity-40"
+                  style={{ background: "#D4870A", boxShadow: "0 6px 18px -6px rgba(180, 100, 5, 0.5)" }}>
+                  {withdrawBusy ? "…" : "Transfer"}
+                </button>
+                <button type="button" onClick={() => { setShowWithdrawForm(false); setWithdrawForm(WITHDRAW_EMPTY); }}
+                  className="rounded-[1.0rem] px-4 py-3 text-sm font-medium transition"
+                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "rgba(212, 135, 10, 0.7)" }}>
+                  Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <p className="text-xs text-slate-400">Need to dip into savings? Tap Withdraw to move an amount back to your current balance.</p>
+            <p className="mt-2 text-xs" style={{ color: "rgba(156, 120, 85, 0.6)" }}>Need to dip into savings? Tap Withdraw to move an amount back to your current balance.</p>
           )}
-        </section>
+        </div>
       </div>
     );
   }
@@ -245,19 +299,34 @@ export default function SavingsPage({
         </div>
 
         {showGoalForm && (
-          <form onSubmit={handleGoalSubmit} className="mb-4 rounded-[1.5rem] border border-sky-100 bg-sky-50/60 p-4 space-y-3">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-sm font-semibold text-slate-800">{editingSavingsGoalId ? "Edit goal" : "New goal"}</p>
-              <button type="button" onClick={handleCancelGoal} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4" /></button>
+          <form onSubmit={handleGoalSubmit} className="mb-4 flex flex-col gap-3 rounded-[1.35rem] p-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold" style={{ color: "#f0e0c0" }}>{editingSavingsGoalId ? "Edit goal" : "New goal"}</p>
+              <button type="button" onClick={handleCancelGoal} style={{ color: "rgba(212, 135, 10, 0.6)" }}><X className="h-4 w-4" /></button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Input label="Goal name" name="title" value={savingsGoalForm.title} onChange={onSavingsGoalChange} placeholder="Emergency fund, Japan trip…" />
-              <Input label="Target amount" name="targetAmount" type="number" min="0" step="0.01" value={savingsGoalForm.targetAmount} onChange={onSavingsGoalChange} placeholder="5000.00" />
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Goal name</p>
+                <input name="title" value={savingsGoalForm.title} onChange={onSavingsGoalChange} placeholder="Emergency fund, Japan trip…" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              </div>
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Target amount</p>
+                <input name="targetAmount" type="number" min="0" step="0.01" value={savingsGoalForm.targetAmount} onChange={onSavingsGoalChange} placeholder="5000.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              </div>
             </div>
-            <Input label="Target date (optional)" name="targetDate" type="date" value={savingsGoalForm.targetDate} onChange={onSavingsGoalChange} />
-            <ActionButton busy={savingsTargetBusy} className="w-full sm:w-auto">
-              {editingSavingsGoalId ? "Update Goal" : "Save Goal"}
-            </ActionButton>
+            <label className="flex items-center gap-2.5 rounded-[1.0rem] px-3 py-2.5 cursor-pointer" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
+              <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
+              <span className="flex-1 text-sm" style={{ color: savingsGoalForm.targetDate ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+                {savingsGoalForm.targetDate ? new Date(savingsGoalForm.targetDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Target date (optional)"}
+              </span>
+              <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+              <input type="date" name="targetDate" value={savingsGoalForm.targetDate} onChange={onSavingsGoalChange} className="sr-only" />
+            </label>
+            <button type="submit" disabled={savingsTargetBusy}
+              className="w-full rounded-[1.0rem] py-3 text-sm font-bold text-white transition disabled:opacity-40"
+              style={{ background: "#D4870A", boxShadow: "0 6px 18px -6px rgba(180, 100, 5, 0.5)" }}>
+              {savingsTargetBusy ? "Saving…" : editingSavingsGoalId ? "Update Goal" : "Save Goal"}
+            </button>
           </form>
         )}
 
