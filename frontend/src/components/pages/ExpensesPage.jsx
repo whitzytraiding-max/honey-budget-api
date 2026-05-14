@@ -264,6 +264,7 @@ function ExpensesPage({
     <form onSubmit={onExpenseSubmit} className="flex flex-col gap-3">
       <input type="hidden" name="amount" value={numStr || "0"} readOnly />
       <input type="hidden" name="currencyCode" value={expenseForm.currencyCode || ""} readOnly />
+      <input type="hidden" name="category" value={expenseForm.category || "Dining"} readOnly />
 
       {/* Editing banner */}
       {editingTransactionId ? (
@@ -486,7 +487,6 @@ function ExpensesPage({
                   Category (full list)
                 </span>
                 <select
-                  name="category"
                   value={expenseForm.category}
                   onChange={onExpenseChange}
                   className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
