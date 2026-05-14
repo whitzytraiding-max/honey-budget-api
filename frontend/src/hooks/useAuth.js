@@ -65,7 +65,7 @@ export function useAuth({ navigate }) {
       const data = await apiFetch("/api/auth/register", {
         auth: false,
         method: "POST",
-        body: JSON.stringify({ ...registerForm, email, monthlySalary: 0 }),
+        body: JSON.stringify({ ...registerForm, email, monthlySalary: 0, salaryPaymentMethod: "card" }),
       });
       setPostAuthFailureMessage(REGISTER_BOOTSTRAP_ERROR);
       setLoginForm({ email, password: registerForm.password });
