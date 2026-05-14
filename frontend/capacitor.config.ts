@@ -11,13 +11,13 @@ const config: CapacitorConfig = {
       androidSplashResourceName: "splash",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
-      backgroundColor: "#10253f",
+      backgroundColor: "#1a1108",
       splashFullScreen: true,
       splashImmersive: true,
     },
     StatusBar: {
       style: "LIGHT",
-      backgroundColor: "#10253f",
+      backgroundColor: "#1a1108",
       overlaysWebView: true,
     },
     Keyboard: {
@@ -36,6 +36,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     contentInset: "always",
+    backgroundColor: "#1a1108",
     limitsNavigationsToAppBoundDomains: true,
   },
 };
