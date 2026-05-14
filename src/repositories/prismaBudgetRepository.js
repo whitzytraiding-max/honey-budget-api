@@ -2110,6 +2110,16 @@ function createPrismaBudgetRepository({ prisma }) {
         },
       });
     },
+
+    async adminGrantPro(email) {
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) return null;
+      await prisma.user.update({
+        where: { email },
+        data: { subscriptionStatus: "pro", subscriptionExpiresAt: null },
+      });
+      return user.id;
+    },
   };
 }
 

@@ -16,6 +16,16 @@ import { sanitizeUser, getPartner, buildSetupChecklist } from "../lib/helpers.js
 
 export function createUserRoutes({ budgetRepository, requireAuth }) {
   const router = express.Router();
+  const adminSecret = process.env.ADMIN_SECRET || "";
+
+  function requireAdmin(request, _response, next) {
+    const auth = request.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    if (!adminSecret || token !== adminSecret) {
+      throw new HttpError(401, "UNAUTHORIZED", "Invalid admin secret.");
+    }
+    next();
+  }
 
   router.get(
     "/api/auth/me",
@@ -199,6 +209,19 @@ export function createUserRoutes({ budgetRepository, requireAuth }) {
     asyncHandler(async (request, response) => {
       await budgetRepository.activateIAPSubscription(request.user.id);
       sendData(response, 200, { ok: true });
+    }),
+  );
+
+  // POST /api/admin/grant-pro — manually grant pro to a user by email
+  router.post(
+    "/api/admin/grant-pro",
+    requireAdmin,
+    asyncHandler(async (request, response) => {
+      const { email } = request.body;
+      if (!email) throw new HttpError(400, "MISSING_EMAIL", "email is required.");
+      const userId = await budgetRepository.adminGrantPro(email);
+      if (!userId) throw new HttpError(404, "NOT_FOUND", "No user with that email.");
+      sendData(response, 200, { ok: true, email, status: "pro" });
     }),
   );
 

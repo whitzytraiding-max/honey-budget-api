@@ -85,7 +85,7 @@ function AppShell({
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-[#f0e0c0]">
+    <div className="min-h-screen text-[#f0e0c0]" style={{ background: "#1a1108" }}>
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
