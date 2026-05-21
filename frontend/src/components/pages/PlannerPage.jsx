@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   AlertTriangle,
   BellRing,
@@ -42,6 +43,13 @@ function PlannerPage({
   const prompts = plannerData?.conflictCenter?.prompts ?? [];
   const rules = plannerData?.householdRules ?? [];
 
+  const billFormRef = useRef(null);
+  useEffect(() => {
+    if (editingRecurringBillId && billFormRef.current) {
+      billFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [editingRecurringBillId]);
+
   return (
     <div className="space-y-4">
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
@@ -75,7 +83,7 @@ function PlannerPage({
               </div>
             </div>
 
-            <form className="mt-4 flex flex-col gap-3" onSubmit={onRecurringBillSubmit}>
+            <form ref={billFormRef} className="mt-4 flex flex-col gap-3" onSubmit={onRecurringBillSubmit}>
               {/* Bill name + Amount */}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
