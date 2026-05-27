@@ -686,6 +686,7 @@ export default function App() {
             setupChecklist={setupChecklist}
             onNavigateToSetup={() => navigate("setup")}
             onSendMessage={coach.handleCoachChat}
+            theme={theme}
           />
         );
     }
