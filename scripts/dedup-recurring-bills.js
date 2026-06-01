@@ -13,9 +13,17 @@
  *   DATABASE_URL="..." node scripts/dedup-recurring-bills.js
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import prismaClientPackage from "@prisma/client";
 
-const prisma = new PrismaClient();
+const { PrismaClient } = prismaClientPackage;
+
+if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is required.");
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+});
+
 const WINDOW_MS = 30_000; // 30-second double-tap window
 
 async function main() {
