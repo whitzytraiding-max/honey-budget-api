@@ -63,7 +63,7 @@ export function createCoachChatRoutes({
       });
 
       const today = new Date().toISOString().split("T")[0];
-      const currency = request.user.incomeCurrencyCode || displayCurrency?.trim() || "USD";
+      const currency = displayCurrency?.trim() || request.user.incomeCurrencyCode || "USD";
 
       // Tool execution — called by insightsService when AI uses a tool
       async function onToolCall(toolName, input) {

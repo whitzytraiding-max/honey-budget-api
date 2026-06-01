@@ -487,6 +487,7 @@ function ExpensesPage({
                   Category (full list)
                 </span>
                 <select
+                  name="category"
                   value={expenseForm.category}
                   onChange={onExpenseChange}
                   className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
