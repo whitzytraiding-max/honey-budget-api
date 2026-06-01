@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { apiFetch } from "../lib/api.js";
 import { getTodayLocalIso } from "../lib/date.js";
 
@@ -41,6 +41,7 @@ export function usePlanner({ appData, showConfirm, route }) {
   const [recurringBillForm, setRecurringBillForm] = useState(() => createRecurringBillDraft(null, baseCurrencyCode));
   const [editingRecurringBillId, setEditingRecurringBillId] = useState(null);
   const [recurringBillBusy, setRecurringBillBusy] = useState(false);
+  const billSubmittingRef = useRef(false);
 
   const [householdRuleForm, setHouseholdRuleForm] = useState(() => createHouseholdRuleDraft(null, baseCurrencyCode));
   const [editingHouseholdRuleId, setEditingHouseholdRuleId] = useState(null);
@@ -81,15 +82,17 @@ export function usePlanner({ appData, showConfirm, route }) {
 
   async function handleRecurringBillSubmit(event) {
     event.preventDefault();
+    if (billSubmittingRef.current) return;
+    billSubmittingRef.current = true;
     setRecurringBillBusy(true);
     setPageError("");
     const amount = Number.parseFloat(recurringBillForm.amount);
     const dayOfMonth = Number.parseInt(recurringBillForm.dayOfMonth, 10);
 
-    if (!recurringBillForm.title.trim()) { setPageError("Enter a recurring bill name."); setRecurringBillBusy(false); return; }
-    if (!Number.isFinite(amount) || amount <= 0) { setPageError("Enter a valid recurring bill amount."); setRecurringBillBusy(false); return; }
-    if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28) { setPageError("Choose a bill day between 1 and 28."); setRecurringBillBusy(false); return; }
-    if (!recurringBillForm.startDate) { setPageError("Pick the bill start date."); setRecurringBillBusy(false); return; }
+    if (!recurringBillForm.title.trim()) { setPageError("Enter a recurring bill name."); setRecurringBillBusy(false); billSubmittingRef.current = false; return; }
+    if (!Number.isFinite(amount) || amount <= 0) { setPageError("Enter a valid recurring bill amount."); setRecurringBillBusy(false); billSubmittingRef.current = false; return; }
+    if (!Number.isInteger(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > 28) { setPageError("Choose a bill day between 1 and 28."); setRecurringBillBusy(false); billSubmittingRef.current = false; return; }
+    if (!recurringBillForm.startDate) { setPageError("Pick the bill start date."); setRecurringBillBusy(false); billSubmittingRef.current = false; return; }
 
     try {
       const url = editingRecurringBillId ? `/api/recurring-bills/${editingRecurringBillId}` : "/api/recurring-bills";
@@ -109,6 +112,7 @@ export function usePlanner({ appData, showConfirm, route }) {
     } catch (err) {
       setPageError(err.message);
     } finally {
+      billSubmittingRef.current = false;
       setRecurringBillBusy(false);
     }
   }
