@@ -110,6 +110,10 @@ export async function buildMmkTransactionSnapshot({
   }
 }
 
+// Per-couple lock: prevents concurrent requests from racing through the
+// exists-check and creating duplicate auto-materialized transactions.
+const _materializeLocks = new Map();
+
 export async function materializeRecurringBills({
   budgetRepository,
   exchangeRateService,
@@ -120,75 +124,88 @@ export async function materializeRecurringBills({
     return [];
   }
 
-  const bills = await budgetRepository.listRecurringBillsForCouple(couple.id);
-  const createdTransactions = [];
-  const todayIsoDate = new Date().toISOString().slice(0, 10);
-  const effectiveThroughDate = throughDate || todayIsoDate;
-
-  for (const recurringBill of bills) {
-    if (!recurringBill.isActive || !recurringBill.autoCreate) {
-      continue;
-    }
-
-    const startIsoDate = recurringBill.startDate;
-    const endIsoDate = recurringBill.endDate && recurringBill.endDate < effectiveThroughDate
-      ? recurringBill.endDate
-      : effectiveThroughDate;
-
-    if (!startIsoDate || startIsoDate > endIsoDate) {
-      continue;
-    }
-
-    const monthSpan = getMonthSpan(startIsoDate, endIsoDate);
-    for (const monthPart of monthSpan) {
-      const occurrenceDate = buildOccurrenceDate(
-        monthPart.year,
-        monthPart.month,
-        recurringBill.dayOfMonth,
-      );
-
-      if (occurrenceDate < startIsoDate || occurrenceDate > endIsoDate) {
-        continue;
-      }
-
-      const existing = await budgetRepository.getMaterializedRecurringBillTransaction({
-        recurringBillId: recurringBill.id,
-        userId: recurringBill.userId,
-        date: occurrenceDate,
-      });
-
-      if (existing) {
-        continue;
-      }
-
-      const exchangeSnapshot = await buildMmkTransactionSnapshot({
-        exchangeRateService,
-        coupleId: couple.id,
-        amount: recurringBill.amount,
-        sourceCurrencyCode: recurringBill.currencyCode,
-        targetCurrencyCode: recurringBill.currencyCode,
-        transactionDate: occurrenceDate,
-      });
-
-      const transaction = await budgetRepository.addTransaction({
-        userId: recurringBill.userId,
-        recurringBillId: recurringBill.id,
-        autoCreated: true,
-        amount: recurringBill.amount,
-        currencyCode: recurringBill.currencyCode,
-        description: recurringBill.title,
-        category: recurringBill.category,
-        type: "recurring",
-        paymentMethod: recurringBill.paymentMethod,
-        date: occurrenceDate,
-        ...exchangeSnapshot,
-      });
-
-      createdTransactions.push(transaction);
-    }
+  if (_materializeLocks.has(couple.id)) {
+    await _materializeLocks.get(couple.id);
+    return [];
   }
 
-  return createdTransactions;
+  let unlock;
+  _materializeLocks.set(couple.id, new Promise((res) => { unlock = res; }));
+
+  try {
+    const bills = await budgetRepository.listRecurringBillsForCouple(couple.id);
+    const createdTransactions = [];
+    const todayIsoDate = new Date().toISOString().slice(0, 10);
+    const effectiveThroughDate = throughDate || todayIsoDate;
+
+    for (const recurringBill of bills) {
+      if (!recurringBill.isActive || !recurringBill.autoCreate) {
+        continue;
+      }
+
+      const startIsoDate = recurringBill.startDate;
+      const endIsoDate = recurringBill.endDate && recurringBill.endDate < effectiveThroughDate
+        ? recurringBill.endDate
+        : effectiveThroughDate;
+
+      if (!startIsoDate || startIsoDate > endIsoDate) {
+        continue;
+      }
+
+      const monthSpan = getMonthSpan(startIsoDate, endIsoDate);
+      for (const monthPart of monthSpan) {
+        const occurrenceDate = buildOccurrenceDate(
+          monthPart.year,
+          monthPart.month,
+          recurringBill.dayOfMonth,
+        );
+
+        if (occurrenceDate < startIsoDate || occurrenceDate > endIsoDate) {
+          continue;
+        }
+
+        const existing = await budgetRepository.getMaterializedRecurringBillTransaction({
+          recurringBillId: recurringBill.id,
+          userId: recurringBill.userId,
+          date: occurrenceDate,
+        });
+
+        if (existing) {
+          continue;
+        }
+
+        const exchangeSnapshot = await buildMmkTransactionSnapshot({
+          exchangeRateService,
+          coupleId: couple.id,
+          amount: recurringBill.amount,
+          sourceCurrencyCode: recurringBill.currencyCode,
+          targetCurrencyCode: recurringBill.currencyCode,
+          transactionDate: occurrenceDate,
+        });
+
+        const transaction = await budgetRepository.addTransaction({
+          userId: recurringBill.userId,
+          recurringBillId: recurringBill.id,
+          autoCreated: true,
+          amount: recurringBill.amount,
+          currencyCode: recurringBill.currencyCode,
+          description: recurringBill.title,
+          category: recurringBill.category,
+          type: "recurring",
+          paymentMethod: recurringBill.paymentMethod,
+          date: occurrenceDate,
+          ...exchangeSnapshot,
+        });
+
+        createdTransactions.push(transaction);
+      }
+    }
+
+    return createdTransactions;
+  } finally {
+    _materializeLocks.delete(couple.id);
+    unlock();
+  }
 }
 
 export async function resolvePartnerUser({ budgetRepository, user }) {
