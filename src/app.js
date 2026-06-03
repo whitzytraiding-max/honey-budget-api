@@ -33,6 +33,7 @@ function createApp({
   emailService = null,
   resetPasswordUrlBase = process.env.RESET_PASSWORD_URL_BASE || process.env.APP_BASE_URL || "",
   jwtSecret = process.env.JWT_SECRET || "",
+  jwtExpiresIn = process.env.JWT_EXPIRES_IN || "30d",
   jsonParser = express.json(),
 }) {
   const isProduction = process.env.NODE_ENV === "production";
@@ -53,7 +54,7 @@ function createApp({
 
   const resolvedExchangeRateService =
     exchangeRateService ?? createExchangeRateService({ budgetRepository });
-  const authService = createAuthService({ jwtSecret: effectiveJwtSecret });
+  const authService = createAuthService({ jwtSecret: effectiveJwtSecret, jwtExpiresIn });
   const requireAuth = createRequireAuth({ authService, budgetRepository });
 
   if (jsonParser) {

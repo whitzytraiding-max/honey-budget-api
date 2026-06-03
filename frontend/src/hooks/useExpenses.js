@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "../lib/api.js";
 import { getTodayLocalIso, getCurrentMonthKey } from "../lib/date.js";
+import { STORAGE_KEYS, readStorage } from "../lib/storage.js";
 
 const TRANSACTION_FIELDS = {
   amount: "", description: "", category: "Dining", currencyCode: "USD",
@@ -20,6 +21,10 @@ function readExpenseDraft(formEl) {
   };
 }
 
+function getDefaultExpenseCurrency(baseCurrencyCode) {
+  return readStorage(STORAGE_KEYS.DEFAULT_EXPENSE_CURRENCY, "") || baseCurrencyCode;
+}
+
 export function useExpenses({ appData, showConfirm, navigate }) {
   const {
     baseCurrencyCode, currencyCode, mmkRateData, loadMmkRate,
@@ -29,7 +34,7 @@ export function useExpenses({ appData, showConfirm, navigate }) {
 
   const [expenseForm, setExpenseForm] = useState(() => ({
     ...TRANSACTION_FIELDS,
-    currencyCode: baseCurrencyCode,
+    currencyCode: getDefaultExpenseCurrency(baseCurrencyCode),
     date: getTodayLocalIso(),
   }));
   const [expenseBusy, setExpenseBusy] = useState(false);
@@ -43,7 +48,7 @@ export function useExpenses({ appData, showConfirm, navigate }) {
 
   function resetExpenseEditor() {
     setEditingTransactionId(null);
-    setExpenseForm({ ...TRANSACTION_FIELDS, currencyCode: baseCurrencyCode, date: getTodayLocalIso() });
+    setExpenseForm({ ...TRANSACTION_FIELDS, currencyCode: getDefaultExpenseCurrency(baseCurrencyCode), date: getTodayLocalIso() });
   }
 
   function handleEditTransaction(transaction) {

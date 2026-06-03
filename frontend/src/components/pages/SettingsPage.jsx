@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { STORAGE_KEYS, readStorage, writeStorage } from "../../lib/storage.js";
 import { Lock, LogOut, Settings2, Sparkles, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
@@ -35,6 +36,9 @@ function SettingsPage({
   onDeleteAccount,
 }) {
   const [mmkUnlocked, setMmkUnlocked] = useState(() => localStorage.getItem("hb-mmk-unlocked") === "true");
+  const [defaultExpenseCurrency, setDefaultExpenseCurrency] = useState(
+    () => readStorage(STORAGE_KEYS.DEFAULT_EXPENSE_CURRENCY, "") || baseCurrencyCode || "USD",
+  );
   const [mmkCodeInput, setMmkCodeInput] = useState("");
   const [mmkCodeError, setMmkCodeError] = useState("");
   const SETTINGS_TABS = mmkUnlocked ? ["profile", "display", "mmk"] : ["profile", "display"];
@@ -174,6 +178,15 @@ function SettingsPage({
                 label={t("settings.referenceCurrency")}
                 value={baseCurrencyCode}
                 onChange={onBaseCurrencyChange}
+                options={currencyOptions}
+              />
+              <Select
+                label="Default expense currency"
+                value={defaultExpenseCurrency}
+                onChange={(e) => {
+                  setDefaultExpenseCurrency(e.target.value);
+                  writeStorage(STORAGE_KEYS.DEFAULT_EXPENSE_CURRENCY, e.target.value);
+                }}
                 options={currencyOptions}
               />
               <Select
