@@ -1579,7 +1579,19 @@ function createPrismaBudgetRepository({ prisma }) {
     },
 
     async unlinkCouple({ coupleId }) {
-      await prisma.couple.delete({ where: { id: coupleId } });
+      const couple = await prisma.couple.findUnique({ where: { id: coupleId } });
+      if (!couple) return;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.couple.delete({ where: { id: coupleId } });
+        // Clearing the Couple row is not enough: linking also sets
+        // User.partnerId on both members, and the link checks treat a stale
+        // partnerId as "already linked". Clear it so both can re-link.
+        await tx.user.updateMany({
+          where: { id: { in: [couple.userOneId, couple.userTwoId] } },
+          data: { partnerId: null },
+        });
+      });
     },
 
     async registerPushDevice({ userId, platform, token, enabled = true }) {
