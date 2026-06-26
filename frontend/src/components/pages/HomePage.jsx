@@ -16,6 +16,8 @@ function HomePage({
   soloMode = false,
   couple = null,
   setupChecklist = [],
+  savingsData = null,
+  onNavigate,
   onNavigateToCoach,
   onNavigateToSetup,
   onSendMessage,
@@ -53,6 +55,13 @@ function HomePage({
   const splitLabelColor = "var(--hb-text-soft)";
   const setupKickerColor = "var(--hb-text-soft)";
   const setupHeadingColor = "var(--hb-text)";
+
+  // Simple-dashboard summaries
+  const savingsGoals = savingsData?.goals ?? [];
+  const topGoal = savingsGoals.find((g) => (g.progressPct ?? 0) < 100) ?? savingsGoals[0] ?? null;
+  const allTimeSaved = Number(savingsData?.allTimeSaved ?? 0);
+  const hasSavings = Boolean(savingsData) && (allTimeSaved > 0 || savingsGoals.length > 0);
+  const recentTx = (dashboard?.transactions ?? []).slice(0, 3);
 
   return (
     <div className="space-y-4">
@@ -152,7 +161,7 @@ function HomePage({
                       className="h-full rounded-full transition-all duration-500"
                       style={{
                         width: `${Math.min(100, person.sharePct)}%`,
-                        background: "#22b36b",
+                        background: "var(--hb-good)",
                       }}
                     />
                   </div>
@@ -162,6 +171,60 @@ function HomePage({
           </div>
         )}
       </section>
+
+      {/* Savings summary */}
+      {hasSavings && (
+        <section className="rounded-[1.35rem] p-4" style={{ background: sectionBg, border: sectionBorder }}>
+          <div className="flex items-center justify-between">
+            <p className="hb-kicker">Savings</p>
+            <button type="button" onClick={() => onNavigate?.("savings")} className="text-xs font-semibold" style={{ color: "var(--hb-accent-text)" }}>
+              See all →
+            </button>
+          </div>
+          <p className="mt-1.5 text-2xl font-bold" style={{ color: "var(--hb-good-text)" }}>{currency(allTimeSaved)}</p>
+          <p className="text-xs" style={{ color: periodColor }}>saved so far</p>
+          {topGoal ? (
+            <div className="mt-3">
+              <div className="mb-1 flex justify-between text-xs" style={{ color: barLabelColor }}>
+                <span className="font-medium">{topGoal.title}</span>
+                <span>{currency(topGoal.totalSaved)} of {currency(topGoal.targetAmount)}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full" style={{ background: trackBg }}>
+                <div className="hb-progress-fill h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(100, topGoal.progressPct ?? 0)}%` }} />
+              </div>
+            </div>
+          ) : (
+            <button type="button" onClick={() => onNavigate?.("savings")} className="mt-3 rounded-xl px-3 py-2 text-sm font-semibold transition" style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)", border: "1px solid var(--hb-accent-line)" }}>
+              Set a savings goal →
+            </button>
+          )}
+        </section>
+      )}
+
+      {/* Recent expenses */}
+      {recentTx.length > 0 && (
+        <section className="rounded-[1.35rem] p-4" style={{ background: sectionBg, border: sectionBorder }}>
+          <div className="flex items-center justify-between">
+            <p className="hb-kicker">Recent</p>
+            <button type="button" onClick={() => onNavigate?.("expenses")} className="text-xs font-semibold" style={{ color: "var(--hb-accent-text)" }}>
+              See all →
+            </button>
+          </div>
+          <ul className="mt-2 space-y-2.5">
+            {recentTx.map((tx) => (
+              <li key={tx.id} className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium" style={{ color: "var(--hb-text)" }}>{tx.description}</p>
+                  <p className="text-xs" style={{ color: periodColor }}>{tx.category}{tx.date ? ` · ${tx.date}` : ""}</p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold" style={{ color: "var(--hb-text)" }}>
+                  {currency(tx.displayAmount ?? tx.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
     </div>
   );

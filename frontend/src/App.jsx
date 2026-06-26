@@ -162,6 +162,14 @@ export default function App() {
     if (simpleMode && ADVANCED_NAV.has(route)) navigate("home");
   }, [simpleMode, route, navigate]);
 
+  // Load savings on the home route so the dashboard can show a savings summary.
+  useEffect(() => {
+    if (session && route === "home" && !dataBundle.savingsData) {
+      dataBundle.loadSavings().catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, route, dataBundle.savingsData]);
+
   const settings = useSettings({
     currencyCode,
     setCurrencyCode,
@@ -705,6 +713,8 @@ export default function App() {
             coachProfile={dataBundle.coachProfile}
             soloMode={soloMode}
             couple={couple}
+            savingsData={dataBundle.savingsData}
+            onNavigate={navigate}
             onNavigateToCoach={() => navigate("coach")}
             setupChecklist={setupChecklist}
             onNavigateToSetup={() => navigate("setup")}
