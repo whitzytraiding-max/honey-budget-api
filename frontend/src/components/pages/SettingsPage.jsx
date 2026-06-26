@@ -13,8 +13,11 @@ const THEME_OPTIONS = [
   { key: "honey", name: "Honey Cream", swatches: ["#FBF6EC", "#FFFFFF", "#E0991A", "#1FA971"] },
   { key: "midnight", name: "Midnight Honey", swatches: ["#17140F", "#2A2620", "#E8A92C", "#36C588"] },
   { key: "mint", name: "Fresh Mint", swatches: ["#F4FAF6", "#FFFFFF", "#10A37A", "#15A34A"] },
+  { key: "mint-dark", name: "Deep Mint", swatches: ["#0E241B", "#1E4838", "#2FE0A6", "#6FEFC4"] },
   { key: "rose", name: "Rose Berry", swatches: ["#FCF4F6", "#FFFFFF", "#D6457E", "#1FA971"] },
+  { key: "rose-dark", name: "Dark Rose", swatches: ["#361320", "#5E2A3E", "#F472A0", "#FBA8C8"] },
   { key: "ocean", name: "Ocean Slate", swatches: ["#F1F5F9", "#FFFFFF", "#2C7BB8", "#16A34A"] },
+  { key: "ocean-dark", name: "Deep Ocean", swatches: ["#0C1E30", "#1E3E5C", "#4DA6E8", "#86C5F2"] },
   { key: "system", name: "Match device", swatches: ["#FBF6EC", "#17140F", "#E0991A", "#36C588"] },
 ];
 

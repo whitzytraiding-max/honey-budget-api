@@ -26,6 +26,7 @@ import {
 import { currency } from "../lib/format.js";
 import { hapticLight } from "../lib/native.js";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
+import { ADVANCED_NAV } from "../lib/navConfig.js";
 import Sidebar from "./Sidebar.jsx";
 
 const ALL_NAV_ITEMS = [
@@ -53,6 +54,7 @@ function AppShell({
   showCoach,
   showPlanner,
   showSetup,
+  simpleMode = false,
   hiddenNavItems,
   onHideNavItem,
   onLogout,
@@ -69,6 +71,7 @@ function AppShell({
   const { t } = useLanguage();
 
   const availableItems = ALL_NAV_ITEMS.filter((item) => {
+    if (simpleMode && ADVANCED_NAV.has(item.key)) return false;
     if (item.key === "notifications") return showNotifications;
     if (item.key === "coach") return showCoach;
     if (item.key === "planner") return showPlanner;
@@ -312,16 +315,28 @@ function AppShell({
           </button>
         </div>
 
-        {/* Reports */}
-        <button
-          className="flex flex-col items-center gap-1 flex-1 transition"
-          style={{ color: route === "insights" ? "var(--hb-accent)" : "var(--hb-text-muted)" }}
-          onClick={() => handleNavTap("insights")}
-          type="button"
-        >
-          <BarChart2 className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Reports</span>
-        </button>
+        {/* Third tab — Reports (advanced) / Savings (simple) */}
+        {simpleMode ? (
+          <button
+            className="flex flex-col items-center gap-1 flex-1 transition"
+            style={{ color: route === "savings" ? "var(--hb-accent)" : "var(--hb-text-muted)" }}
+            onClick={() => handleNavTap("savings")}
+            type="button"
+          >
+            <PiggyBank className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Savings</span>
+          </button>
+        ) : (
+          <button
+            className="flex flex-col items-center gap-1 flex-1 transition"
+            style={{ color: route === "insights" ? "var(--hb-accent)" : "var(--hb-text-muted)" }}
+            onClick={() => handleNavTap("insights")}
+            type="button"
+          >
+            <BarChart2 className="h-5 w-5" />
+            <span className="text-[10px] font-medium">Reports</span>
+          </button>
+        )}
       </nav>
 
       {/* ── Desktop page sub-tabs ───────────────────────────────────────── */}

@@ -18,6 +18,8 @@ import ExpensesPage from "./components/pages/ExpensesPage.jsx";
 import CalendarPage from "./components/pages/CalendarPage.jsx";
 import HistoryPage from "./components/pages/HistoryPage.jsx";
 import HomePage from "./components/pages/HomePage.jsx";
+import HunnyFab from "./components/HunnyFab.jsx";
+import { ADVANCED_NAV } from "./lib/navConfig.js";
 import InsightsPage from "./components/pages/InsightsPage.jsx";
 import MorePage from "./components/pages/MorePage.jsx";
 import NotificationsPage from "./components/pages/NotificationsPage.jsx";
@@ -98,9 +100,6 @@ const PAGE_TABS = {
 };
 
 const TAB_DEFAULTS = { expenses: "log", savings: "goals", debt: "debts", coach: "chat" };
-
-// Feature pages hidden in Simple experience mode (Advanced shows everything).
-const ADVANCED_NAV = new Set(["insights", "calendar", "history", "planner", "budget-planner", "debt"]);
 
 export default function App() {
   const { locale } = useLanguage();
@@ -727,6 +726,7 @@ export default function App() {
         showCoach={showCoach}
         showPlanner={showPlanner}
         showSetup={showSetup}
+        simpleMode={simpleMode}
         hiddenNavItems={hiddenNavItems}
         onHideNavItem={toggleHideNavItem}
         onLogout={handleLogout}
@@ -748,6 +748,12 @@ export default function App() {
       >
         <div key={route} className="hb-page-enter">{renderPage()}</div>
       </AppShell>
+      {session && route === "home" && (
+        <HunnyFab
+          onSendMessage={coach.handleCoachChat}
+          remainingPct={Number(dataBundle.summaryData?.remainingPct ?? 50)}
+        />
+      )}
       {confirmDialog && (
         <ConfirmDialog
           message={confirmDialog.message}

@@ -3,10 +3,15 @@ import { setStatusBarForTheme } from "../lib/native.js";
 import { STORAGE_KEYS, readStorage, writeStorage } from "../lib/storage.js";
 
 // Theme keys map to [data-theme="..."] blocks in styles.css.
-export const THEME_KEYS = ["honey", "midnight", "mint", "rose", "ocean"];
+export const THEME_KEYS = [
+  "honey", "midnight",
+  "mint", "mint-dark",
+  "rose", "rose-dark",
+  "ocean", "ocean-dark",
+];
 
 // Dark themes drive the native status bar style + system fallback.
-const DARK_THEMES = new Set(["midnight"]);
+const DARK_THEMES = new Set(["midnight", "mint-dark", "rose-dark", "ocean-dark"]);
 
 const SUPPORTED = new Set([...THEME_KEYS, "system"]);
 

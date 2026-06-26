@@ -303,6 +303,177 @@
   --hb-ink-soft: var(--hb-text-soft);
 }
 
+/* ─── Theme: Deep Mint (dark emerald) ─────────────────────────────────────── */
+:root[data-theme="mint-dark"] {
+  color-scheme: dark;
+
+  --page-bg: linear-gradient(180deg, #102A20 0%, #0C2018 55%, #102A20 100%);
+  --page-bg-solid: #0E241B;
+
+  --hb-text: #E3F4EC;
+  --hb-text-soft: #A6C7B8;
+  --hb-text-muted: #7B998C;
+  --hb-text-on-dark: #FFFFFF;
+  --hb-on-dark-soft: rgba(255, 255, 255, 0.82);
+
+  --hb-surface: rgba(24, 60, 46, 0.80);
+  --hb-surface-strong: rgba(30, 72, 56, 0.94);
+  --hb-surface-soft: linear-gradient(180deg, rgba(26, 64, 49, 0.88), rgba(18, 48, 37, 0.88));
+  --hb-border: rgba(64, 196, 150, 0.26);
+  --hb-shadow: 0 26px 62px -30px rgba(0, 0, 0, 0.6);
+
+  --hb-accent: #2FE0A6;
+  --hb-accent-strong: #22C892;
+  --hb-accent-contrast: #06241A;
+  --hb-accent-text: #6FEFC4;
+  --hb-accent-soft-bg: rgba(47, 224, 166, 0.16);
+  --hb-accent-ring: rgba(47, 224, 166, 0.28);
+  --hb-accent-line: rgba(47, 224, 166, 0.34);
+  --hb-accent-glow: rgba(47, 224, 166, 0.42);
+
+  --hb-good: #36C588;
+  --hb-good-text: #6FEFC4;
+  --hb-good-soft-bg: rgba(54, 197, 136, 0.18);
+  --hb-good-line: rgba(54, 197, 136, 0.34);
+
+  --hb-bad: #FF8A7E;
+  --hb-bad-text: #FFA89E;
+  --hb-bad-soft-bg: rgba(255, 138, 126, 0.16);
+  --hb-bad-line: rgba(255, 138, 126, 0.40);
+
+  --hb-track: rgba(64, 196, 150, 0.22);
+  --hb-input-bg: rgba(20, 52, 40, 0.88);
+  --hb-input-border: rgba(64, 196, 150, 0.32);
+
+  --hb-hero-bg:
+    radial-gradient(circle at 80% 12%, rgba(47, 224, 166, 0.20), transparent 24%),
+    radial-gradient(circle at 16% 100%, rgba(54, 197, 136, 0.12), transparent 26%),
+    linear-gradient(180deg, #163A2C 0%, #0C2018 100%);
+  --hb-hero-text: var(--hb-text);
+
+  --hb-gold-500: var(--hb-accent-strong);
+  --hb-gold-400: var(--hb-accent);
+  --hb-gold-100: #1E4838;
+  --hb-green-600: var(--hb-good-text);
+  --hb-green-500: var(--hb-good);
+  --hb-green-100: var(--hb-good-soft-bg);
+  --hb-ink-soft: var(--hb-text-soft);
+}
+
+/* ─── Theme: Dark Rose (deep berry) ───────────────────────────────────────── */
+:root[data-theme="rose-dark"] {
+  color-scheme: dark;
+
+  --page-bg: linear-gradient(180deg, #3D1627 0%, #2F1019 55%, #3D1627 100%);
+  --page-bg-solid: #361320;
+
+  --hb-text: #FBE8F0;
+  --hb-text-soft: #D9AEC1;
+  --hb-text-muted: #A77E8E;
+  --hb-text-on-dark: #FFFFFF;
+  --hb-on-dark-soft: rgba(255, 255, 255, 0.82);
+
+  --hb-surface: rgba(80, 34, 52, 0.80);
+  --hb-surface-strong: rgba(94, 42, 62, 0.94);
+  --hb-surface-soft: linear-gradient(180deg, rgba(84, 36, 54, 0.88), rgba(64, 24, 40, 0.88));
+  --hb-border: rgba(214, 120, 160, 0.28);
+  --hb-shadow: 0 26px 62px -30px rgba(0, 0, 0, 0.6);
+
+  --hb-accent: #F472A0;
+  --hb-accent-strong: #E85694;
+  --hb-accent-contrast: #2A0E18;
+  --hb-accent-text: #FBA8C8;
+  --hb-accent-soft-bg: rgba(244, 114, 160, 0.18);
+  --hb-accent-ring: rgba(244, 114, 160, 0.30);
+  --hb-accent-line: rgba(244, 114, 160, 0.36);
+  --hb-accent-glow: rgba(244, 114, 160, 0.45);
+
+  --hb-good: #36C588;
+  --hb-good-text: #5BD6A0;
+  --hb-good-soft-bg: rgba(54, 197, 136, 0.18);
+  --hb-good-line: rgba(54, 197, 136, 0.34);
+
+  --hb-bad: #FF8A7E;
+  --hb-bad-text: #FFA89E;
+  --hb-bad-soft-bg: rgba(255, 138, 126, 0.18);
+  --hb-bad-line: rgba(255, 138, 126, 0.40);
+
+  --hb-track: rgba(214, 120, 160, 0.25);
+  --hb-input-bg: rgba(72, 28, 44, 0.88);
+  --hb-input-border: rgba(214, 120, 160, 0.34);
+
+  --hb-hero-bg:
+    radial-gradient(circle at 80% 12%, rgba(244, 114, 160, 0.22), transparent 24%),
+    radial-gradient(circle at 16% 100%, rgba(54, 197, 136, 0.12), transparent 26%),
+    linear-gradient(180deg, #4D1E33 0%, #2F1019 100%);
+  --hb-hero-text: var(--hb-text);
+
+  --hb-gold-500: var(--hb-accent-strong);
+  --hb-gold-400: var(--hb-accent);
+  --hb-gold-100: #5C2840;
+  --hb-green-600: var(--hb-good-text);
+  --hb-green-500: var(--hb-good);
+  --hb-green-100: var(--hb-good-soft-bg);
+  --hb-ink-soft: var(--hb-text-soft);
+}
+
+/* ─── Theme: Deep Ocean (dark navy) ───────────────────────────────────────── */
+:root[data-theme="ocean-dark"] {
+  color-scheme: dark;
+
+  --page-bg: linear-gradient(180deg, #0E2236 0%, #0A1A2A 55%, #0E2236 100%);
+  --page-bg-solid: #0C1E30;
+
+  --hb-text: #E2EEF8;
+  --hb-text-soft: #A3BCD2;
+  --hb-text-muted: #788FA3;
+  --hb-text-on-dark: #FFFFFF;
+  --hb-on-dark-soft: rgba(255, 255, 255, 0.82);
+
+  --hb-surface: rgba(24, 52, 78, 0.80);
+  --hb-surface-strong: rgba(30, 62, 92, 0.94);
+  --hb-surface-soft: linear-gradient(180deg, rgba(26, 56, 84, 0.88), rgba(18, 42, 64, 0.88));
+  --hb-border: rgba(77, 166, 232, 0.26);
+  --hb-shadow: 0 26px 62px -30px rgba(0, 0, 0, 0.6);
+
+  --hb-accent: #4DA6E8;
+  --hb-accent-strong: #2E8AD4;
+  --hb-accent-contrast: #061A2A;
+  --hb-accent-text: #86C5F2;
+  --hb-accent-soft-bg: rgba(77, 166, 232, 0.16);
+  --hb-accent-ring: rgba(77, 166, 232, 0.28);
+  --hb-accent-line: rgba(77, 166, 232, 0.34);
+  --hb-accent-glow: rgba(77, 166, 232, 0.42);
+
+  --hb-good: #36C588;
+  --hb-good-text: #5BD6A0;
+  --hb-good-soft-bg: rgba(54, 197, 136, 0.18);
+  --hb-good-line: rgba(54, 197, 136, 0.34);
+
+  --hb-bad: #FF8A7E;
+  --hb-bad-text: #FFA89E;
+  --hb-bad-soft-bg: rgba(255, 138, 126, 0.16);
+  --hb-bad-line: rgba(255, 138, 126, 0.40);
+
+  --hb-track: rgba(77, 166, 232, 0.22);
+  --hb-input-bg: rgba(20, 46, 70, 0.88);
+  --hb-input-border: rgba(77, 166, 232, 0.32);
+
+  --hb-hero-bg:
+    radial-gradient(circle at 80% 12%, rgba(77, 166, 232, 0.20), transparent 24%),
+    radial-gradient(circle at 16% 100%, rgba(54, 197, 136, 0.10), transparent 26%),
+    linear-gradient(180deg, #143A56 0%, #0A1A2A 100%);
+  --hb-hero-text: var(--hb-text);
+
+  --hb-gold-500: var(--hb-accent-strong);
+  --hb-gold-400: var(--hb-accent);
+  --hb-gold-100: #1E4868;
+  --hb-green-600: var(--hb-good-text);
+  --hb-green-500: var(--hb-good);
+  --hb-green-100: var(--hb-good-soft-bg);
+  --hb-ink-soft: var(--hb-text-soft);
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    Base layout
    ════════════════════════════════════════════════════════════════════════════ */
@@ -888,6 +1059,11 @@ textarea:focus {
 
 .hb-page-enter {
   animation: hb-page-enter 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes hb-hunny-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
 }
 
 /* ─── Native touch feedback ───────────────────────────────────────────────── */
