@@ -283,7 +283,7 @@ export default function DebtPage({
             <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Currency</p>
               <select name="currencyCode" value={debtForm.currencyCode} onChange={onDebtChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
-                {CURRENCY_OPTIONS.map((o) => <option key={o.value} value={o.value} style={{ background: "#1a1108" }}>{o.label}</option>)}
+                {CURRENCY_OPTIONS.map((o) => <option key={o.value} value={o.value} style={{ background: "var(--hb-input-bg)", color: "var(--hb-text)" }}>{o.label}</option>)}
               </select>
             </div>
           </div>

@@ -85,7 +85,7 @@ function AppShell({
   }
 
   return (
-    <div className="min-h-screen text-[#f0e0c0]" style={{ background: "#1a1108" }}>
+    <div className="min-h-screen" style={{ background: "var(--page-bg)", color: "var(--hb-text)" }}>
       <Sidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -106,12 +106,12 @@ function AppShell({
           <div className="flex items-center gap-1.5">
             <span
               className="text-[1.6rem] font-bold lowercase leading-none"
-              style={{ color: "#D4870A", letterSpacing: "-0.02em", fontFamily: "Avenir Next, Trebuchet MS, sans-serif" }}
+              style={{ color: "var(--hb-accent)", letterSpacing: "-0.02em", fontFamily: "Avenir Next, Trebuchet MS, sans-serif" }}
             >
               honey budget
             </span>
           </div>
-          <p className="text-[11px] mt-0.5" style={{ color: "rgba(212, 135, 10, 0.5)" }}>
+          <p className="text-[11px] mt-0.5" style={{ color: "var(--hb-text-soft)" }}>
             Save sweetly, live happily. ♥
           </p>
         </div>
@@ -125,9 +125,9 @@ function AppShell({
           <button
             className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition active:opacity-70"
             style={{
-              background: "rgba(42, 26, 8, 0.9)",
-              border: "1px solid rgba(212, 135, 10, 0.35)",
-              color: "#D4870A",
+              background: "var(--hb-surface)",
+              border: "1px solid var(--hb-border)",
+              color: "var(--hb-accent-text)",
             }}
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -161,7 +161,7 @@ function AppShell({
                   <h1 className="mt-3 max-w-4xl text-[1.9rem] font-semibold leading-tight tracking-tight sm:mt-4 sm:text-4xl">
                     {coupleNames || "Your Household"}
                   </h1>
-                  <p className="mt-1 hidden text-sm leading-6 sm:block sm:text-base" style={{ color: "rgba(240, 210, 160, 0.6)" }}>
+                  <p className="mt-1 hidden text-sm leading-6 sm:block sm:text-base" style={{ color: "var(--hb-text-soft)" }}>
                     {t("shell.subtitle")}
                   </p>
                 </div>
@@ -194,7 +194,7 @@ function AppShell({
         <div className="md:hidden px-4 pt-2 pb-1">
           <div
             className="flex gap-1 p-1 rounded-full"
-            style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.35)" }}
+            style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
           >
             {pageTabs.map((tab) => {
               const isActive = activeTab === tab.key;
@@ -203,8 +203,8 @@ function AppShell({
                   key={tab.key}
                   className="flex-1 py-2 rounded-full text-sm font-medium transition"
                   style={{
-                    background: isActive ? "#D4870A" : "transparent",
-                    color: isActive ? "#fff" : "rgba(212, 135, 10, 0.5)",
+                    background: isActive ? "var(--hb-accent)" : "transparent",
+                    color: isActive ? "var(--hb-accent-contrast)" : "var(--hb-text-soft)",
                   }}
                   onClick={() => { hapticLight(); onTabChange(tab.key); }}
                   type="button"
@@ -226,12 +226,16 @@ function AppShell({
         }`}
       >
         {pageError ? (
-          <div className="mt-3 flex items-center justify-between gap-3 rounded-[1.5rem] border border-rose-700/40 bg-rose-950/50 px-4 py-3 text-sm text-rose-300">
+          <div
+            className="mt-3 flex items-center justify-between gap-3 rounded-[1.5rem] px-4 py-3 text-sm"
+            style={{ background: "var(--hb-bad-soft-bg)", border: "1px solid var(--hb-bad-line)", color: "var(--hb-bad-text)" }}
+          >
             <span>{pageError}</span>
             <div className="flex shrink-0 items-center gap-2">
               {onRetryLoad ? (
                 <button
-                  className="rounded-lg bg-rose-900/60 px-2.5 py-1 text-xs font-medium text-rose-300 transition hover:bg-rose-800/60"
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:opacity-80"
+                  style={{ background: "var(--hb-bad-soft-bg)", color: "var(--hb-bad-text)" }}
                   onClick={onRetryLoad}
                   type="button"
                 >
@@ -240,7 +244,8 @@ function AppShell({
               ) : null}
               {onDismissError ? (
                 <button
-                  className="rounded-lg bg-rose-900/60 px-2.5 py-1 text-xs font-medium text-rose-300 transition hover:bg-rose-800/60"
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium transition hover:opacity-80"
+                  style={{ background: "var(--hb-bad-soft-bg)", color: "var(--hb-bad-text)" }}
                   onClick={onDismissError}
                   type="button"
                 >
@@ -257,7 +262,7 @@ function AppShell({
           ) : children}
         </div>
 
-        <footer className="hidden md:block mt-6 px-2 text-center text-xs leading-5" style={{ color: "rgba(156, 120, 85, 0.6)" }}>
+        <footer className="hidden md:block mt-6 px-2 text-center text-xs leading-5" style={{ color: "var(--hb-text-muted)" }}>
           <p>{t("legal.ownership")}</p>
           <p>{t("legal.rightsReserved")}</p>
           <button
@@ -274,8 +279,8 @@ function AppShell({
       <nav
         className="md:hidden fixed inset-x-0 bottom-0 z-20 flex items-center justify-around px-6"
         style={{
-          background: "#1e1508",
-          borderTop: "1px solid rgba(100, 65, 20, 0.3)",
+          background: "var(--hb-surface-strong)",
+          borderTop: "1px solid var(--hb-border)",
           paddingTop: "0.5rem",
           paddingBottom: "max(0.75rem, var(--safe-bottom))",
         }}
@@ -283,7 +288,7 @@ function AppShell({
         {/* Home */}
         <button
           className="flex flex-col items-center gap-1 flex-1 transition"
-          style={{ color: route === "home" ? "#D4870A" : "rgba(212, 135, 10, 0.38)" }}
+          style={{ color: route === "home" ? "var(--hb-accent)" : "var(--hb-text-muted)" }}
           onClick={() => handleNavTap("home")}
           type="button"
         >
@@ -296,8 +301,8 @@ function AppShell({
           <button
             className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition -mt-5"
             style={{
-              background: route === "expenses" ? "#B56A08" : "#D4870A",
-              boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.55)",
+              background: route === "expenses" ? "var(--hb-accent-strong)" : "var(--hb-accent)",
+              boxShadow: "0 8px 24px -6px var(--hb-accent-glow)",
             }}
             onClick={() => handleNavTap("expenses")}
             type="button"
@@ -310,7 +315,7 @@ function AppShell({
         {/* Reports */}
         <button
           className="flex flex-col items-center gap-1 flex-1 transition"
-          style={{ color: route === "insights" ? "#D4870A" : "rgba(212, 135, 10, 0.38)" }}
+          style={{ color: route === "insights" ? "var(--hb-accent)" : "var(--hb-text-muted)" }}
           onClick={() => handleNavTap("insights")}
           type="button"
         >
