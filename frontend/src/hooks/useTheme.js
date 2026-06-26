@@ -2,42 +2,62 @@ import { useEffect, useState } from "react";
 import { setStatusBarForTheme } from "../lib/native.js";
 import { STORAGE_KEYS, readStorage, writeStorage } from "../lib/storage.js";
 
-const SUPPORTED_THEMES = new Set(["light", "dark", "system"]);
+// Theme keys map to [data-theme="..."] blocks in styles.css.
+export const THEME_KEYS = ["honey", "midnight", "mint", "rose", "ocean"];
+
+// Dark themes drive the native status bar style + system fallback.
+const DARK_THEMES = new Set(["midnight"]);
+
+const SUPPORTED = new Set([...THEME_KEYS, "system"]);
+
+// Migrate legacy saved values from the old light/dark-only system.
+const LEGACY_MAP = { light: "honey", dark: "midnight" };
+
+function normalizeTheme(value) {
+  if (!value) return "system";
+  if (LEGACY_MAP[value]) return LEGACY_MAP[value];
+  return SUPPORTED.has(value) ? value : "system";
+}
 
 function getInitialTheme() {
-  const saved = readStorage(STORAGE_KEYS.THEME);
-  return saved && SUPPORTED_THEMES.has(saved) ? saved : "system";
+  return normalizeTheme(readStorage(STORAGE_KEYS.THEME));
+}
+
+function resolveTheme(theme) {
+  if (theme !== "system") return theme;
+  const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+  return prefersDark ? "midnight" : "honey";
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState(getInitialTheme);
+  const [theme, setThemeState] = useState(getInitialTheme);
+
+  const setTheme = (value) => setThemeState(normalizeTheme(value));
 
   useEffect(() => {
     if (typeof document === "undefined") return;
 
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const resolved = theme === "system" ? (mq?.matches ? "dark" : "light") : theme;
-
-    document.documentElement.dataset.theme = resolved;
-    document.documentElement.style.colorScheme = resolved;
-    writeStorage(STORAGE_KEYS.THEME, theme);
-
-    if (theme !== "system" || !mq) return;
-
-    const onChange = (e) => {
-      const next = e.matches ? "dark" : "light";
-      document.documentElement.dataset.theme = next;
-      document.documentElement.style.colorScheme = next;
+    const apply = (resolved) => {
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.style.colorScheme = DARK_THEMES.has(resolved) ? "dark" : "light";
     };
 
+    apply(resolveTheme(theme));
+    writeStorage(STORAGE_KEYS.THEME, theme);
+
+    if (theme !== "system") return;
+
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+
+    const onChange = (e) => apply(e.matches ? "midnight" : "honey");
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
 
   useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
-    const resolved = theme === "system" ? (mq?.matches ? "dark" : "light") : theme;
-    setStatusBarForTheme(resolved);
+    const resolved = resolveTheme(theme);
+    setStatusBarForTheme(DARK_THEMES.has(resolved) ? "dark" : "light");
   }, [theme]);
 
   return { theme, setTheme };

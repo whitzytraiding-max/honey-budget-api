@@ -50,6 +50,7 @@ import { useCoach } from "./hooks/useCoach.js";
 import { useDebt } from "./hooks/useDebt.js";
 import { usePaywall } from "./hooks/usePaywall.js";
 import OnboardingTour, { isTourDone, markTourDone } from "./components/OnboardingTour.jsx";
+import ExperienceModeChooser from "./components/ExperienceModeChooser.jsx";
 
 const SUPPORTED_CURRENCIES = new Set(["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "CHF", "SGD", "NZD", "ZAR", "INR", "THB", "AED", "MMK"]);
 
@@ -98,6 +99,9 @@ const PAGE_TABS = {
 
 const TAB_DEFAULTS = { expenses: "log", savings: "goals", debt: "debts", coach: "chat" };
 
+// Feature pages hidden in Simple experience mode (Advanced shows everything).
+const ADVANCED_NAV = new Set(["insights", "calendar", "history", "planner", "budget-planner", "debt"]);
+
 export default function App() {
   const { locale } = useLanguage();
 
@@ -116,6 +120,9 @@ export default function App() {
 
   // Persistent UI preferences — localStorage is the runtime source, server is the authoritative source
   const [soloMode, setSoloMode] = useState(() => readStorage(STORAGE_KEYS.SOLO_MODE) === "true");
+  const [simpleMode, setSimpleMode] = useState(() => readStorage(STORAGE_KEYS.EXPERIENCE_MODE) === "simple");
+  // Existing users (no stored value) default to Advanced; new users pick at first run.
+  const [experienceChosen, setExperienceChosen] = useState(() => readStorage(STORAGE_KEYS.EXPERIENCE_MODE) != null);
   const [hiddenNavItems, setHiddenNavItems] = useState(() => {
     try { return new Set(JSON.parse(readStorage(STORAGE_KEYS.HIDDEN_NAV) || "[]")); }
     catch { return new Set(); }
@@ -150,6 +157,11 @@ export default function App() {
     const uid = session?.user?.id;
     if (uid && !isTourDone(uid)) setTourVisible(true);
   }, [session?.user?.id]);
+
+  // Keep Simple-mode users off hidden pages (e.g. an old bookmark/hash).
+  useEffect(() => {
+    if (simpleMode && ADVANCED_NAV.has(route)) navigate("home");
+  }, [simpleMode, route, navigate]);
 
   const settings = useSettings({
     currencyCode,
@@ -273,6 +285,15 @@ export default function App() {
       includeMonth: false, includeInsights: false,
       includeSavings: false, includeNotifications: false,
     }).catch(() => {});
+  }
+
+  function applyExperienceMode(mode) {
+    const simple = mode === "simple";
+    writeStorage(STORAGE_KEYS.EXPERIENCE_MODE, simple ? "simple" : "advanced");
+    setSimpleMode(simple);
+    setExperienceChosen(true);
+    // If Simple hides the page we're on, fall back to home.
+    if (simple && ADVANCED_NAV.has(route)) navigate("home");
   }
 
   function toggleHideNavItem(key) {
@@ -442,6 +463,7 @@ export default function App() {
   const coachRequired = !dataBundle.coachProfile?.completed && (Boolean(couple) || soloMode);
 
   const availableNavItems = ALL_NAV_ITEMS.filter(({ key }) => {
+    if (simpleMode && ADVANCED_NAV.has(key)) return false;
     if (key === "coach") return showCoach;
     if (key === "planner") return showPlanner;
     if (key === "setup") return showSetup;
@@ -653,7 +675,9 @@ export default function App() {
             mmkRateData={settings.mmkRateData}
             mmkRateForm={settings.mmkRateForm}
             mmkRateBusy={settings.mmkRateBusy}
-            onThemeChange={(e) => setTheme(e.target.value)}
+            onThemeChange={setTheme}
+            simpleMode={simpleMode}
+            onExperienceModeChange={applyExperienceMode}
             onCurrencyChange={settings.handleCurrencyChange}
             onBaseCurrencyChange={settings.handleBaseCurrencyChange}
             onMmkRateChange={settings.handleMmkRateChange}
@@ -731,7 +755,10 @@ export default function App() {
           onCancel={handleConfirmNo}
         />
       )}
-      {tourVisible && (
+      {session && !experienceChosen && (
+        <ExperienceModeChooser onChoose={applyExperienceMode} />
+      )}
+      {tourVisible && experienceChosen && (
         <OnboardingTour
           userId={session?.user?.id}
           onDone={() => setTourVisible(false)}

@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   CURRENCY: "budget_currency",
   BASE_CURRENCY: "budget_base_currency",
   SOLO_MODE: "budget_solo_mode",
+  EXPERIENCE_MODE: "budget_experience_mode",
   HIDDEN_NAV: "hb-hidden-nav",
   DEFAULT_EXPENSE_CURRENCY: "budget_default_expense_currency",
 };

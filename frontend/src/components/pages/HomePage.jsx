@@ -270,12 +270,12 @@ function HomePage({
   const { t } = useLanguage();
 
   const isDark = useMemo(() => {
-    if (theme === "light") return false;
-    if (theme === "dark") return true;
+    if (theme === "midnight") return true;
+    if (theme !== "system") return false;
     if (typeof window !== "undefined") {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
-    return true;
+    return false;
   }, [theme]);
 
   const setupRemaining = setupChecklist.filter((item) => !item.completed).length;

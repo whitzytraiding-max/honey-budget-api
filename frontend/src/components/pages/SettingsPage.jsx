@@ -1,12 +1,54 @@
 import { useState } from "react";
 import { STORAGE_KEYS, readStorage, writeStorage } from "../../lib/storage.js";
-import { Lock, LogOut, Settings2, Sparkles, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
+import { Check, Lock, LogOut, Settings2, Sparkles, Trash2, UserMinus, UserPlus, Users } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
 import { isNative } from "../../lib/native.js";
-import { ActionButton, Input, Select } from "../ui.jsx";
+import { ActionButton, Input, Select, ToggleGroup } from "../ui.jsx";
 
 const MMK_UNLOCK_CODE = "YANGON-2026";
+
+// Representative swatches for the theme picker — keep in sync with styles.css.
+const THEME_OPTIONS = [
+  { key: "honey", name: "Honey Cream", swatches: ["#FBF6EC", "#FFFFFF", "#E0991A", "#1FA971"] },
+  { key: "midnight", name: "Midnight Honey", swatches: ["#17140F", "#2A2620", "#E8A92C", "#36C588"] },
+  { key: "mint", name: "Fresh Mint", swatches: ["#F4FAF6", "#FFFFFF", "#10A37A", "#15A34A"] },
+  { key: "rose", name: "Rose Berry", swatches: ["#FCF4F6", "#FFFFFF", "#D6457E", "#1FA971"] },
+  { key: "ocean", name: "Ocean Slate", swatches: ["#F1F5F9", "#FFFFFF", "#2C7BB8", "#16A34A"] },
+  { key: "system", name: "Match device", swatches: ["#FBF6EC", "#17140F", "#E0991A", "#36C588"] },
+];
+
+function ThemePicker({ value, onChange }) {
+  return (
+    <div className="hb-theme-grid">
+      {THEME_OPTIONS.map((option) => {
+        const active = value === option.key;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            className="hb-theme-card"
+            data-active={active}
+            aria-pressed={active}
+            onClick={() => onChange(option.key)}
+          >
+            {active ? (
+              <span className="hb-theme-check">
+                <Check className="h-3 w-3" strokeWidth={3} />
+              </span>
+            ) : null}
+            <span className="hb-theme-swatches">
+              {option.swatches.map((color, i) => (
+                <span key={i} className="hb-theme-swatch" style={{ background: color }} />
+              ))}
+            </span>
+            <span className="hb-theme-name">{option.name}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function SettingsPage({
   session,
@@ -16,6 +58,8 @@ function SettingsPage({
   onIncomeProfileSubmit,
   incomeProfileBusy,
   theme,
+  simpleMode = false,
+  onExperienceModeChange,
   currencyCode,
   baseCurrencyCode,
   exchangeRateLabel,
@@ -189,16 +233,29 @@ function SettingsPage({
                 }}
                 options={currencyOptions}
               />
-              <Select
-                label={t("settings.theme")}
-                value={theme}
-                onChange={onThemeChange}
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">{t("settings.theme")}</p>
+              <ThemePicker value={theme} onChange={onThemeChange} />
+            </div>
+
+            <div>
+              <ToggleGroup
+                label="App experience"
+                name="experienceMode"
+                value={simpleMode ? "simple" : "advanced"}
+                onChange={(e) => onExperienceModeChange?.(e.target.value)}
                 options={[
-                  { value: "system", label: t("settings.systemMode") },
-                  { value: "light", label: t("settings.lightMode") },
-                  { value: "dark", label: t("settings.darkMode") },
+                  { value: "simple", label: "Simple" },
+                  { value: "advanced", label: "Advanced" },
                 ]}
               />
+              <p className="mt-2 text-sm text-slate-600">
+                {simpleMode
+                  ? "Showing just the essentials — Home, Expenses, Savings and Hunny. Switch to Advanced to unlock insights, planners, debt tracking and more."
+                  : "Showing every tool. Switch to Simple for a cleaner, easier view with just the essentials."}
+              </p>
             </div>
 
             <div className="hb-panel-soft rounded-3xl px-4 py-4">
