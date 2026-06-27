@@ -50,6 +50,7 @@ import { usePlanner } from "./hooks/usePlanner.js";
 import { useSettings } from "./hooks/useSettings.js";
 import { useCoach } from "./hooks/useCoach.js";
 import { useDebt } from "./hooks/useDebt.js";
+import { useIncomeSources } from "./hooks/useIncomeSources.js";
 import { usePaywall } from "./hooks/usePaywall.js";
 import OnboardingTour, { isTourDone, markTourDone } from "./components/OnboardingTour.jsx";
 import ExperienceModeChooser from "./components/ExperienceModeChooser.jsx";
@@ -195,6 +196,7 @@ export default function App() {
   const planner = usePlanner({ appData, showConfirm, route });
   const coach = useCoach({ appData, navigate });
   const debt = useDebt({ appData, showConfirm });
+  const incomeSourcesHook = useIncomeSources({ appData });
   const paywall = usePaywall({ appData, navigate });
 
   const isPro = session?.isPro ?? false;
@@ -226,6 +228,12 @@ export default function App() {
   useEffect(() => {
     if (!auth.token || route !== "debt" || debt.debtData) return;
     debt.loadDebts().catch(() => {});
+  }, [auth.token, route]);
+
+  // Load extra income sources on first visit to settings
+  useEffect(() => {
+    if (!auth.token || route !== "settings" || incomeSourcesHook.incomeSources) return;
+    incomeSourcesHook.loadIncomeSources().catch(() => {});
   }, [auth.token, route]);
 
   // Deep link handler (iOS external URL open)
@@ -675,6 +683,15 @@ export default function App() {
             }}
             onIncomeProfileSubmit={handleIncomeProfileSubmit}
             incomeProfileBusy={incomeProfileBusy}
+            incomeSources={incomeSourcesHook.incomeSources}
+            incomeSourceForm={incomeSourcesHook.incomeSourceForm}
+            incomeSourceBusy={incomeSourcesHook.incomeSourceBusy}
+            editingIncomeSourceId={incomeSourcesHook.editingIncomeSourceId}
+            onIncomeSourceChange={incomeSourcesHook.handleIncomeSourceChange}
+            onIncomeSourceSubmit={incomeSourcesHook.handleIncomeSourceSubmit}
+            onEditIncomeSource={incomeSourcesHook.handleEditIncomeSource}
+            onDeleteIncomeSource={incomeSourcesHook.handleDeleteIncomeSource}
+            onCancelIncomeSourceEdit={incomeSourcesHook.cancelIncomeSourceEdit}
             theme={theme}
             currencyCode={currencyCode}
             baseCurrencyCode={baseCurrencyCode}

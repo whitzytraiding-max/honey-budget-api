@@ -60,6 +60,15 @@ function SettingsPage({
   onIncomeProfileChange,
   onIncomeProfileSubmit,
   incomeProfileBusy,
+  incomeSources,
+  incomeSourceForm,
+  incomeSourceBusy,
+  editingIncomeSourceId,
+  onIncomeSourceChange,
+  onIncomeSourceSubmit,
+  onEditIncomeSource,
+  onDeleteIncomeSource,
+  onCancelIncomeSourceEdit,
   theme,
   simpleMode = false,
   onExperienceModeChange,
@@ -140,6 +149,7 @@ function SettingsPage({
 
         {/* Profile tab */}
         {activeTab === "profile" && (
+          <>
           <form className="mt-6 grid gap-4" onSubmit={onIncomeProfileSubmit}>
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
@@ -200,6 +210,108 @@ function SettingsPage({
               {t("settings.save")}
             </ActionButton>
           </form>
+
+          {/* Extra income sources */}
+          <section className="mt-8">
+            <h3 className="text-base font-semibold text-slate-900">Extra income</h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Side income, freelance, rental — added to your monthly income on top of your salary.
+            </p>
+
+            {Array.isArray(incomeSources) && incomeSources.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {incomeSources.map((source) => (
+                  <div
+                    key={source.id}
+                    className="hb-panel-soft flex items-center justify-between gap-3 rounded-2xl px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{source.label}</p>
+                      <p className="text-xs text-slate-500">
+                        {source.paymentMethod === "cash" ? "Cash" : "Card / bank"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {currency(Number(source.amount), { sourceCurrency: source.currencyCode, convert: false })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => onEditIncomeSource(source)}
+                        className="rounded-full bg-white/95 px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-100"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onDeleteIncomeSource(source)}
+                        className="rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-100"
+                        aria-label={`Delete ${source.label}`}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <form className="mt-4 grid gap-4" onSubmit={onIncomeSourceSubmit}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input
+                  label="Label"
+                  name="label"
+                  value={incomeSourceForm?.label ?? ""}
+                  onChange={onIncomeSourceChange}
+                  placeholder="Freelance, rental…"
+                />
+                <Input
+                  label="Amount / month"
+                  name="amount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={incomeSourceForm?.amount ?? ""}
+                  onChange={onIncomeSourceChange}
+                  placeholder="400.00"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Select
+                  label="Currency"
+                  name="currencyCode"
+                  value={incomeSourceForm?.currencyCode ?? "USD"}
+                  onChange={onIncomeSourceChange}
+                  options={currencyOptions}
+                />
+                <Select
+                  label="Paid into"
+                  name="paymentMethod"
+                  value={incomeSourceForm?.paymentMethod ?? "card"}
+                  onChange={onIncomeSourceChange}
+                  options={[
+                    { value: "card", label: "Card / bank" },
+                    { value: "cash", label: "Cash" },
+                  ]}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton busy={incomeSourceBusy} className="sm:w-auto">
+                  {editingIncomeSourceId ? "Update income" : "Add income"}
+                </ActionButton>
+                {editingIncomeSourceId && (
+                  <button
+                    type="button"
+                    onClick={onCancelIncomeSourceEdit}
+                    className="rounded-[1.2rem] px-4 py-3 text-sm font-medium text-slate-600 transition hover:text-slate-900"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+          </>
         )}
 
         {/* Display tab */}

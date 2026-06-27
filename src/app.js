@@ -23,6 +23,7 @@ import { createCoachChatRoutes } from "./routes/coachChat.js";
 import { createBudgetPlannerRoutes } from "./routes/budgetPlanner.js";
 import { createWebhookRoutes } from "./routes/webhooks.js";
 import { createDebtRoutes } from "./routes/debt.js";
+import { createIncomeSourceRoutes } from "./routes/incomeSources.js";
 
 function createApp({
   app = express(),
@@ -96,6 +97,7 @@ function createApp({
   app.use("/", createCoachChatRoutes(ctx));
   app.use("/", createBudgetPlannerRoutes({ budgetRepository, budgetPlannerService, requireAuth }));
   app.use("/", createDebtRoutes(ctx));
+  app.use("/", createIncomeSourceRoutes(ctx));
   app.use("/", createWebhookRoutes());
 
   // Catch-all 404 — prevents silent hangs on unmatched routes

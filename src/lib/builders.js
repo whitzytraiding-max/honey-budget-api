@@ -285,15 +285,32 @@ export async function buildMonthlySummary({
     0,
   );
 
+  // Extra recurring income sources (side income), added on top of salary
+  const incomeSources = await budgetRepository.listIncomeSourcesForUserIds({
+    userIds: activeUsers.map((user) => user.id),
+  });
+  const extraIncome = incomeSources.reduce(
+    (sum, source) => sum + converter.convert(source.amount ?? 0, source.currencyCode),
+    0,
+  );
+  const extraCashIncome = incomeSources.reduce(
+    (sum, source) => sum + (source.paymentMethod === "cash" ? converter.convert(source.amount ?? 0, source.currencyCode) : 0),
+    0,
+  );
+  const extraCardIncome = incomeSources.reduce(
+    (sum, source) => sum + (source.paymentMethod !== "cash" ? converter.convert(source.amount ?? 0, source.currencyCode) : 0),
+    0,
+  );
+
   const householdIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.monthlySalary ?? 0, user.incomeCurrencyCode);
-  }, 0);
+  }, extraIncome);
   const cashIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.salaryCashAmount ?? 0, user.incomeCurrencyCode);
-  }, 0);
+  }, extraCashIncome);
   const cardIncome = activeUsers.reduce((sum, user) => {
     return sum + converter.convert(user.salaryCardAmount ?? 0, user.incomeCurrencyCode);
-  }, 0);
+  }, extraCardIncome);
   const totalExpenses = monthlyTransactions.reduce(
     (sum, transaction) => sum + convertTransactionWithSnapshot(transaction, converter),
     0,

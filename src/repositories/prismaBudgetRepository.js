@@ -222,6 +222,24 @@ function mapSavingsGoal(goal) {
   };
 }
 
+function mapIncomeSource(source) {
+  if (!source) {
+    return null;
+  }
+
+  return {
+    id: source.id,
+    userId: source.userId,
+    label: source.label,
+    amount: toNumber(source.amount),
+    currencyCode: source.currencyCode ?? "USD",
+    paymentMethod: source.paymentMethod ?? "card",
+    isActive: source.isActive ?? true,
+    createdAt: source.createdAt?.toISOString?.() ?? source.createdAt,
+    updatedAt: source.updatedAt?.toISOString?.() ?? source.updatedAt,
+  };
+}
+
 function mapCoupleInvite(invite) {
   if (!invite) {
     return null;
@@ -1830,6 +1848,69 @@ function createPrismaBudgetRepository({ prisma }) {
       const goal = await prisma.savingsGoal.delete({ where: { id: goalId } });
 
       return mapSavingsGoal(goal);
+    },
+
+    async listIncomeSourcesForUserIds({ userIds }) {
+      const filteredUserIds = [...new Set(userIds.filter((value) => Number.isInteger(value)))];
+
+      if (!filteredUserIds.length) {
+        return [];
+      }
+
+      const sources = await prisma.incomeSource.findMany({
+        where: { userId: { in: filteredUserIds }, isActive: true },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return sources.map(mapIncomeSource);
+    },
+
+    async listIncomeSourcesForUser(userId) {
+      const sources = await prisma.incomeSource.findMany({
+        where: { userId },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+
+      return sources.map(mapIncomeSource);
+    },
+
+    async createIncomeSourceForUser({ userId, label, amount, currencyCode = "USD", paymentMethod = "card" }) {
+      const source = await prisma.incomeSource.create({
+        data: { userId, label, amount, currencyCode, paymentMethod },
+      });
+
+      return mapIncomeSource(source);
+    },
+
+    async updateIncomeSourceForUser({ sourceId, userId, label, amount, currencyCode = "USD", paymentMethod = "card" }) {
+      const existing = await prisma.incomeSource.findFirst({
+        where: { id: sourceId, userId },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "INCOME_SOURCE_NOT_FOUND", "Income source not found.");
+      }
+
+      const source = await prisma.incomeSource.update({
+        where: { id: sourceId },
+        data: { label, amount, currencyCode, paymentMethod },
+      });
+
+      return mapIncomeSource(source);
+    },
+
+    async deleteIncomeSourceForUser({ sourceId, userId }) {
+      const existing = await prisma.incomeSource.findFirst({
+        where: { id: sourceId, userId },
+      });
+
+      if (!existing) {
+        throw new HttpError(404, "INCOME_SOURCE_NOT_FOUND", "Income source not found.");
+      }
+
+      const source = await prisma.incomeSource.delete({ where: { id: sourceId } });
+
+      return mapIncomeSource(source);
     },
 
     async createSavingsGoalForCouple({
