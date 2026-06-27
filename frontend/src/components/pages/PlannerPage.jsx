@@ -86,41 +86,41 @@ function PlannerPage({
             <form ref={billFormRef} className="mt-4 flex flex-col gap-3" onSubmit={onRecurringBillSubmit}>
               {/* Bill name + Amount */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Bill name</p>
-                  <input name="title" value={recurringBillForm.title} onChange={onRecurringBillChange} placeholder="Rent" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Bill name</p>
+                  <input name="title" value={recurringBillForm.title} onChange={onRecurringBillChange} placeholder="Rent" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
                 </div>
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
-                  <input name="amount" type="number" min="0" step="0.01" value={recurringBillForm.amount} onChange={onRecurringBillChange} placeholder="750.00" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Amount</p>
+                  <input name="amount" type="number" min="0" step="0.01" value={recurringBillForm.amount} onChange={onRecurringBillChange} placeholder="750.00" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
                 </div>
               </div>
               {/* Currency + Day of month */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Currency</p>
-                  <select name="currencyCode" value={recurringBillForm.currencyCode} onChange={onRecurringBillChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Currency</p>
+                  <select name="currencyCode" value={recurringBillForm.currencyCode} onChange={onRecurringBillChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }}>
                     {currencyOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "var(--hb-input-bg)", color: "var(--hb-text)" }}>{o.label}</option>)}
                   </select>
                 </div>
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Day of month</p>
-                  <input name="dayOfMonth" type="number" min="1" max="28" step="1" value={recurringBillForm.dayOfMonth} onChange={onRecurringBillChange} placeholder="1" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Day of month</p>
+                  <input name="dayOfMonth" type="number" min="1" max="28" step="1" value={recurringBillForm.dayOfMonth} onChange={onRecurringBillChange} placeholder="1" className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
                 </div>
               </div>
               {/* Category */}
-              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Category</p>
-                <input name="category" value={recurringBillForm.category} onChange={onRecurringBillChange} placeholder="Housing" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Category</p>
+                <input name="category" value={recurringBillForm.category} onChange={onRecurringBillChange} placeholder="Housing" className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
               </div>
               {/* Payment method pill */}
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Payment method</p>
-                <div className="flex gap-1 p-1 rounded-full" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Payment method</p>
+                <div className="flex gap-1 p-1 rounded-full" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
                   {[{ value: "card", label: "Card" }, { value: "cash", label: "Cash" }].map(({ value, label }) => (
                     <button key={value} type="button"
                       className="flex-1 py-2.5 rounded-full text-sm font-semibold transition"
-                      style={{ background: recurringBillForm.paymentMethod === value ? "#D4870A" : "transparent", color: recurringBillForm.paymentMethod === value ? "#fff" : "rgba(212, 135, 10, 0.5)" }}
+                      style={{ background: recurringBillForm.paymentMethod === value ? "var(--hb-accent-strong)" : "transparent", color: recurringBillForm.paymentMethod === value ? "var(--hb-accent-contrast)" : "var(--hb-text-muted)" }}
                       onClick={() => onRecurringBillChange({ target: { name: "paymentMethod", value } })}>
                       {label}
                     </button>
@@ -129,12 +129,12 @@ function PlannerPage({
               </div>
               {/* Who pays */}
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Who pays this bill?</p>
-                <div className="flex gap-1 p-1 rounded-full" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Who pays this bill?</p>
+                <div className="flex gap-1 p-1 rounded-full" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
                   {[{ value: "joint", label: "Joint" }, { value: "user", label: "Mine" }, { value: "partner", label: "Partner" }].map(({ value, label }) => (
                     <button key={value} type="button"
                       className="flex-1 py-2.5 rounded-full text-sm font-semibold transition"
-                      style={{ background: recurringBillForm.paidBy === value ? "#D4870A" : "transparent", color: recurringBillForm.paidBy === value ? "#fff" : "rgba(212, 135, 10, 0.5)" }}
+                      style={{ background: recurringBillForm.paidBy === value ? "var(--hb-accent-strong)" : "transparent", color: recurringBillForm.paidBy === value ? "var(--hb-accent-contrast)" : "var(--hb-text-muted)" }}
                       onClick={() => onRecurringBillChange({ target: { name: "paidBy", value } })}>
                       {label}
                     </button>
@@ -143,44 +143,44 @@ function PlannerPage({
               </div>
               {/* Start + End date */}
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
-                  <span className="flex-1 text-sm" style={{ color: recurringBillForm.startDate ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+                <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+                  <span className="flex-1 text-sm" style={{ color: recurringBillForm.startDate ? "var(--hb-text)" : "var(--hb-text-muted)" }}>
                     {recurringBillForm.startDate ? new Date(recurringBillForm.startDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Start date"}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+                  <ChevronDown className="h-3.5 w-3.5" style={{ color: "var(--hb-text-muted)" }} />
                   <input type="date" name="startDate" value={recurringBillForm.startDate} onChange={onRecurringBillChange} className="sr-only" />
                 </label>
-                <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
-                  <span className="flex-1 text-sm" style={{ color: recurringBillForm.endDate ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+                <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--hb-text-muted)" }} />
+                  <span className="flex-1 text-sm" style={{ color: recurringBillForm.endDate ? "var(--hb-text)" : "var(--hb-text-muted)" }}>
                     {recurringBillForm.endDate ? new Date(recurringBillForm.endDate + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "End date (optional)"}
                   </span>
-                  <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+                  <ChevronDown className="h-3.5 w-3.5" style={{ color: "var(--hb-text-muted)" }} />
                   <input type="date" name="endDate" value={recurringBillForm.endDate} onChange={onRecurringBillChange} className="sr-only" />
                 </label>
               </div>
               {/* Notes */}
-              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Notes (optional)</p>
-                <textarea name="notes" value={recurringBillForm.notes} onChange={onRecurringBillChange} placeholder="Landlord transfer, Netflix family plan, electric bill, etc." rows={2} className="w-full bg-transparent text-sm outline-none resize-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Notes (optional)</p>
+                <textarea name="notes" value={recurringBillForm.notes} onChange={onRecurringBillChange} placeholder="Landlord transfer, Netflix family plan, electric bill, etc." rows={2} className="w-full bg-transparent text-sm outline-none resize-none" style={{ color: "var(--hb-text)" }} />
               </div>
               {/* Auto-create */}
-              <label className="flex items-center gap-3 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+              <label className="flex items-center gap-3 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
                 <input checked={Boolean(recurringBillForm.autoCreate)} name="autoCreate" onChange={onRecurringBillChange} type="checkbox"
-                  className="h-4 w-4 rounded accent-[#D4870A]" />
-                <span className="text-sm" style={{ color: "#f0e0c0" }}>Auto-create this bill each month</span>
+                  className="h-4 w-4 rounded accent-[var(--hb-accent-strong)]" />
+                <span className="text-sm" style={{ color: "var(--hb-text)" }}>Auto-create this bill each month</span>
               </label>
               <div className="flex gap-2">
                 <button type="submit" disabled={recurringBillBusy}
                   className="flex-1 rounded-[1.2rem] py-3.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}>
+                  style={{ background: "var(--hb-accent-strong)", boxShadow: "0 8px 24px -6px var(--hb-accent-glow)" }}>
                   {recurringBillBusy ? "Saving…" : editingRecurringBillId ? "Update bill" : "Save bill 🐾"}
                 </button>
                 {editingRecurringBillId && (
                   <button type="button" onClick={onCancelRecurringBillEdit}
                     className="rounded-[1.2rem] px-4 py-3 text-sm font-medium transition"
-                    style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)", color: "rgba(212, 135, 10, 0.7)" }}>
+                    style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text-muted)" }}>
                     Cancel
                   </button>
                 )}
@@ -266,22 +266,22 @@ function PlannerPage({
             </div>
 
             <form className="mt-4 flex flex-col gap-3" onSubmit={onRuleSubmit}>
-              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Rule name</p>
-                <input name="title" value={ruleForm.title} onChange={onRuleChange} placeholder="Check in before anything over $50" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Rule name</p>
+                <input name="title" value={ruleForm.title} onChange={onRuleChange} placeholder="Check in before anything over $50" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
               </div>
-              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Rule details</p>
-                <textarea name="details" value={ruleForm.details} onChange={onRuleChange} placeholder="Message each other before spending over the threshold unless it is groceries or transport." rows={3} className="w-full bg-transparent text-sm outline-none resize-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Rule details</p>
+                <textarea name="details" value={ruleForm.details} onChange={onRuleChange} placeholder="Message each other before spending over the threshold unless it is groceries or transport." rows={3} className="w-full bg-transparent text-sm outline-none resize-none" style={{ color: "var(--hb-text)" }} />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Threshold amount (optional)</p>
-                  <input name="thresholdAmount" type="number" min="0" step="0.01" value={ruleForm.thresholdAmount} onChange={onRuleChange} placeholder="50.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Threshold amount (optional)</p>
+                  <input name="thresholdAmount" type="number" min="0" step="0.01" value={ruleForm.thresholdAmount} onChange={onRuleChange} placeholder="50.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
                 </div>
-                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Threshold currency</p>
-                  <select name="currencyCode" value={ruleForm.currencyCode} onChange={onRuleChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+                <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Threshold currency</p>
+                  <select name="currencyCode" value={ruleForm.currencyCode} onChange={onRuleChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }}>
                     {currencyOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "var(--hb-input-bg)", color: "var(--hb-text)" }}>{o.label}</option>)}
                   </select>
                 </div>
@@ -289,13 +289,13 @@ function PlannerPage({
               <div className="flex gap-2">
                 <button type="submit" disabled={ruleBusy}
                   className="flex-1 rounded-[1.2rem] py-3.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-40"
-                  style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}>
+                  style={{ background: "var(--hb-accent-strong)", boxShadow: "0 8px 24px -6px var(--hb-accent-glow)" }}>
                   {ruleBusy ? "Saving…" : editingRuleId ? "Update rule" : "Save rule 🐾"}
                 </button>
                 {editingRuleId && (
                   <button type="button" onClick={onCancelRuleEdit}
                     className="rounded-[1.2rem] px-4 py-3 text-sm font-medium transition"
-                    style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)", color: "rgba(212, 135, 10, 0.7)" }}>
+                    style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text-muted)" }}>
                     Cancel
                   </button>
                 )}

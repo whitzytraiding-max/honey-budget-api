@@ -72,14 +72,14 @@ function UploadProgress({ active, done }) {
   return (
     <div className="mt-4 space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium" style={{ color: done ? "#22c55e" : "#38bdf8" }}>
+        <span className="font-medium" style={{ color: done ? "var(--hb-good)" : "var(--hb-accent)" }}>
           {done ? "Done! Loading your plan…" : UPLOAD_STAGES[stageIdx]?.label}
         </span>
         <span style={{ color: "var(--hb-ink-soft)" }}>{pct}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "rgba(148,163,184,0.2)" }}>
+      <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--hb-track)" }}>
         <div className="h-full rounded-full transition-all duration-300"
-          style={{ width: `${pct}%`, background: done ? "#22c55e" : "#38bdf8" }} />
+          style={{ width: `${pct}%`, background: done ? "var(--hb-good)" : "var(--hb-accent)" }} />
       </div>
       {!done && <p className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>Parsed locally — no upload needed.</p>}
     </div>
@@ -88,9 +88,9 @@ function UploadProgress({ active, done }) {
 
 // ── Timeline journey roadmap ──────────────────────────────────────────────────
 const CHECKIN_OPTIONS = [
-  { value: "on-track", emoji: "✅", label: "On Track", color: "#22c55e", bg: "rgba(34,197,94,0.12)" },
-  { value: "behind",   emoji: "⚠️",  label: "Behind",   color: "#ef4444", bg: "rgba(239,68,68,0.12)"  },
-  { value: "ahead",    emoji: "🔥",  label: "Ahead",    color: "#f59e0b", bg: "rgba(245,158,11,0.15)" },
+  { value: "on-track", emoji: "✅", label: "On Track", color: "var(--hb-good-text)", bg: "var(--hb-good-soft-bg)" },
+  { value: "behind",   emoji: "⚠️",  label: "Behind",   color: "var(--hb-bad)", bg: "var(--hb-bad-soft-bg)"  },
+  { value: "ahead",    emoji: "🔥",  label: "Ahead",    color: "var(--hb-accent)", bg: "var(--hb-accent-soft-bg)" },
 ];
 
 function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew, onImportGoal, importGoalBusy, importGoalDone }) {
@@ -121,9 +121,9 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
     if (!m.actual) return null;
     const savRatio = m.planned.savings > 0 ? m.actual.savings / m.planned.savings : 0;
     const expRatio = m.planned.totalExpenses > 0 ? m.actual.totalExpenses / m.planned.totalExpenses : 1;
-    if (savRatio > 1.05) return { emoji: "🔥", label: "Ahead", color: "#f59e0b", bg: "rgba(245,158,11,0.15)" };
-    if (expRatio > 1.05) return { emoji: "⚠", label: "Overspending", color: "#ef4444", bg: "rgba(239,68,68,0.12)" };
-    return { emoji: "✅", label: "On Track", color: "#22c55e", bg: "rgba(34,197,94,0.12)" };
+    if (savRatio > 1.05) return { emoji: "🔥", label: "Ahead", color: "var(--hb-accent)", bg: "var(--hb-accent-soft-bg)" };
+    if (expRatio > 1.05) return { emoji: "⚠", label: "Overspending", color: "var(--hb-bad)", bg: "var(--hb-bad-soft-bg)" };
+    return { emoji: "✅", label: "On Track", color: "var(--hb-good-text)", bg: "var(--hb-good-soft-bg)" };
   }
 
   return (
@@ -131,12 +131,12 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
       {/* ── GOAL HEADER ── */}
       <section className="hb-surface-card rounded-[1.5rem] p-5 sm:rounded-[1.75rem] overflow-hidden relative">
         <div className="pointer-events-none absolute inset-0"
-          style={{ background: "radial-gradient(ellipse at 90% -10%, rgba(56,189,248,0.12), transparent 55%)" }} />
+          style={{ background: "radial-gradient(ellipse at 90% -10%, var(--hb-accent-soft-bg), transparent 55%)" }} />
 
         <div className="relative flex items-start justify-between gap-2 mb-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "rgba(56,189,248,0.12)" }}>
-              <Map className="h-5 w-5" style={{ color: "#38bdf8" }} />
+            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-accent-soft-bg)" }}>
+              <Map className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
             </span>
             <div>
               <h2 className="text-lg font-bold leading-tight">{plan.name}</h2>
@@ -156,7 +156,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
             <div className="flex items-end justify-between mb-2">
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
-                  <Target className="h-3 w-3" style={{ color: "#38bdf8" }} />
+                  <Target className="h-3 w-3" style={{ color: "var(--hb-accent-text)" }} />
                   <span className="text-xs font-semibold uppercase tracking-wider"
                     style={{ color: "var(--hb-ink-soft)" }}>
                     {plan.goalDescription || "Savings goal"}
@@ -165,7 +165,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                 <p className="text-2xl font-bold tracking-tight">{fmt(goalAmount, currency)}</p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold tracking-tight" style={{ color: "#38bdf8" }}>{goalPct}%</p>
+                <p className="text-3xl font-bold tracking-tight" style={{ color: "var(--hb-accent-text)" }}>{goalPct}%</p>
                 <p className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>{fmt(currentSavings, currency)} saved</p>
               </div>
             </div>
@@ -175,12 +175,12 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="rounded-full px-3 py-1 text-xs font-semibold"
-                style={{ background: "rgba(56,189,248,0.1)", color: "var(--hb-ink-soft)" }}>
+                style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-ink-soft)" }}>
                 {roadmap.length} months
               </span>
               {totalPlanned > 0 && (
                 <span className="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{ background: "rgba(34,197,94,0.1)", color: "var(--hb-ink-soft)" }}>
+                  style={{ background: "var(--hb-good-soft-bg)", color: "var(--hb-ink-soft)" }}>
                   {fmt(totalPlanned / (roadmap.length || 1), currency)}/mo target
                 </span>
               )}
@@ -189,7 +189,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
             {/* Import to Savings Goals */}
             <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--hb-border)" }}>
               {importGoalDone ? (
-                <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#22c55e" }}>
+                <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: "var(--hb-good-text)" }}>
                   <CheckCircle className="h-4 w-4" />
                   Added to Savings Goals
                 </div>
@@ -200,8 +200,8 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                   onClick={onImportGoal}
                   className="rounded-xl px-4 py-2 text-sm font-semibold transition"
                   style={{
-                    background: "rgba(56,189,248,0.12)",
-                    color: "#38bdf8",
+                    background: "var(--hb-accent-soft-bg)",
+                    color: "var(--hb-accent-text)",
                     opacity: importGoalBusy ? 0.6 : 1,
                   }}
                 >
@@ -213,12 +213,12 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
         ) : (
           <div className="flex gap-2 flex-wrap">
             <span className="rounded-full px-3 py-1 text-xs font-semibold"
-              style={{ background: "rgba(56,189,248,0.1)", color: "var(--hb-ink-soft)" }}>
+              style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-ink-soft)" }}>
               {roadmap.length} months
             </span>
             {totalPlanned > 0 && (
               <span className="rounded-full px-3 py-1 text-xs font-semibold"
-                style={{ background: "rgba(34,197,94,0.1)", color: "var(--hb-ink-soft)" }}>
+                style={{ background: "var(--hb-good-soft-bg)", color: "var(--hb-ink-soft)" }}>
                 {fmt(totalPlanned / (roadmap.length || 1), currency)}/mo planned
               </span>
             )}
@@ -260,23 +260,23 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                       width: isCurrent ? 20 : 14,
                       height: isCurrent ? 20 : 14,
                       background: isCompleted
-                        ? "#22c55e"
+                        ? "var(--hb-good)"
                         : isCurrent
-                          ? "#38bdf8"
-                          : "rgba(148,163,184,0.2)",
+                          ? "var(--hb-accent)"
+                          : "var(--hb-track)",
                       boxShadow: isCurrent
-                        ? "0 0 0 4px rgba(56,189,248,0.18), 0 0 16px rgba(56,189,248,0.35)"
+                        ? "0 0 0 4px var(--hb-accent-soft-bg), 0 0 16px var(--hb-accent-soft-bg)"
                         : isCompleted
-                          ? "0 0 6px rgba(34,197,94,0.3)"
+                          ? "0 0 6px var(--hb-good-soft-bg)"
                           : "none",
-                      border: isUpcoming ? "2px solid rgba(148,163,184,0.25)" : "none",
+                      border: isUpcoming ? "2px solid var(--hb-track)" : "none",
                       flexShrink: 0,
                     }}>
                     {isCompleted && <Check className="text-white" style={{ width: 8, height: 8 }} />}
                     {isCurrent && (
                       <>
                         <div className="absolute inset-0 rounded-full animate-ping"
-                          style={{ background: "rgba(56,189,248,0.25)", animationDuration: "2s" }} />
+                          style={{ background: "var(--hb-accent-soft-bg)", animationDuration: "2s" }} />
                         <div className="w-2 h-2 rounded-full bg-white" style={{ opacity: 0.9 }} />
                       </>
                     )}
@@ -289,10 +289,10 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                       marginTop: 4,
                       minHeight: 24,
                       background: isCompleted
-                        ? "linear-gradient(180deg, #22c55e 0%, rgba(56,189,248,0.3) 100%)"
+                        ? "var(--hb-good)"
                         : isCurrent
-                          ? "linear-gradient(180deg, #38bdf8 0%, rgba(148,163,184,0.15) 100%)"
-                          : "rgba(148,163,184,0.12)",
+                          ? "var(--hb-accent)"
+                          : "var(--hb-track)",
                     }} />
                   )}
                 </div>
@@ -302,17 +302,17 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                   <div className="rounded-[1.2rem] overflow-hidden"
                     style={{
                       background: isCurrent
-                        ? "rgba(56,189,248,0.05)"
+                        ? "var(--hb-accent-soft-bg)"
                         : isCompleted
-                          ? "rgba(255,255,255,0.02)"
+                          ? "var(--hb-surface-soft)"
                           : "transparent",
                       border: isCurrent
-                        ? "1px solid rgba(56,189,248,0.22)"
+                        ? "1px solid var(--hb-accent-soft-bg)"
                         : isCompleted
                           ? "1px solid var(--hb-border)"
-                          : "1px solid rgba(148,163,184,0.10)",
+                          : "1px solid var(--hb-track)",
                       boxShadow: isCurrent
-                        ? "0 0 0 1px rgba(56,189,248,0.08), 0 8px 28px rgba(56,189,248,0.07)"
+                        ? "0 0 0 1px var(--hb-accent-soft-bg), 0 8px 28px var(--hb-accent-soft-bg)"
                         : "none",
                     }}>
 
@@ -332,7 +332,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                         </span>
                         {isCurrent && (
                           <span className="text-xs font-bold rounded-full px-2 py-0.5"
-                            style={{ background: "rgba(56,189,248,0.15)", color: "#38bdf8", letterSpacing: "0.05em" }}>
+                            style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)", letterSpacing: "0.05em" }}>
                             NOW
                           </span>
                         )}
@@ -358,7 +358,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                         <span className="text-sm font-semibold tabular-nums shrink-0"
                           style={{
                             color: actualSav !== null
-                              ? (actualSav >= plannedSav ? "#22c55e" : "#ef4444")
+                              ? (actualSav >= plannedSav ? "var(--hb-good)" : "var(--hb-bad)")
                               : "var(--hb-ink-soft)",
                           }}>
                           {fmt(actualSav !== null ? actualSav : plannedSav, currency)}
@@ -375,15 +375,15 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                     {savPct !== null && (
                       <div className="px-3.5 pb-3">
                         <div className="h-2 rounded-full overflow-hidden mb-1"
-                          style={{ background: "rgba(148,163,184,0.12)" }}>
+                          style={{ background: "var(--hb-track)" }}>
                           <div className="h-full rounded-full"
                             style={{
                               width: `${savPct}%`,
                               background: savPct >= 100
-                                ? "linear-gradient(90deg,#22c55e,#4ade80)"
+                                ? "var(--hb-good)"
                                 : savPct >= 60
-                                  ? "linear-gradient(90deg,#f59e0b,#fcd34d)"
-                                  : "linear-gradient(90deg,#38bdf8,#818cf8)",
+                                  ? "var(--hb-accent)"
+                                  : "var(--hb-accent)",
                               transition: "width 0.9s cubic-bezier(0.34,1.56,0.64,1)",
                             }} />
                         </div>
@@ -393,7 +393,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                           </span>
                           <span className="text-xs font-bold"
                             style={{
-                              color: savPct >= 100 ? "#22c55e" : savPct >= 60 ? "#f59e0b" : "#38bdf8",
+                              color: savPct >= 100 ? "var(--hb-good)" : savPct >= 60 ? "var(--hb-accent)" : "var(--hb-accent)",
                             }}>
                             {savPct}% of target
                           </span>
@@ -419,7 +419,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                             {
                               label: "Income",
                               value: fmt(m.planned.income, currency),
-                              color: "#22c55e",
+                              color: "var(--hb-good-text)",
                             },
                             {
                               label: "Spent",
@@ -428,19 +428,19 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                                 currency,
                               ),
                               color: m.actual && m.actual.totalExpenses > m.planned.totalExpenses * 1.05
-                                ? "#ef4444"
+                                ? "var(--hb-bad)"
                                 : "inherit",
                             },
                             {
                               label: "Saved",
                               value: fmt(actualSav !== null ? actualSav : plannedSav, currency),
                               color: actualSav !== null
-                                ? (actualSav >= plannedSav ? "#22c55e" : "#ef4444")
-                                : "#38bdf8",
+                                ? (actualSav >= plannedSav ? "var(--hb-good)" : "var(--hb-bad)")
+                                : "var(--hb-accent)",
                             },
                           ].map(({ label, value, color }) => (
                             <div key={label} className="rounded-xl p-2.5 text-center"
-                              style={{ background: "rgba(0,0,0,0.08)" }}>
+                              style={{ background: "var(--hb-surface-soft)" }}>
                               <p className="text-xs mb-1" style={{ color: "var(--hb-ink-soft)" }}>{label}</p>
                               <p className="text-sm font-bold tabular-nums leading-tight" style={{ color }}>{value}</p>
                             </div>
@@ -465,11 +465,11 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                                       <span className="font-medium tabular-nums">{fmt(cat.amount, currency)}</span>
                                     </div>
                                     <div className="h-1.5 rounded-full overflow-hidden"
-                                      style={{ background: "rgba(148,163,184,0.1)" }}>
+                                      style={{ background: "var(--hb-track)" }}>
                                       <div className="h-full rounded-full"
                                         style={{
                                           width: `${pct}%`,
-                                          background: "rgba(56,189,248,0.45)",
+                                          background: "var(--hb-accent-soft-bg)",
                                           transition: "width 0.6s ease",
                                         }} />
                                     </div>
@@ -482,9 +482,9 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                         {/* Cumulative chip */}
                         {m.cumulativePlannedSavings > 0 && (
                           <div className="mt-3 rounded-xl px-3 py-2 flex justify-between items-center"
-                            style={{ background: "rgba(56,189,248,0.06)" }}>
+                            style={{ background: "var(--hb-accent-soft-bg)" }}>
                             <span className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>Cumulative saved</span>
-                            <span className="text-xs font-bold" style={{ color: "#38bdf8" }}>
+                            <span className="text-xs font-bold" style={{ color: "var(--hb-accent-text)" }}>
                               {fmt(
                                 m.cumulativeActualSavings > 0
                                   ? m.cumulativeActualSavings
@@ -497,7 +497,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
 
                         {/* Manual check-in */}
                         <div className="mt-3 rounded-xl px-3 py-3"
-                          style={{ background: "rgba(0,0,0,0.04)", border: "1px solid var(--hb-border)" }}>
+                          style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
                           <p className="text-xs mb-2 font-semibold uppercase tracking-wider"
                             style={{ color: "var(--hb-ink-soft)" }}>
                             Your check-in
@@ -511,8 +511,8 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                                   type="button"
                                   className="flex-1 rounded-xl py-2 text-xs font-semibold transition"
                                   style={{
-                                    background: active ? opt.bg : "rgba(0,0,0,0.06)",
-                                    border: active ? `1px solid ${opt.color}40` : "1px solid transparent",
+                                    background: active ? opt.bg : "var(--hb-surface-soft)",
+                                    border: active ? `1px solid ${opt.color}` : "1px solid transparent",
                                     color: active ? opt.color : "var(--hb-ink-soft)",
                                   }}
                                   onClick={() => setCheckIn(m.month, active ? null : opt.value)}
@@ -733,8 +733,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           <div className="flex flex-col items-center gap-4 py-10">
             <div className="relative">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-sky-400"
-                style={{ borderColor: "rgba(56,189,248,0.2)", borderTopColor: "#38bdf8" }} />
-              <Sparkles className="absolute inset-0 m-auto h-5 w-5" style={{ color: "#38bdf8" }} />
+                style={{ borderColor: "var(--hb-accent-soft-bg)", borderTopColor: "var(--hb-accent)" }} />
+              <Sparkles className="absolute inset-0 m-auto h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
             </div>
             <p className="font-semibold">Checking with Gemini AI…</p>
             <p className="text-sm text-center max-w-xs" style={{ color: "var(--hb-ink-soft)" }}>
@@ -753,7 +753,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         <section className="hb-surface-card rounded-[1.5rem] p-6 sm:rounded-[1.75rem]">
           <div className="flex flex-col items-center gap-4 py-10">
             <div className="h-12 w-12 animate-spin rounded-full border-4"
-              style={{ borderColor: "rgba(56,189,248,0.2)", borderTopColor: "#38bdf8" }} />
+              style={{ borderColor: "var(--hb-accent-soft-bg)", borderTopColor: "var(--hb-accent)" }} />
             <p className="font-semibold">Saving your plan…</p>
             <p className="text-sm" style={{ color: "var(--hb-ink-soft)" }}>Building your roadmap.</p>
           </div>
@@ -768,8 +768,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       <div className="space-y-4">
         <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex items-center gap-3 mb-4">
-            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "rgba(168,85,247,0.12)" }}>
-              <Sparkles className="h-5 w-5" style={{ color: "#a855f7" }} />
+            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-accent-soft-bg)" }}>
+              <Sparkles className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
             </span>
             <div>
               <h2 className="text-xl font-semibold">Quick question</h2>
@@ -779,15 +779,15 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           <div className="space-y-2 mb-4">
             {questions.map((q, i) => (
               <div key={i} className="rounded-xl px-4 py-3 text-sm"
-                style={{ background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.15)" }}>
-                <span className="font-semibold" style={{ color: "#a855f7" }}>{i + 1}. </span>{q}
+                style={{ background: "var(--hb-accent-soft-bg)", border: "1px solid var(--hb-accent-soft-bg)" }}>
+                <span className="font-semibold" style={{ color: "var(--hb-accent-text)" }}>{i + 1}. </span>{q}
               </div>
             ))}
           </div>
           <textarea
             className="w-full rounded-[1rem] px-4 py-3 text-sm focus:outline-none"
             style={{
-              background: "rgba(0,0,0,0.08)",
+              background: "var(--hb-surface-soft)",
               border: "1px solid var(--hb-border)",
               color: "inherit",
               minHeight: 120,
@@ -796,7 +796,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
             value={answers}
             onChange={(e) => setAnswers(e.target.value)}
           />
-          {error && <p className="mt-2 text-sm" style={{ color: "#f87171" }}>{error}</p>}
+          {error && <p className="mt-2 text-sm" style={{ color: "var(--hb-bad-text)" }}>{error}</p>}
         </section>
         <div className="flex flex-col gap-3 sm:flex-row">
           <ActionButton onClick={handleAnswers} className="flex-1">Continue</ActionButton>
@@ -817,8 +817,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       <div className="space-y-4">
         <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
           <div className="flex items-center gap-3 mb-4">
-            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "rgba(34,197,94,0.12)" }}>
-              <Check className="h-5 w-5" style={{ color: "#22c55e" }} />
+            <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-good-soft-bg)" }}>
+              <Check className="h-5 w-5" style={{ color: "var(--hb-good-text)" }} />
             </span>
             <div>
               <h2 className="text-xl font-semibold">Review your budget</h2>
@@ -826,7 +826,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
             </div>
           </div>
           <div className="rounded-[1.2rem] p-4 space-y-2"
-            style={{ background: "rgba(0,0,0,0.06)", border: "1px solid var(--hb-border)" }}>
+            style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
             {[
               ["Name", parsedPlan.name],
               ["Period", `${monthLabel(parsedPlan.startMonth)} → ${monthLabel(parsedPlan.endMonth)}`],
@@ -846,19 +846,19 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           <div className="space-y-2">
             {(parsedPlan.months ?? []).map((m) => (
               <div key={m.month} className="flex items-center justify-between rounded-[1rem] px-4 py-3"
-                style={{ background: "rgba(0,0,0,0.04)", border: "1px solid var(--hb-border)" }}>
+                style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
                 <span className="font-medium text-sm">{monthLabel(m.month)}</span>
                 <div className="text-sm flex items-center gap-2">
                   <span style={{ color: "var(--hb-ink-soft)" }}>In: {fmt(m.income, currency)}</span>
-                  <span style={{ color: "rgba(148,163,184,0.4)" }}>·</span>
-                  <span className="font-semibold" style={{ color: "#38bdf8" }}>Save: {fmt(m.plannedSavings, currency)}</span>
+                  <span style={{ color: "var(--hb-track)" }}>·</span>
+                  <span className="font-semibold" style={{ color: "var(--hb-accent-text)" }}>Save: {fmt(m.plannedSavings, currency)}</span>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        {error && <p className="text-sm px-1" style={{ color: "#f87171" }}>{error}</p>}
+        {error && <p className="text-sm px-1" style={{ color: "var(--hb-bad-text)" }}>{error}</p>}
         <div className="flex flex-col gap-3 sm:flex-row">
           <ActionButton onClick={handleSave} className="flex-1">Save &amp; view roadmap</ActionButton>
           <button
@@ -876,8 +876,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     <div className="space-y-4">
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
         <div className="flex items-center gap-3">
-          <span className="inline-flex rounded-2xl p-2.5" style={{ background: "rgba(56,189,248,0.12)" }}>
-            <Map className="h-5 w-5" style={{ color: "#38bdf8" }} />
+          <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-accent-soft-bg)" }}>
+            <Map className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
           </span>
           <div>
             <h2 className="text-xl font-semibold sm:text-2xl">Budget Planner</h2>
@@ -894,8 +894,8 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         <div
           className="relative flex flex-col items-center justify-center gap-3 rounded-[1.2rem] border-2 border-dashed px-6 py-10 cursor-pointer transition-all"
           style={{
-            borderColor: dragOver ? "#38bdf8" : "var(--hb-border)",
-            background: dragOver ? "rgba(56,189,248,0.06)" : "rgba(0,0,0,0.03)",
+            borderColor: dragOver ? "var(--hb-accent)" : "var(--hb-border)",
+            background: dragOver ? "var(--hb-accent-soft-bg)" : "var(--hb-surface-soft)",
           }}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
           onDragLeave={() => setDragOver(false)}
@@ -903,7 +903,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           onClick={() => fileRef.current?.click()}
         >
           <CloudUpload className="h-10 w-10 transition-all"
-            style={{ color: dragOver ? "#38bdf8" : "var(--hb-ink-soft)", opacity: dragOver ? 1 : 0.4 }} />
+            style={{ color: dragOver ? "var(--hb-accent)" : "var(--hb-ink-soft)", opacity: dragOver ? 1 : 0.4 }} />
           <div className="text-center">
             <p className="font-medium">Drop your file here or tap to browse</p>
             <p className="mt-1 text-sm" style={{ color: "var(--hb-ink-soft)" }}>Excel (.xlsx, .xls) or CSV · up to 5 MB</p>
@@ -912,7 +912,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
             onChange={(e) => handleFile(e.target.files[0])} />
         </div>
         <UploadProgress active={step === STEPS.UPLOADING} done={uploadDone} />
-        {error && <p className="mt-3 text-sm" style={{ color: "#f87171" }}>{error}</p>}
+        {error && <p className="mt-3 text-sm" style={{ color: "var(--hb-bad-text)" }}>{error}</p>}
       </section>
 
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
@@ -926,7 +926,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           ].map((item) => (
             <div key={item.n} className="flex gap-3">
               <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                style={{ background: "rgba(56,189,248,0.12)", color: "#38bdf8" }}>
+                style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)" }}>
                 {item.n}
               </span>
               <div>

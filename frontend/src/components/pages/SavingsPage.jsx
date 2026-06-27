@@ -5,15 +5,15 @@ import { currency, getCurrencyOptions } from "../../lib/format.js";
 
 function GoalProgress({ goal }) {
   const pct = goal.progressPct ?? 0;
-  const barColor = pct >= 100 ? "bg-emerald-400" : pct >= 60 ? "bg-sky-400" : "bg-indigo-400";
+  const barColor = pct >= 100 ? "var(--hb-good)" : "var(--hb-accent)";
   return (
     <div className="mt-3">
-      <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-        <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      <div className="hb-progress-track h-2.5 w-full overflow-hidden rounded-full">
+        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${Math.min(pct, 100)}%`, background: barColor }} />
       </div>
       <div className="mt-1.5 flex items-center justify-between text-xs text-slate-500">
         <span>{currency(goal.totalSaved)} saved</span>
-        <span className="font-semibold" style={{ color: pct >= 100 ? "#10b981" : pct >= 60 ? "#0ea5e9" : "#6366f1" }}>
+        <span className="font-semibold" style={{ color: barColor }}>
           {pct}%
         </span>
       </div>
@@ -141,7 +141,7 @@ export default function SavingsPage({
         {editingSavingsEntryId && (
           <div
             className="flex items-center justify-between gap-3 rounded-[1.2rem] px-4 py-3 text-sm"
-            style={{ background: "rgba(50, 30, 8, 0.85)", border: "1px solid rgba(212, 135, 10, 0.35)", color: "#fde68a" }}
+            style={{ background: "var(--hb-accent-soft-bg)", border: "1px solid var(--hb-accent-line)", color: "var(--hb-accent-text)" }}
           >
             <p>Editing savings entry</p>
             <button className="inline-flex items-center gap-1 font-semibold" onClick={onCancelSavingsEntryEdit} type="button">
@@ -152,107 +152,107 @@ export default function SavingsPage({
 
         <form onSubmit={onSavingsSubmit} className="flex flex-col gap-3">
           {/* Amount */}
-          <div className="rounded-[1.2rem] px-5 py-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
+          <div className="rounded-[1.2rem] px-5 py-4" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Amount</p>
             <input
               name="amount" type="number" min="0" step="0.01"
               value={savingsForm.amount} onChange={onSavingsChange} placeholder="0.00"
               className="w-full bg-transparent text-2xl font-bold outline-none"
-              style={{ color: "#f0e0c0" }}
+              style={{ color: "var(--hb-text)" }}
             />
           </div>
 
           {/* Date */}
-          <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
-            <span className="flex-1 text-sm font-medium" style={{ color: savingsForm.date ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+          <label className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+            <span className="flex-1 text-sm font-medium" style={{ color: savingsForm.date ? "var(--hb-text)" : "var(--hb-text-muted)" }}>
               {savingsForm.date ? new Date(savingsForm.date + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Select date"}
             </span>
-            <ChevronDown className="h-4 w-4" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+            <ChevronDown className="h-4 w-4" style={{ color: "var(--hb-text-muted)" }} />
             <input type="date" name="date" value={savingsForm.date} onChange={onSavingsChange} className="sr-only" />
           </label>
 
           {/* Goal */}
-          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Goal (optional)</p>
-            <select name="savingsGoalId" value={savingsForm.savingsGoalId} onChange={onSavingsChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Goal (optional)</p>
+            <select name="savingsGoalId" value={savingsForm.savingsGoalId} onChange={onSavingsChange} className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }}>
               {goalOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "var(--hb-input-bg)", color: "var(--hb-text)" }}>{o.label}</option>)}
             </select>
           </div>
 
           {/* Note */}
-          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
-            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Note (optional)</p>
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Note (optional)</p>
             <input
               name="note" value={savingsForm.note} onChange={onSavingsChange}
               placeholder="Payday transfer, side income…"
-              className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}
+              className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }}
             />
           </div>
 
           <button type="submit" disabled={savingsBusy}
             className="w-full rounded-[1.2rem] py-3.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-40"
-            style={{ background: "#D4870A", boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.5)" }}>
+            style={{ background: "var(--hb-accent-strong)", boxShadow: "0 8px 24px -6px var(--hb-accent-glow)" }}>
             {savingsBusy ? "Saving…" : editingSavingsEntryId ? "Update Entry" : "Log Saving 🐾"}
           </button>
         </form>
 
         {/* Transfer to Current */}
-        <div className="rounded-[1.35rem] p-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+        <div className="rounded-[1.35rem] p-4" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <ArrowDownLeft className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
-              <p className="text-sm font-semibold" style={{ color: "#f0e0c0" }}>Transfer to Current</p>
+              <ArrowDownLeft className="h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+              <p className="text-sm font-semibold" style={{ color: "var(--hb-text)" }}>Transfer to Current</p>
             </div>
             {!showWithdrawForm && (
               <button type="button" onClick={() => setShowWithdrawForm(true)}
                 className="rounded-full px-3 py-1.5 text-xs font-semibold transition"
-                style={{ background: "rgba(212, 135, 10, 0.15)", color: "#D4870A", border: "1px solid rgba(212, 135, 10, 0.3)" }}>
+                style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)", border: "1px solid var(--hb-accent-line)" }}>
                 Withdraw
               </button>
             )}
           </div>
           {showWithdrawForm ? (
             <form onSubmit={handleWithdrawSubmit} className="flex flex-col gap-3 mt-4">
-              <p className="text-xs" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Moves money back to your current balance as a negative savings entry.</p>
+              <p className="text-xs" style={{ color: "var(--hb-text-muted)" }}>Moves money back to your current balance as a negative savings entry.</p>
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Amount</p>
+                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Amount</p>
                   <input type="number" min="0" step="0.01" value={withdrawForm.amount}
                     onChange={(e) => setWithdrawForm((f) => ({ ...f, amount: e.target.value }))}
-                    placeholder="0.00" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "#f0e0c0" }} />
+                    placeholder="0.00" className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
                 </div>
-                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>From goal</p>
+                <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+                  <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>From goal</p>
                   <select value={withdrawForm.savingsGoalId}
                     onChange={(e) => setWithdrawForm((f) => ({ ...f, savingsGoalId: e.target.value }))}
-                    className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }}>
+                    className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }}>
                     {goalOptions.map((o) => <option key={o.value} value={o.value} style={{ background: "var(--hb-input-bg)", color: "var(--hb-text)" }}>{o.label}</option>)}
                   </select>
                 </div>
               </div>
-              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Note (optional)</p>
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Note (optional)</p>
                 <input value={withdrawForm.note}
                   onChange={(e) => setWithdrawForm((f) => ({ ...f, note: e.target.value }))}
                   placeholder="Emergency repair, medical bill…"
-                  className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+                  className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
               </div>
               <div className="flex gap-2">
                 <button type="submit" disabled={withdrawBusy}
                   className="flex-1 rounded-[1.0rem] py-3 text-sm font-bold text-white transition disabled:opacity-40"
-                  style={{ background: "#D4870A", boxShadow: "0 6px 18px -6px rgba(180, 100, 5, 0.5)" }}>
+                  style={{ background: "var(--hb-accent-strong)", boxShadow: "0 6px 18px -6px var(--hb-accent-glow)" }}>
                   {withdrawBusy ? "…" : "Transfer"}
                 </button>
                 <button type="button" onClick={() => { setShowWithdrawForm(false); setWithdrawForm(WITHDRAW_EMPTY); }}
                   className="rounded-[1.0rem] px-4 py-3 text-sm font-medium transition"
-                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "rgba(212, 135, 10, 0.7)" }}>
+                  style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)", color: "var(--hb-text-muted)" }}>
                   Cancel
                 </button>
               </div>
             </form>
           ) : (
-            <p className="mt-2 text-xs" style={{ color: "rgba(156, 120, 85, 0.6)" }}>Need to dip into savings? Tap Withdraw to move an amount back to your current balance.</p>
+            <p className="mt-2 text-xs" style={{ color: "var(--hb-text-muted)" }}>Need to dip into savings? Tap Withdraw to move an amount back to your current balance.</p>
           )}
         </div>
       </div>
@@ -299,32 +299,32 @@ export default function SavingsPage({
         </div>
 
         {showGoalForm && (
-          <form onSubmit={handleGoalSubmit} className="mb-4 flex flex-col gap-3 rounded-[1.35rem] p-4" style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}>
+          <form onSubmit={handleGoalSubmit} className="mb-4 flex flex-col gap-3 rounded-[1.35rem] p-4" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
             <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold" style={{ color: "#f0e0c0" }}>{editingSavingsGoalId ? "Edit goal" : "New goal"}</p>
-              <button type="button" onClick={handleCancelGoal} style={{ color: "rgba(212, 135, 10, 0.6)" }}><X className="h-4 w-4" /></button>
+              <p className="text-sm font-semibold" style={{ color: "var(--hb-text)" }}>{editingSavingsGoalId ? "Edit goal" : "New goal"}</p>
+              <button type="button" onClick={handleCancelGoal} style={{ color: "var(--hb-text-muted)" }}><X className="h-4 w-4" /></button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Goal name</p>
-                <input name="title" value={savingsGoalForm.title} onChange={onSavingsGoalChange} placeholder="Emergency fund, Japan trip…" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Goal name</p>
+                <input name="title" value={savingsGoalForm.title} onChange={onSavingsGoalChange} placeholder="Emergency fund, Japan trip…" className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
               </div>
-              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Target amount</p>
-                <input name="targetAmount" type="number" min="0" step="0.01" value={savingsGoalForm.targetAmount} onChange={onSavingsGoalChange} placeholder="5000.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "#f0e0c0" }} />
+              <div className="rounded-[1.0rem] px-3 py-2.5" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+                <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Target amount</p>
+                <input name="targetAmount" type="number" min="0" step="0.01" value={savingsGoalForm.targetAmount} onChange={onSavingsGoalChange} placeholder="5000.00" className="w-full bg-transparent text-sm outline-none" style={{ color: "var(--hb-text)" }} />
               </div>
             </div>
-            <label className="flex items-center gap-2.5 rounded-[1.0rem] px-3 py-2.5 cursor-pointer" style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)" }}>
-              <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
-              <span className="flex-1 text-sm" style={{ color: savingsGoalForm.targetDate ? "#f0e0c0" : "rgba(240,210,160,0.35)" }}>
+            <label className="flex items-center gap-2.5 rounded-[1.0rem] px-3 py-2.5 cursor-pointer" style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)" }}>
+              <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+              <span className="flex-1 text-sm" style={{ color: savingsGoalForm.targetDate ? "var(--hb-text)" : "var(--hb-text-muted)" }}>
                 {savingsGoalForm.targetDate ? new Date(savingsGoalForm.targetDate + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "Target date (optional)"}
               </span>
-              <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+              <ChevronDown className="h-3.5 w-3.5" style={{ color: "var(--hb-text-muted)" }} />
               <input type="date" name="targetDate" value={savingsGoalForm.targetDate} onChange={onSavingsGoalChange} className="sr-only" />
             </label>
             <button type="submit" disabled={savingsTargetBusy}
               className="w-full rounded-[1.0rem] py-3 text-sm font-bold text-white transition disabled:opacity-40"
-              style={{ background: "#D4870A", boxShadow: "0 6px 18px -6px rgba(180, 100, 5, 0.5)" }}>
+              style={{ background: "var(--hb-accent-strong)", boxShadow: "0 6px 18px -6px var(--hb-accent-glow)" }}>
               {savingsTargetBusy ? "Saving…" : editingSavingsGoalId ? "Update Goal" : "Save Goal"}
             </button>
           </form>

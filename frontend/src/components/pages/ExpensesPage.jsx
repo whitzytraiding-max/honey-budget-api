@@ -48,11 +48,11 @@ function NumpadKey({ label, onPress, wide, tall, amber }) {
       style={{
         minHeight: tall ? undefined : "52px",
         background: amber
-          ? "#D4870A"
-          : "rgba(50, 30, 8, 0.75)",
-        color: amber ? "#fff" : "#f0e0c0",
-        border: amber ? "none" : "1px solid rgba(100, 65, 20, 0.3)",
-        boxShadow: amber ? "0 6px 20px -6px rgba(180, 100, 5, 0.5)" : "none",
+          ? "var(--hb-accent-strong)"
+          : "var(--hb-surface-soft)",
+        color: amber ? "var(--hb-accent-contrast)" : "var(--hb-text)",
+        border: amber ? "none" : "1px solid var(--hb-border)",
+        boxShadow: amber ? "0 6px 20px -6px var(--hb-accent-glow)" : "none",
       }}
       onClick={() => { hapticLight(); onPress(label); }}
     >
@@ -66,27 +66,27 @@ function TransactionCard({ transaction, currentUserId, onEdit, onDelete, t }) {
   return (
     <div
       className="rounded-[1.35rem] p-4"
-      style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+      style={{ background: "var(--hb-surface)", border: "1px solid var(--hb-border)" }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-semibold" style={{ color: "#f0e0c0" }}>{transaction.description}</p>
-          <p className="mt-1 text-xs uppercase tracking-[0.18em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+          <p className="truncate font-semibold" style={{ color: "var(--hb-text)" }}>{transaction.description}</p>
+          <p className="mt-1 text-xs uppercase tracking-[0.18em]" style={{ color: "var(--hb-text-muted)" }}>
             {transaction.date}
           </p>
         </div>
-        <p className="text-base font-semibold" style={{ color: "#D4870A" }}>
+        <p className="text-base font-semibold" style={{ color: "var(--hb-accent-text)" }}>
           {currency(transaction.displayAmount ?? transaction.amount)}
         </p>
       </div>
-      <div className="mt-3 flex flex-wrap gap-2 text-xs" style={{ color: "rgba(212, 135, 10, 0.7)" }}>
-        <span className="rounded-full px-2.5 py-1" style={{ background: "rgba(60, 36, 8, 0.8)" }}>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs" style={{ color: "var(--hb-accent-text)" }}>
+        <span className="rounded-full px-2.5 py-1" style={{ background: "var(--hb-accent-soft-bg)" }}>
           {transaction.category}
         </span>
-        <span className="rounded-full px-2.5 py-1" style={{ background: "rgba(60, 36, 8, 0.8)" }}>
+        <span className="rounded-full px-2.5 py-1" style={{ background: "var(--hb-accent-soft-bg)" }}>
           {transaction.currencyCode}
         </span>
-        <span className="rounded-full px-2.5 py-1" style={{ background: "rgba(60, 36, 8, 0.8)" }}>
+        <span className="rounded-full px-2.5 py-1" style={{ background: "var(--hb-accent-soft-bg)" }}>
           {transaction.paymentMethod === "cash" ? "Cash" : "Card"}
         </span>
       </div>
@@ -94,7 +94,7 @@ function TransactionCard({ transaction, currentUserId, onEdit, onDelete, t }) {
         <div className="mt-3 flex gap-2">
           <button
             className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition"
-            style={{ background: "rgba(60, 36, 8, 0.8)", color: "#D4870A" }}
+            style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)" }}
             onClick={() => onEdit(transaction)}
             type="button"
           >
@@ -103,7 +103,7 @@ function TransactionCard({ transaction, currentUserId, onEdit, onDelete, t }) {
           </button>
           <button
             className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition"
-            style={{ background: "rgba(60, 14, 18, 0.8)", color: "#f87171" }}
+            style={{ background: "var(--hb-bad-soft-bg)", color: "var(--hb-bad-text)" }}
             onClick={() => onDelete(transaction)}
             type="button"
           >
@@ -195,10 +195,10 @@ function ExpensesPage({
     return (
       <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-4">
-          <Wallet className="h-5 w-5" style={{ color: "#D4870A" }} />
+          <Wallet className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
           <div>
             <h2 className="text-xl font-semibold">{t("expenses.latest")}</h2>
-            <p className="text-sm" style={{ color: "rgba(156, 120, 85, 0.8)" }}>{t("expenses.latestSubtitle")}</p>
+            <p className="text-sm" style={{ color: "var(--hb-text-muted)" }}>{t("expenses.latestSubtitle")}</p>
           </div>
         </div>
         <div className="space-y-3">
@@ -214,7 +214,7 @@ function ExpensesPage({
               />
             ))
           ) : (
-            <div className="rounded-[1.35rem] px-4 py-8 text-center text-sm" style={{ background: "rgba(42, 26, 8, 0.7)", color: "rgba(156, 120, 85, 0.8)" }}>
+            <div className="rounded-[1.35rem] px-4 py-8 text-center text-sm" style={{ background: "var(--hb-surface-soft)", color: "var(--hb-text-muted)" }}>
               {t("expenses.empty")}
             </div>
           )}
@@ -228,7 +228,7 @@ function ExpensesPage({
     return (
       <section className="hb-surface-card rounded-[1.75rem] p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-4">
-          <Wallet className="h-5 w-5" style={{ color: "#D4870A" }} />
+          <Wallet className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
           <h2 className="text-xl font-semibold">Expense History</h2>
         </div>
         <div className="space-y-3">
@@ -244,7 +244,7 @@ function ExpensesPage({
               />
             ))
           ) : (
-            <div className="rounded-[1.35rem] px-4 py-8 text-center text-sm" style={{ background: "rgba(42, 26, 8, 0.7)", color: "rgba(156, 120, 85, 0.8)" }}>
+            <div className="rounded-[1.35rem] px-4 py-8 text-center text-sm" style={{ background: "var(--hb-surface-soft)", color: "var(--hb-text-muted)" }}>
               {t("expenses.empty")}
             </div>
           )}
@@ -270,7 +270,7 @@ function ExpensesPage({
       {editingTransactionId ? (
         <div
           className="flex items-center justify-between gap-3 rounded-[1.2rem] px-4 py-3 text-sm"
-          style={{ background: "rgba(50, 30, 8, 0.85)", border: "1px solid rgba(212, 135, 10, 0.35)", color: "#fde68a" }}
+          style={{ background: "var(--hb-accent-soft-bg)", border: "1px solid var(--hb-accent-line)", color: "var(--hb-accent-text)" }}
         >
           <p>{t("expenses.editingHelp")}</p>
           <button className="inline-flex items-center gap-1 font-semibold" onClick={onCancelEdit} type="button">
@@ -283,7 +283,7 @@ function ExpensesPage({
       {/* Card / Cash toggle */}
       <div
         className="flex gap-1 p-1 rounded-full"
-        style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+        style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
       >
         {[{ label: "Card", value: "card" }, { label: "Cash", value: "cash" }].map(({ label, value }) => (
           <button
@@ -291,8 +291,8 @@ function ExpensesPage({
             type="button"
             className="flex-1 py-2.5 rounded-full text-sm font-semibold transition"
             style={{
-              background: (expenseForm.paymentMethod || "card") === value ? "#D4870A" : "transparent",
-              color: (expenseForm.paymentMethod || "card") === value ? "#fff" : "rgba(212, 135, 10, 0.5)",
+              background: (expenseForm.paymentMethod || "card") === value ? "var(--hb-accent-strong)" : "transparent",
+              color: (expenseForm.paymentMethod || "card") === value ? "var(--hb-accent-contrast)" : "var(--hb-text-muted)",
             }}
             onClick={() => { hapticLight(); onExpenseChange({ target: { name: "paymentMethod", value } }); }}
           >
@@ -304,13 +304,13 @@ function ExpensesPage({
           {/* Date row */}
           <label
             className="flex items-center gap-2.5 rounded-[1.2rem] px-4 py-3 cursor-pointer transition"
-            style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+            style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
           >
-            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#D4870A" }} />
-            <span className="flex-1 text-sm font-medium" style={{ color: "#f0e0c0" }}>
+            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+            <span className="flex-1 text-sm font-medium" style={{ color: "var(--hb-text)" }}>
               {formatDateDisplay(expenseForm.date)}
             </span>
-            <ChevronDown className="h-4 w-4" style={{ color: "rgba(212, 135, 10, 0.5)" }} />
+            <ChevronDown className="h-4 w-4" style={{ color: "var(--hb-text-muted)" }} />
             <input
               type="date"
               name="date"
@@ -323,7 +323,7 @@ function ExpensesPage({
 
           {/* Category grid */}
           <div>
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: "var(--hb-text-muted)" }}>
               Category
             </p>
             <div className="grid grid-cols-5 gap-2">
@@ -335,8 +335,8 @@ function ExpensesPage({
                     type="button"
                     className="flex flex-col items-center gap-1 rounded-xl py-2 px-1 transition active:scale-95"
                     style={{
-                      background: isSelected ? "rgba(212, 135, 10, 0.2)" : "rgba(42, 26, 8, 0.85)",
-                      border: isSelected ? "1px solid #D4870A" : "1px solid rgba(100, 65, 20, 0.3)",
+                      background: isSelected ? "var(--hb-accent-soft-bg)" : "var(--hb-surface-soft)",
+                      border: isSelected ? "1px solid var(--hb-accent)" : "1px solid var(--hb-border)",
                     }}
                     onClick={() => {
                       hapticLight();
@@ -345,11 +345,11 @@ function ExpensesPage({
                   >
                     <cat.icon
                       className="h-5 w-5"
-                      style={{ color: isSelected ? "#D4870A" : "rgba(212, 135, 10, 0.55)", strokeWidth: 1.75 }}
+                      style={{ color: isSelected ? "var(--hb-accent-text)" : "var(--hb-text-muted)", strokeWidth: 1.75 }}
                     />
                     <span
                       className="text-[9px] font-medium leading-none text-center"
-                      style={{ color: isSelected ? "#D4870A" : "rgba(212, 135, 10, 0.6)" }}
+                      style={{ color: isSelected ? "var(--hb-accent-text)" : "var(--hb-text-muted)" }}
                     >
                       {cat.label}
                     </span>
@@ -362,23 +362,23 @@ function ExpensesPage({
           {/* Amount display */}
           <div
             className="relative flex items-center justify-between rounded-[1.2rem] px-5 py-4"
-            style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+            style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
           >
             <div className="flex items-baseline gap-1.5">
               <button
                 type="button"
                 className="flex items-center gap-1 text-lg font-medium transition active:opacity-60"
-                style={{ color: "rgba(212, 135, 10, 0.8)", background: "none", border: "none", padding: 0 }}
+                style={{ color: "var(--hb-accent-text)", background: "none", border: "none", padding: 0 }}
                 onClick={() => { hapticLight(); setShowCurrencyPicker((v) => !v); }}
               >
                 {activeCurrency}
-                <ChevronDown className="h-3.5 w-3.5" style={{ color: "rgba(212, 135, 10, 0.5)", marginBottom: "-2px" }} />
+                <ChevronDown className="h-3.5 w-3.5" style={{ color: "var(--hb-text-muted)", marginBottom: "-2px" }} />
               </button>
               {/* Currency dropdown */}
               {showCurrencyPicker && (
                 <div
                   className="absolute left-0 top-full mt-2 z-30 rounded-2xl overflow-y-auto"
-                  style={{ background: "rgba(28, 16, 4, 0.97)", border: "1px solid rgba(212, 135, 10, 0.35)", minWidth: "160px", maxHeight: "220px", boxShadow: "0 8px 32px -8px rgba(0,0,0,0.6)" }}
+                  style={{ background: "var(--hb-surface-strong)", border: "1px solid var(--hb-accent-line)", minWidth: "160px", maxHeight: "220px", boxShadow: "var(--hb-shadow)" }}
                 >
                   {currencyOptions.map((opt) => (
                     <button
@@ -386,7 +386,7 @@ function ExpensesPage({
                       type="button"
                       className="flex w-full items-center justify-between px-4 py-2.5 text-sm transition hover:bg-white/5"
                       style={{
-                        color: activeCurrency === opt.value ? "#D4870A" : "#f0e0c0",
+                        color: activeCurrency === opt.value ? "var(--hb-accent-text)" : "var(--hb-text)",
                         fontWeight: activeCurrency === opt.value ? 600 : 400,
                       }}
                       onClick={() => {
@@ -396,20 +396,20 @@ function ExpensesPage({
                       }}
                     >
                       <span>{opt.value}</span>
-                      {activeCurrency === opt.value && <span style={{ color: "#D4870A" }}>✓</span>}
+                      {activeCurrency === opt.value && <span style={{ color: "var(--hb-accent-text)" }}>✓</span>}
                     </button>
                   ))}
                 </div>
               )}
               <span
                 className="text-4xl font-bold tracking-tight transition-all duration-300"
-                style={{ color: loggedFlash ? "#4ade80" : numStr ? "#f0e0c0" : "rgba(240, 210, 160, 0.3)" }}
+                style={{ color: loggedFlash ? "var(--hb-good)" : numStr ? "var(--hb-text)" : "var(--hb-text-muted)" }}
               >
                 {loggedFlash ? "Logged ✓" : numStr ? displayAmount() : "0.00"}
               </span>
             </div>
             {showMmkHelper && mmkRateText ? (
-              <span className="text-[10px]" style={{ color: "rgba(156, 120, 85, 0.6)" }}>{mmkRateText}</span>
+              <span className="text-[10px]" style={{ color: "var(--hb-text-muted)" }}>{mmkRateText}</span>
             ) : null}
           </div>
 
@@ -429,12 +429,13 @@ function ExpensesPage({
             <button
               type="submit"
               disabled={expenseBusy || !numStr || parseFloat(numStr) === 0}
-              className="rounded-2xl font-bold text-white transition active:scale-95 disabled:opacity-40"
+              className="rounded-2xl font-bold transition active:scale-95 disabled:opacity-40"
               style={{
                 gridRow: "2 / span 3",
                 gridColumn: "4",
-                background: "#D4870A",
-                boxShadow: "0 8px 24px -6px rgba(180, 100, 5, 0.55)",
+                background: "var(--hb-accent-strong)",
+                color: "var(--hb-accent-contrast)",
+                boxShadow: "0 8px 24px -6px var(--hb-accent-glow)",
                 fontSize: "0.95rem",
               }}
             >
@@ -455,7 +456,7 @@ function ExpensesPage({
           <button
             type="button"
             className="text-xs font-medium text-center py-1 transition"
-            style={{ color: "rgba(156, 120, 85, 0.6)" }}
+            style={{ color: "var(--hb-text-muted)" }}
             onClick={() => setShowAdvanced((v) => !v)}
           >
             {showAdvanced ? "▲ Hide options" : "▼ More options"}
@@ -464,11 +465,11 @@ function ExpensesPage({
           {showAdvanced && (
             <div
               className="rounded-[1.35rem] p-4 space-y-4"
-              style={{ background: "rgba(42, 26, 8, 0.85)", border: "1px solid rgba(100, 65, 20, 0.3)" }}
+              style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
             >
               {/* Note */}
               <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>
                   Note
                 </span>
                 <input
@@ -477,13 +478,13 @@ function ExpensesPage({
                   onChange={onExpenseChange}
                   placeholder="e.g. Date night tacos"
                   className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
-                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "#f0e0c0" }}
+                  style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)", color: "var(--hb-text)" }}
                 />
               </label>
 
               {/* Full category select */}
               <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+                <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>
                   Category (full list)
                 </span>
                 <select
@@ -491,7 +492,7 @@ function ExpensesPage({
                   value={expenseForm.category}
                   onChange={onExpenseChange}
                   className="w-full rounded-[0.9rem] px-3 py-2.5 text-sm outline-none"
-                  style={{ background: "rgba(30, 16, 4, 0.9)", border: "1px solid rgba(100, 65, 20, 0.35)", color: "#f0e0c0" }}
+                  style={{ background: "var(--hb-input-bg)", border: "1px solid var(--hb-input-border)", color: "var(--hb-text)" }}
                 >
                   {CATEGORIES.map((c) => (
                     <option key={c} value={c}>{c}</option>
@@ -501,7 +502,7 @@ function ExpensesPage({
 
               {/* Type */}
               <div>
-                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>Type</p>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>Type</p>
                 <div className="flex gap-1">
                   {[{ label: t("expenses.oneTime"), value: "one-time" }, { label: t("expenses.recurring"), value: "recurring" }].map((o) => (
                     <button
@@ -509,9 +510,9 @@ function ExpensesPage({
                       type="button"
                       className="flex-1 rounded-xl py-2 text-xs font-medium transition"
                       style={{
-                        background: expenseForm.type === o.value ? "#D4870A" : "rgba(30, 16, 4, 0.9)",
-                        color: expenseForm.type === o.value ? "#fff" : "rgba(212, 135, 10, 0.6)",
-                        border: "1px solid rgba(100, 65, 20, 0.35)",
+                        background: expenseForm.type === o.value ? "var(--hb-accent-strong)" : "var(--hb-surface)",
+                        color: expenseForm.type === o.value ? "var(--hb-accent-contrast)" : "var(--hb-text-muted)",
+                        border: "1px solid var(--hb-border)",
                       }}
                       onClick={() => onExpenseChange({ target: { name: "type", value: o.value } })}
                     >
@@ -533,7 +534,7 @@ function ExpensesPage({
                 ];
                 return (
                   <div>
-                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "rgba(156, 120, 85, 0.7)" }}>
+                    <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>
                       Log under
                     </p>
                     <div className="flex gap-2">
@@ -543,9 +544,9 @@ function ExpensesPage({
                           type="button"
                           className="flex-1 rounded-xl py-2 text-xs font-medium transition"
                           style={{
-                            background: activeId === id ? "#D4870A" : "rgba(30, 16, 4, 0.9)",
-                            color: activeId === id ? "#fff" : "rgba(212, 135, 10, 0.6)",
-                            border: "1px solid rgba(100, 65, 20, 0.35)",
+                            background: activeId === id ? "var(--hb-accent-strong)" : "var(--hb-surface)",
+                            color: activeId === id ? "var(--hb-accent-contrast)" : "var(--hb-text-muted)",
+                            border: "1px solid var(--hb-border)",
                           }}
                           onClick={() => onExpenseChange({ target: { name: "logAsUserId", value: id } })}
                         >
