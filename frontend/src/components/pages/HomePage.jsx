@@ -4,8 +4,45 @@
  * Proprietary and confidential. Unauthorized copying is prohibited.
  */
 import { useMemo } from "react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { Lightbulb } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency } from "../../lib/format.js";
+
+// Categorical palette — distinct, reads on both light and dark surfaces.
+const CAT_COLORS = ["#6366f1", "#0ea5e9", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6", "#f97316"];
+
+// ─── Spending donut (this month, by category) ────────────────────────────────
+function SpendingDonut({ data, total }) {
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: 150, height: 150 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={48}
+            outerRadius={70}
+            paddingAngle={3}
+            dataKey="value"
+            startAngle={90}
+            endAngle={-270}
+            stroke="none"
+          >
+            {data.map((entry, i) => (
+              <Cell key={i} fill={entry.color} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-[10px] uppercase tracking-[0.16em]" style={{ color: "var(--hb-text-muted)" }}>Spent</span>
+        <span className="text-base font-bold" style={{ color: "var(--hb-text)" }}>{currency(total)}</span>
+      </div>
+    </div>
+  );
+}
 
 
 function HomePage({
@@ -62,6 +99,31 @@ function HomePage({
   const allTimeSaved = Number(savingsData?.allTimeSaved ?? 0);
   const hasSavings = Boolean(savingsData) && (allTimeSaved > 0 || savingsGoals.length > 0);
   const recentTx = (dashboard?.transactions ?? []).slice(0, 3);
+
+  // Spending-by-category donut (this month)
+  const topCategories = dashboard?.topCategories ?? [];
+  const catData = useMemo(
+    () =>
+      topCategories
+        .slice(0, 6)
+        .map((cat, i) => ({ name: cat.category, value: Number(cat.amount) || 0, color: CAT_COLORS[i % CAT_COLORS.length] }))
+        .filter((d) => d.value > 0),
+    [topCategories],
+  );
+
+  // A small, instant insight tip derived from the month's numbers (no AI call)
+  const homeTip = useMemo(() => {
+    if (totalSpent === 0) return null;
+    if (remainingBudget < 0) return "You've gone over budget this month — a good moment to pause new spending.";
+    if (remainingPct <= 15) return "You're close to the edge for the month. Keep the next few days light.";
+    const top = catData[0];
+    if (top && totalSpent > 0) {
+      const pct = Math.round((top.value / totalSpent) * 100);
+      if (pct >= 35) return `${top.name} is your biggest spend this month — ${currency(top.value)} (${pct}% of spending).`;
+    }
+    if (remainingPct >= 60) return `Nicely on track — ${currency(remainingBudget)} still free this month.`;
+    return top ? `Most goes to ${top.name} so far (${currency(top.value)}).` : null;
+  }, [totalSpent, remainingBudget, remainingPct, catData]);
 
   return (
     <div className="space-y-4">
@@ -171,6 +233,42 @@ function HomePage({
           </div>
         )}
       </section>
+
+      {/* Where it went — spending by category */}
+      {catData.length > 0 && (
+        <section className="rounded-[1.35rem] p-4" style={{ background: sectionBg, border: sectionBorder }}>
+          <div className="flex items-center justify-between">
+            <p className="hb-kicker">Where it went</p>
+            <button type="button" onClick={() => onNavigate?.("insights")} className="text-xs font-semibold" style={{ color: "var(--hb-accent-text)" }}>
+              Insights →
+            </button>
+          </div>
+          <div className="mt-2 flex items-center gap-4">
+            <SpendingDonut data={catData} total={totalSpent} />
+            <ul className="min-w-0 flex-1 space-y-1.5">
+              {catData.slice(0, 5).map((cat) => {
+                const pct = totalSpent > 0 ? Math.round((cat.value / totalSpent) * 100) : 0;
+                return (
+                  <li key={cat.name} className="flex items-center gap-2 text-sm">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: cat.color }} />
+                    <span className="min-w-0 flex-1 truncate" style={{ color: "var(--hb-text)" }}>{cat.name}</span>
+                    <span className="shrink-0 tabular-nums" style={{ color: "var(--hb-text-muted)" }}>{pct}%</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          {homeTip && (
+            <div
+              className="mt-3 flex items-start gap-2.5 rounded-[1rem] px-3.5 py-2.5"
+              style={{ background: "var(--hb-accent-soft-bg)", border: "1px solid var(--hb-accent-line)" }}
+            >
+              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+              <p className="text-sm leading-5" style={{ color: "var(--hb-text)" }}>{homeTip}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Savings summary */}
       {hasSavings && (

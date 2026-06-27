@@ -57,7 +57,7 @@ function getMood(pct) {
 
 let keyframesInjected = false;
 
-export function MoneyCat({ remainingPct = 50, size = 88 }) {
+export function MoneyCat({ remainingPct = 50, size = 88, variant = "full", showLabel = true }) {
   if (typeof document !== "undefined" && !keyframesInjected) {
     const style = document.createElement("style");
     style.textContent = KEYFRAMES;
@@ -66,6 +66,40 @@ export function MoneyCat({ remainingPct = 50, size = 88 }) {
   }
 
   const mood = getMood(remainingPct);
+
+  // Avatar variant — the cat is a 2:3 portrait, so to "sit inside" a round
+  // button we clip it to a circle (cover) and keep the mood emoji outside the clip.
+  if (variant === "avatar") {
+    return (
+      <div className="relative select-none flex-shrink-0" style={{ width: size, height: size }}>
+        <div
+          className="overflow-hidden rounded-full"
+          style={{ width: size, height: size, ...ANIM_STYLE[mood] }}
+        >
+          <img
+            src="/icons/money-cat.png"
+            alt={`Money cat: ${MOOD_LABELS[mood]}`}
+            width={size}
+            height={size}
+            style={{
+              width: size,
+              height: size,
+              objectFit: "cover",
+              objectPosition: "center 22%",
+              filter: MOOD_FILTER[mood],
+              transition: "filter 0.6s ease",
+            }}
+            draggable={false}
+          />
+        </div>
+        {MOOD_OVERLAY[mood] && (
+          <span className="absolute -right-1 -top-1 text-base leading-none" aria-hidden="true">
+            {MOOD_OVERLAY[mood]}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center gap-1 select-none flex-shrink-0">
@@ -91,9 +125,11 @@ export function MoneyCat({ remainingPct = 50, size = 88 }) {
           </span>
         )}
       </div>
-      <p className="text-[10px] font-semibold text-white/70 tracking-wide text-center leading-tight" style={{ maxWidth: size }}>
-        {MOOD_LABELS[mood]}
-      </p>
+      {showLabel && (
+        <p className="text-[10px] font-semibold text-white/70 tracking-wide text-center leading-tight" style={{ maxWidth: size }}>
+          {MOOD_LABELS[mood]}
+        </p>
+      )}
     </div>
   );
 }

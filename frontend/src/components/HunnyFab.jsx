@@ -259,7 +259,7 @@ export default function HunnyFab({ onSendMessage, remainingPct = 50 }) {
         {recording && (
           <span className="absolute inset-0 -m-1 animate-ping rounded-full pointer-events-none" style={{ background: "var(--hb-accent-ring)" }} />
         )}
-        <MoneyCat remainingPct={remainingPct} size={54} />
+        <MoneyCat remainingPct={remainingPct} size={58} variant="avatar" />
       </button>
 
       {!open && (
