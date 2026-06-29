@@ -6,13 +6,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Check, CheckCircle, ChevronDown, ChevronUp, CloudUpload, Map,
-  Trash2, Sparkles, Target,
+  Trash2, Sparkles, Target, Plus, Wallet, PencilLine, ArrowRight,
 } from "lucide-react";
 import { ActionButton } from "../ui.jsx";
 import { parseBudgetSpreadsheet } from "../../lib/budgetParser.js";
 
 const STEPS = {
   IDLE: "idle",
+  BUILD: "build",
   UPLOADING: "uploading",
   ANALYSING: "analysing",
   QUESTIONS: "questions",
@@ -20,6 +21,12 @@ const STEPS = {
   SAVING: "saving",
   ROADMAP: "roadmap",
 };
+
+// Common expense categories offered as quick-add chips in the manual builder
+const COMMON_CATEGORIES = [
+  "Housing", "Food & Dining", "Transport", "Utilities",
+  "Entertainment", "Health", "Subscriptions", "Debt",
+];
 
 const UPLOAD_STAGES = [
   { pct: 55, label: "Reading your file…" },
@@ -546,6 +553,245 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
   );
 }
 
+// ── Build a parsedPlan from manual builder input ──────────────────────────────
+// Mirrors the single-period spreadsheet shape: one monthly template repeated
+// across 12 months so it slots straight into the save → roadmap pipeline.
+function buildManualPlan({ name, startMonth, currency, income, expenses, goalAmount, goalDescription }) {
+  const categories = expenses
+    .map((e) => ({ name: (e.name || "").trim() || "Other", amount: Number(e.amount) || 0 }))
+    .filter((e) => e.amount > 0);
+  // Merge duplicate category names
+  const merged = {};
+  for (const c of categories) merged[c.name] = (merged[c.name] ?? 0) + c.amount;
+  const mergedCats = Object.entries(merged).map(([n, a]) => ({ name: n, amount: a }));
+
+  const totalExpenses = mergedCats.reduce((s, c) => s + c.amount, 0);
+  const inc = Number(income) || 0;
+  const plannedSavings = Math.max(0, inc - totalExpenses);
+
+  const [y, m] = startMonth.split("-").map(Number);
+  const months = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(y, m - 1 + i, 1);
+    months.push({
+      month: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      income: inc,
+      categories: mergedCats.map((c) => ({ ...c })),
+      totalExpenses,
+      plannedSavings,
+    });
+  }
+
+  const goal = Number(goalAmount) > 0
+    ? Number(goalAmount)
+    : (plannedSavings > 0 ? Math.round(plannedSavings * 12) : null);
+
+  return {
+    name: (name || "").trim() || "My Monthly Budget",
+    startMonth: months[0].month,
+    endMonth: months[months.length - 1].month,
+    currency,
+    goalAmount: goal,
+    goalDescription: goalDescription || (goal ? "Yearly savings goal" : null),
+    months,
+  };
+}
+
+// ── Manual budget builder ─────────────────────────────────────────────────────
+function ManualBuilder({ displayCurrency, onCancel, onSave }) {
+  const [name, setName] = useState("My Monthly Budget");
+  const [startMonth, setStartMonth] = useState(currentYYYYMM());
+  const [income, setIncome] = useState("");
+  const [rows, setRows] = useState([{ id: 1, name: "", amount: "" }]);
+  const [goalAmount, setGoalAmount] = useState("");
+  const nextId = useRef(2);
+
+  const currency = displayCurrency || "USD";
+
+  function addRow(presetName = "") {
+    setRows((rs) => [...rs, { id: nextId.current++, name: presetName, amount: "" }]);
+  }
+  function updateRow(id, field, value) {
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+  }
+  function removeRow(id) {
+    setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== id) : rs));
+  }
+
+  const incomeNum = Number(income) || 0;
+  const totalExpenses = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const leftOver = incomeNum - totalExpenses;
+  const usedCategories = new Set(rows.map((r) => r.name.trim()).filter(Boolean));
+
+  function handleSubmit() {
+    const plan = buildManualPlan({
+      name, startMonth, currency, income: incomeNum,
+      expenses: rows, goalAmount,
+    });
+    onSave(plan);
+  }
+
+  const canSave = incomeNum > 0 || totalExpenses > 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-accent-soft-bg)" }}>
+            <PencilLine className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
+          </span>
+          <div>
+            <h2 className="text-xl font-semibold sm:text-2xl">Build your budget</h2>
+            <p className="text-sm" style={{ color: "var(--hb-ink-soft)" }}>
+              Add your income and monthly expenses — we'll show what's left.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Plan basics */}
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>Plan name</p>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="My Monthly Budget"
+              className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
+          </div>
+          <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>Starting month</p>
+            <input type="month" value={startMonth} onChange={(e) => setStartMonth(e.target.value || currentYYYYMM())}
+              className="w-full bg-transparent text-sm font-semibold outline-none" style={{ color: "var(--hb-text)" }} />
+          </div>
+        </div>
+        <div className="rounded-[1.2rem] px-4 py-3 flex items-center gap-3"
+          style={{ background: "var(--hb-good-soft-bg)", border: "1px solid var(--hb-border)" }}>
+          <Wallet className="h-5 w-5 shrink-0" style={{ color: "var(--hb-good-text)" }} />
+          <div className="flex-1">
+            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>Monthly income</p>
+            <input type="number" inputMode="decimal" min="0" step="0.01" value={income}
+              onChange={(e) => setIncome(e.target.value)} placeholder="0.00"
+              className="w-full bg-transparent text-lg font-bold outline-none tabular-nums" style={{ color: "var(--hb-text)" }} />
+          </div>
+        </div>
+      </section>
+
+      {/* Expenses */}
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold">Monthly expenses</h3>
+          <span className="text-sm font-bold tabular-nums" style={{ color: "var(--hb-ink-soft)" }}>
+            {fmt(totalExpenses, currency)}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {rows.map((r) => (
+            <div key={r.id} className="flex items-center gap-2">
+              <input
+                list="hb-budget-categories"
+                value={r.name}
+                onChange={(e) => updateRow(r.id, "name", e.target.value)}
+                placeholder="Expense name"
+                className="flex-1 min-w-0 rounded-[1rem] px-3 py-2.5 text-sm outline-none"
+                style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text)" }}
+              />
+              <input
+                type="number" inputMode="decimal" min="0" step="0.01"
+                value={r.amount}
+                onChange={(e) => updateRow(r.id, "amount", e.target.value)}
+                placeholder="0.00"
+                className="w-24 shrink-0 rounded-[1rem] px-3 py-2.5 text-sm font-semibold outline-none tabular-nums text-right"
+                style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text)" }}
+              />
+              <button type="button" onClick={() => removeRow(r.id)}
+                className="shrink-0 p-2 rounded-xl transition opacity-40 hover:opacity-90"
+                style={{ color: "var(--hb-ink-soft)" }} title="Remove" disabled={rows.length <= 1}>
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <datalist id="hb-budget-categories">
+          {COMMON_CATEGORIES.map((c) => <option key={c} value={c} />)}
+        </datalist>
+
+        <button type="button" onClick={() => addRow()}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-[1rem] px-3.5 py-2 text-sm font-semibold transition"
+          style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)" }}>
+          <Plus className="h-4 w-4" /> Add expense
+        </button>
+
+        {/* Quick-add category chips */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {COMMON_CATEGORIES.filter((c) => !usedCategories.has(c)).map((c) => (
+            <button key={c} type="button" onClick={() => addRow(c)}
+              className="rounded-full px-3 py-1 text-xs font-medium transition opacity-80 hover:opacity-100"
+              style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-ink-soft)" }}>
+              + {c}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Live summary */}
+      <section className="hb-surface-card rounded-[1.5rem] p-5 sm:rounded-[1.75rem] overflow-hidden relative">
+        <div className="pointer-events-none absolute inset-0"
+          style={{ background: `radial-gradient(ellipse at 90% -10%, ${leftOver >= 0 ? "var(--hb-good-soft-bg)" : "var(--hb-bad-soft-bg)"}, transparent 60%)` }} />
+        <div className="relative space-y-2">
+          <div className="flex justify-between text-sm">
+            <span style={{ color: "var(--hb-ink-soft)" }}>Income</span>
+            <span className="font-semibold tabular-nums" style={{ color: "var(--hb-good-text)" }}>{fmt(incomeNum, currency)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span style={{ color: "var(--hb-ink-soft)" }}>Expenses</span>
+            <span className="font-semibold tabular-nums">− {fmt(totalExpenses, currency)}</span>
+          </div>
+          <div className="h-px my-1" style={{ background: "var(--hb-border)" }} />
+          <div className="flex items-end justify-between">
+            <span className="text-sm font-semibold">Left over each month</span>
+            <span className="text-2xl font-bold tabular-nums"
+              style={{ color: leftOver >= 0 ? "var(--hb-good-text)" : "var(--hb-bad-text)" }}>
+              {fmt(leftOver, currency)}
+            </span>
+          </div>
+          {leftOver < 0 && (
+            <p className="text-xs pt-1" style={{ color: "var(--hb-bad-text)" }}>
+              You're spending more than you earn. Trim an expense or add income.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Optional savings goal */}
+      <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
+        <div className="rounded-[1.2rem] px-4 py-3" style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}>
+          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>Savings goal (optional)</p>
+          <input type="number" inputMode="decimal" min="0" step="0.01" value={goalAmount}
+            onChange={(e) => setGoalAmount(e.target.value)}
+            placeholder={leftOver > 0 ? `e.g. ${fmt(leftOver * 12, currency)} a year` : "Total you want to save"}
+            className="w-full bg-transparent text-sm font-semibold outline-none tabular-nums" style={{ color: "var(--hb-text)" }} />
+        </div>
+        <p className="mt-2 text-xs" style={{ color: "var(--hb-ink-soft)" }}>
+          Leave blank to use your yearly left-over ({fmt(Math.max(0, leftOver) * 12, currency)}) as the target.
+        </p>
+      </section>
+
+      {/* Actions */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <ActionButton onClick={handleSubmit} className="flex-1" disabled={!canSave}>
+          Save &amp; view roadmap
+        </ActionButton>
+        <button
+          className="hb-button-secondary inline-flex items-center justify-center rounded-[1.2rem] px-5 py-3 font-medium transition"
+          onClick={onCancel} type="button">
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main page component ───────────────────────────────────────────────────────
 export default function BudgetPlannerPage({ apiBase = "", token = "", displayCurrency = "USD" }) {
   const [step, setStep] = useState(STEPS.IDLE);
@@ -636,7 +882,10 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     } catch (err) { setError(err.message); setStep(STEPS.QUESTIONS); }
   }
 
-  async function handleSave() {
+  async function handleSave(planArg, fallbackStep = STEPS.REVIEW) {
+    // planArg is a parsed plan only when it has months (REVIEW passes a click event)
+    const planToSave = planArg?.months ? planArg : parsedPlan;
+    if (planArg?.months) setParsedPlan(planArg);
     setError(null);
     setStep(STEPS.SAVING);
     const ctrl = new AbortController();
@@ -645,7 +894,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       const res = await fetch(`${apiBase}/api/budget-planner/save`, {
         method: "POST",
         headers: { ...authHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ parsedPlan }),
+        body: JSON.stringify({ parsedPlan: planToSave }),
         signal: ctrl.signal,
       });
       clearTimeout(timeout);
@@ -654,12 +903,12 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
       const rd = await fetch(`${apiBase}/api/budget-planner`, { headers: authHeaders() })
         .then((r) => r.json()).then((j) => j.data ?? j);
       setPlans(rd.plans ?? []);
-      setActivePlan(rd.activePlan ?? { parsedPlan, roadmap: [] });
+      setActivePlan(rd.activePlan ?? { parsedPlan: planToSave, roadmap: [] });
       setStep(STEPS.ROADMAP);
     } catch (err) {
       clearTimeout(timeout);
       setError(err.name === "AbortError" ? "Save timed out." : err.message);
-      setStep(STEPS.REVIEW);
+      setStep(fallbackStep);
     }
   }
 
@@ -743,6 +992,17 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           </div>
         </section>
       </div>
+    );
+  }
+
+  // ── BUILD (manual) ────────────────────────────────────────────────────────
+  if (step === STEPS.BUILD) {
+    return (
+      <ManualBuilder
+        displayCurrency={displayCurrency}
+        onCancel={() => { setError(null); setStep(STEPS.IDLE); }}
+        onSave={(plan) => handleSave(plan, STEPS.BUILD)}
+      />
     );
   }
 
@@ -860,7 +1120,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
 
         {error && <p className="text-sm px-1" style={{ color: "var(--hb-bad-text)" }}>{error}</p>}
         <div className="flex flex-col gap-3 sm:flex-row">
-          <ActionButton onClick={handleSave} className="flex-1">Save &amp; view roadmap</ActionButton>
+          <ActionButton onClick={() => handleSave()} className="flex-1">Save &amp; view roadmap</ActionButton>
           <button
             className="hb-button-secondary inline-flex items-center justify-center rounded-[1.2rem] px-5 py-3 font-medium transition"
             onClick={() => setStep(STEPS.IDLE)} type="button">
@@ -881,13 +1141,41 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
           </span>
           <div>
             <h2 className="text-xl font-semibold sm:text-2xl">Budget Planner</h2>
-            <p className="text-sm" style={{ color: "var(--hb-ink-soft)" }}>Import a spreadsheet and get a personalised roadmap.</p>
+            <p className="text-sm" style={{ color: "var(--hb-ink-soft)" }}>Build a budget from scratch or import a spreadsheet — then track your roadmap.</p>
           </div>
         </div>
       </section>
 
+      {/* Build from scratch — primary path */}
+      <button
+        type="button"
+        onClick={() => { setError(null); setStep(STEPS.BUILD); }}
+        className="hb-surface-card w-full text-left rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6 transition active:scale-[0.99] relative overflow-hidden"
+      >
+        <div className="pointer-events-none absolute inset-0"
+          style={{ background: "radial-gradient(ellipse at 95% -10%, var(--hb-accent-soft-bg), transparent 55%)" }} />
+        <div className="relative flex items-center gap-3">
+          <span className="inline-flex rounded-2xl p-2.5" style={{ background: "var(--hb-accent-soft-bg)" }}>
+            <PencilLine className="h-5 w-5" style={{ color: "var(--hb-accent-text)" }} />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold">Build a budget from scratch</h3>
+            <p className="text-sm" style={{ color: "var(--hb-ink-soft)" }}>
+              Add your income and expenses — see what's left each month.
+            </p>
+          </div>
+          <ArrowRight className="h-5 w-5 shrink-0" style={{ color: "var(--hb-accent-text)" }} />
+        </div>
+      </button>
+
+      <div className="flex items-center gap-3 px-1">
+        <div className="h-px flex-1" style={{ background: "var(--hb-border)" }} />
+        <span className="text-xs font-medium uppercase tracking-wider" style={{ color: "var(--hb-ink-soft)" }}>or import</span>
+        <div className="h-px flex-1" style={{ background: "var(--hb-border)" }} />
+      </div>
+
       <section className="hb-surface-card rounded-[1.5rem] p-4 sm:rounded-[1.75rem] sm:p-6">
-        <h3 className="mb-3 font-semibold">Upload your budget</h3>
+        <h3 className="mb-3 font-semibold">Upload a spreadsheet</h3>
         <p className="mb-4 text-sm" style={{ color: "var(--hb-ink-soft)" }}>
           Excel or CSV. Parsed instantly in your browser — Gemini AI handles anything unusual.
         </p>
