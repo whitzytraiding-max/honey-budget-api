@@ -209,6 +209,7 @@ function MonthEditPanel({ monthPlan, currency, saving, onCancel, onSave }) {
 function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew, onImportGoal, importGoalBusy, importGoalDone, onUpdatePlan }) {
   const cur = currentYYYYMM();
   const totalPlanned = roadmap.reduce((s, m) => s + (m.planned?.savings ?? 0), 0);
+  const projectedPct = goalAmount > 0 ? Math.min(100, Math.round((totalPlanned / goalAmount) * 100)) : 0;
 
   // Auto-open current month
   const [expanded, setExpanded] = useState(() => cur);
@@ -286,25 +287,47 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
 
         {goalAmount > 0 ? (
           <div className="relative">
-            <div className="flex items-end justify-between mb-2">
+            {/* Goal target */}
+            <div className="flex items-center gap-1.5 mb-1">
+              <Target className="h-3 w-3" style={{ color: "var(--hb-accent-text)" }} />
+              <span className="text-xs font-semibold uppercase tracking-wider"
+                style={{ color: "var(--hb-ink-soft)" }}>
+                {plan.goalDescription || "Savings goal"}
+              </span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight mb-3">{fmt(goalAmount, currency)}</p>
+
+            {/* Projected (your plan) vs Actual (logged) */}
+            <div className="space-y-3">
               <div>
-                <div className="flex items-center gap-1.5 mb-1">
-                  <Target className="h-3 w-3" style={{ color: "var(--hb-accent-text)" }} />
-                  <span className="text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: "var(--hb-ink-soft)" }}>
-                    {plan.goalDescription || "Savings goal"}
+                <div className="flex items-end justify-between mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--hb-ink-soft)" }}>
+                    Projected · your plan
+                  </span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "var(--hb-accent-text)" }}>
+                    {fmt(totalPlanned, currency)} · {projectedPct}%
                   </span>
                 </div>
-                <p className="text-2xl font-bold tracking-tight">{fmt(goalAmount, currency)}</p>
+                <div className="h-2.5 rounded-full overflow-hidden" style={{ background: "var(--hb-track)" }}>
+                  <div className="h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${projectedPct}%`, background: "var(--hb-accent)" }} />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-bold tracking-tight" style={{ color: "var(--hb-accent-text)" }}>{goalPct}%</p>
-                <p className="text-xs" style={{ color: "var(--hb-ink-soft)" }}>{fmt(currentSavings, currency)} saved</p>
+
+              <div>
+                <div className="flex items-end justify-between mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--hb-ink-soft)" }}>
+                    Actual · logged
+                  </span>
+                  <span className="text-sm font-bold tabular-nums" style={{ color: "var(--hb-good-text)" }}>
+                    {fmt(currentSavings, currency)} · {goalPct}%
+                  </span>
+                </div>
+                <div className="hb-progress-track h-2.5 rounded-full overflow-hidden">
+                  <div className="hb-progress-fill h-full rounded-full transition-all duration-1000"
+                    style={{ width: `${goalPct}%` }} />
+                </div>
               </div>
-            </div>
-            <div className="hb-progress-track h-3 rounded-full overflow-hidden">
-              <div className="hb-progress-fill h-full rounded-full transition-all duration-1000"
-                style={{ width: `${goalPct}%` }} />
             </div>
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="rounded-full px-3 py-1 text-xs font-semibold"
