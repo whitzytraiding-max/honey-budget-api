@@ -2080,6 +2080,14 @@ function createPrismaBudgetRepository({ prisma }) {
       });
     },
 
+    async updateBudgetPlan({ planId, userId, name, startMonth, endMonth, planJson, goalAmount, goalCurrency }) {
+      await prisma.budgetPlan.updateMany({
+        where: { id: planId, userId },
+        data: { name, startMonth, endMonth, planJson, goalAmount: goalAmount ?? null, goalCurrency: goalCurrency ?? null },
+      });
+      return prisma.budgetPlan.findFirst({ where: { id: planId, userId } });
+    },
+
     async deleteBudgetPlan({ planId, userId }) {
       await prisma.budgetPlan.deleteMany({
         where: { id: planId, userId },

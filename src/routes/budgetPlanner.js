@@ -111,6 +111,35 @@ export function createBudgetPlannerRoutes({ budgetRepository, budgetPlannerServi
     }),
   );
 
+  // Update an existing plan (e.g. edited month) — replaces planJson
+  router.patch(
+    "/api/budget-planner/:id",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const planId = Number(request.params.id);
+      if (!planId) throw new HttpError(400, "INVALID_ID", "Invalid plan ID.");
+
+      const { parsedPlan } = request.body ?? {};
+      if (!parsedPlan || !parsedPlan.name || !parsedPlan.startMonth || !parsedPlan.months?.length) {
+        throw new HttpError(400, "INVALID_PLAN", "Invalid plan data.");
+      }
+
+      const updated = await budgetRepository.updateBudgetPlan({
+        planId,
+        userId: request.user.id,
+        name: String(parsedPlan.name),
+        startMonth: String(parsedPlan.startMonth),
+        endMonth: String(parsedPlan.endMonth),
+        planJson: JSON.stringify(parsedPlan),
+        goalAmount: parsedPlan.goalAmount ?? null,
+        goalCurrency: parsedPlan.currency ?? request.user.incomeCurrencyCode ?? "USD",
+      });
+      if (!updated) throw new HttpError(404, "NOT_FOUND", "Plan not found.");
+
+      sendData(response, 200, { plan: updated });
+    }),
+  );
+
   // List plans + compute roadmap actuals
   router.get(
     "/api/budget-planner",

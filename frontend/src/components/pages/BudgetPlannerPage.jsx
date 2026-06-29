@@ -100,12 +100,138 @@ const CHECKIN_OPTIONS = [
   { value: "ahead",    emoji: "🔥",  label: "Ahead",    color: "var(--hb-accent)", bg: "var(--hb-accent-soft-bg)" },
 ];
 
-function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew, onImportGoal, importGoalBusy, importGoalDone }) {
+// ── Per-month edit panel (inside an expanded roadmap card) ────────────────────
+function MonthEditPanel({ monthPlan, currency, saving, onCancel, onSave }) {
+  const idRef = useRef(0);
+  const [income, setIncome] = useState(monthPlan.income != null ? String(monthPlan.income) : "");
+  const [rows, setRows] = useState(() =>
+    (monthPlan.categories?.length ? monthPlan.categories : [{ name: "", amount: "" }])
+      .map((c) => ({ id: idRef.current++, name: c.name ?? "", amount: c.amount != null ? String(c.amount) : "" })),
+  );
+
+  function addRow(presetName = "") { setRows((rs) => [...rs, { id: idRef.current++, name: presetName, amount: "" }]); }
+  function updateRow(id, field, value) { setRows((rs) => rs.map((r) => (r.id === id ? { ...r, [field]: value } : r))); }
+  function removeRow(id) { setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.id !== id) : rs)); }
+
+  const incomeNum = Number(income) || 0;
+  const totalExpenses = rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+  const leftOver = incomeNum - totalExpenses;
+  const usedCategories = new Set(rows.map((r) => r.name.trim()).filter(Boolean));
+
+  function handleSave() {
+    const cats = rows
+      .map((r) => ({ name: (r.name || "").trim() || "Other", amount: Number(r.amount) || 0 }))
+      .filter((c) => c.amount > 0);
+    const merged = {};
+    for (const c of cats) merged[c.name] = (merged[c.name] ?? 0) + c.amount;
+    const mergedCats = Object.entries(merged).map(([n, a]) => ({ name: n, amount: a }));
+    const te = mergedCats.reduce((s, c) => s + c.amount, 0);
+    onSave({
+      ...monthPlan,
+      income: incomeNum,
+      categories: mergedCats,
+      totalExpenses: te,
+      plannedSavings: Math.max(0, incomeNum - te),
+    });
+  }
+
+  return (
+    <div className="pt-3 space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--hb-ink-soft)" }}>
+        Editing {monthLabel(monthPlan.month)}
+      </p>
+
+      <div className="rounded-[1rem] px-3 py-2.5" style={{ background: "var(--hb-good-soft-bg)", border: "1px solid var(--hb-border)" }}>
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>Income</p>
+        <input type="number" inputMode="decimal" min="0" step="0.01" value={income}
+          onChange={(e) => setIncome(e.target.value)} placeholder="0.00"
+          className="w-full bg-transparent text-base font-bold outline-none tabular-nums" style={{ color: "var(--hb-text)" }} />
+      </div>
+
+      <div className="space-y-2">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center gap-2">
+            <input list="hb-budget-categories-edit" value={r.name} onChange={(e) => updateRow(r.id, "name", e.target.value)} placeholder="Expense name"
+              className="flex-1 min-w-0 rounded-[0.8rem] px-3 py-2 text-sm outline-none"
+              style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text)" }} />
+            <input type="number" inputMode="decimal" min="0" step="0.01" value={r.amount} onChange={(e) => updateRow(r.id, "amount", e.target.value)} placeholder="0.00"
+              className="w-24 shrink-0 rounded-[0.8rem] px-3 py-2 text-sm font-semibold outline-none tabular-nums text-right"
+              style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-text)" }} />
+            <button type="button" onClick={() => removeRow(r.id)} className="shrink-0 p-2 rounded-lg transition opacity-40 hover:opacity-90"
+              style={{ color: "var(--hb-ink-soft)" }} disabled={rows.length <= 1} title="Remove">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <datalist id="hb-budget-categories-edit">
+        {COMMON_CATEGORIES.map((c) => <option key={c} value={c} />)}
+      </datalist>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => addRow()}
+          className="inline-flex items-center gap-1.5 rounded-[0.8rem] px-3 py-1.5 text-xs font-semibold transition"
+          style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)" }}>
+          <Plus className="h-3.5 w-3.5" /> Add expense
+        </button>
+        {COMMON_CATEGORIES.filter((c) => !usedCategories.has(c)).map((c) => (
+          <button key={c} type="button" onClick={() => addRow(c)}
+            className="rounded-full px-2.5 py-1 text-xs font-medium transition opacity-80 hover:opacity-100"
+            style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-ink-soft)" }}>
+            + {c}
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-[1rem] px-3 py-2.5 flex justify-between items-center"
+        style={{ background: leftOver >= 0 ? "var(--hb-good-soft-bg)" : "var(--hb-bad-soft-bg)" }}>
+        <span className="text-xs font-semibold">Left over</span>
+        <span className="text-base font-bold tabular-nums"
+          style={{ color: leftOver >= 0 ? "var(--hb-good-text)" : "var(--hb-bad-text)" }}>{fmt(leftOver, currency)}</span>
+      </div>
+
+      <div className="flex gap-2">
+        <button type="button" onClick={handleSave} disabled={saving}
+          className="flex-1 rounded-[1rem] py-2.5 text-sm font-bold text-white transition active:scale-[0.98] disabled:opacity-50"
+          style={{ background: "var(--hb-accent)" }}>
+          {saving ? "Saving…" : "Save month"}
+        </button>
+        <button type="button" onClick={onCancel} disabled={saving}
+          className="rounded-[1rem] px-4 py-2.5 text-sm font-medium transition"
+          style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)", color: "var(--hb-ink-soft)" }}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, goalPct, displayCurrency, onDelete, activePlanId, onImportNew, onImportGoal, importGoalBusy, importGoalDone, onUpdatePlan }) {
   const cur = currentYYYYMM();
   const totalPlanned = roadmap.reduce((s, m) => s + (m.planned?.savings ?? 0), 0);
 
   // Auto-open current month
   const [expanded, setExpanded] = useState(() => cur);
+  const [editingMonth, setEditingMonth] = useState(null);
+  const [savingMonth, setSavingMonth] = useState(false);
+
+  // Persist an edited month back into the plan, recompute start/end + goal default
+  async function saveMonth(monthKey, updatedMonth) {
+    const months = (plan.months ?? []).map((pm) => (pm.month === monthKey ? updatedMonth : pm));
+    const updatedPlan = {
+      ...plan,
+      startMonth: months[0]?.month ?? plan.startMonth,
+      endMonth: months[months.length - 1]?.month ?? plan.endMonth,
+      months,
+    };
+    setSavingMonth(true);
+    try {
+      await onUpdatePlan(updatedPlan);
+    } finally {
+      setSavingMonth(false);
+      setEditingMonth(null);
+    }
+  }
 
   // Per-month manual check-ins stored in localStorage
   const checkinKey = `hb_checkins_${activePlanId}`;
@@ -250,6 +376,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
             const isOpen = expanded === m.month;
 
             const b = badge(m);
+            const planMonth = (plan.months ?? []).find((pm) => pm.month === m.month) ?? null;
             const plannedSav = m.planned?.savings ?? 0;
             const actualSav = m.actual?.savings ?? null;
             const savPct = plannedSav > 0 && actualSav !== null
@@ -418,7 +545,19 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                     )}
 
                     {/* ── EXPANDED DETAIL ── */}
-                    {isOpen && (
+                    {isOpen && editingMonth === m.month && planMonth && (
+                      <div className="px-3.5 pb-4" style={{ borderTop: "1px solid var(--hb-border)" }}>
+                        <MonthEditPanel
+                          monthPlan={planMonth}
+                          currency={currency}
+                          saving={savingMonth}
+                          onCancel={() => setEditingMonth(null)}
+                          onSave={(updated) => saveMonth(m.month, updated)}
+                        />
+                      </div>
+                    )}
+
+                    {isOpen && editingMonth !== m.month && (
                       <div className="px-3.5 pb-4" style={{ borderTop: "1px solid var(--hb-border)" }}>
                         {/* 3-stat row */}
                         <div className="grid grid-cols-3 gap-2 pt-3 mb-3">
@@ -429,7 +568,7 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                               color: "var(--hb-good-text)",
                             },
                             {
-                              label: "Spent",
+                              label: m.actual ? "Spent" : "Budgeted",
                               value: fmt(
                                 m.actual ? m.actual.totalExpenses : m.planned.totalExpenses,
                                 currency,
@@ -454,22 +593,42 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                           ))}
                         </div>
 
-                        {/* Category bars */}
-                        {m.planned.categories?.length > 0 && (
-                          <div className="space-y-2 mt-1">
+                        {/* Full expense list (planned, with actual per category when available) */}
+                        {m.planned.categories?.length > 0 ? (
+                          <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--hb-border)" }}>
+                            <div className="flex items-center justify-between px-3 py-2"
+                              style={{ background: "var(--hb-surface-soft)" }}>
+                              <span className="text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>
+                                Expenses
+                              </span>
+                              {m.actual && (
+                                <span className="text-[10px] font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-ink-soft)" }}>
+                                  Planned · Actual
+                                </span>
+                              )}
+                            </div>
                             {m.planned.categories
                               .slice()
                               .sort((a, b) => b.amount - a.amount)
-                              .slice(0, 5)
                               .map((cat) => {
+                                const actualCat = m.actual?.categories?.find((c) => c.name === cat.name);
                                 const pct = m.planned.totalExpenses > 0
                                   ? Math.round((cat.amount / m.planned.totalExpenses) * 100)
                                   : 0;
+                                const over = actualCat && actualCat.amount > cat.amount * 1.05;
                                 return (
-                                  <div key={cat.name}>
-                                    <div className="flex justify-between text-xs mb-1">
-                                      <span style={{ color: "var(--hb-ink-soft)" }}>{cat.name}</span>
-                                      <span className="font-medium tabular-nums">{fmt(cat.amount, currency)}</span>
+                                  <div key={cat.name} className="px-3 py-2"
+                                    style={{ borderTop: "1px solid var(--hb-border)" }}>
+                                    <div className="flex justify-between items-center text-xs mb-1">
+                                      <span style={{ color: "var(--hb-text)" }}>{cat.name}</span>
+                                      <span className="tabular-nums font-medium">
+                                        {fmt(cat.amount, currency)}
+                                        {m.actual && (
+                                          <span style={{ color: over ? "var(--hb-bad)" : "var(--hb-ink-soft)" }}>
+                                            {" · "}{fmt(actualCat?.amount ?? 0, currency)}
+                                          </span>
+                                        )}
+                                      </span>
                                     </div>
                                     <div className="h-1.5 rounded-full overflow-hidden"
                                       style={{ background: "var(--hb-track)" }}>
@@ -483,7 +642,42 @@ function TimelineRoadmap({ roadmap, plan, currency, goalAmount, currentSavings, 
                                   </div>
                                 );
                               })}
+                            <div className="flex justify-between px-3 py-2 text-xs font-bold"
+                              style={{ borderTop: "1px solid var(--hb-border)", background: "var(--hb-surface-soft)" }}>
+                              <span>Total expenses</span>
+                              <span className="tabular-nums">{fmt(m.planned.totalExpenses, currency)}</span>
+                            </div>
                           </div>
+                        ) : (
+                          <p className="text-xs py-2" style={{ color: "var(--hb-ink-soft)" }}>
+                            No expenses listed for this month yet.
+                          </p>
+                        )}
+
+                        {/* Savings row */}
+                        <div className="mt-2 rounded-xl px-3 py-2.5 flex justify-between items-center"
+                          style={{ background: "var(--hb-good-soft-bg)" }}>
+                          <span className="text-xs font-semibold" style={{ color: "var(--hb-ink-soft)" }}>
+                            {actualSav !== null ? "Saved this month" : "Planned savings"}
+                          </span>
+                          <span className="text-sm font-bold tabular-nums"
+                            style={{ color: actualSav !== null
+                              ? (actualSav >= plannedSav ? "var(--hb-good-text)" : "var(--hb-bad-text)")
+                              : "var(--hb-good-text)" }}>
+                            {fmt(actualSav !== null ? actualSav : plannedSav, currency)}
+                          </span>
+                        </div>
+
+                        {/* Edit this month */}
+                        {planMonth && onUpdatePlan && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingMonth(m.month)}
+                            className="mt-3 w-full inline-flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition"
+                            style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)" }}
+                          >
+                            <PencilLine className="h-4 w-4" /> Edit this month
+                          </button>
                         )}
 
                         {/* Cumulative chip */}
@@ -939,6 +1133,25 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
     setImportGoalBusy(false);
   }
 
+  async function handleUpdatePlan(updatedPlan) {
+    if (!activePlan?.id) return;
+    try {
+      const res = await fetch(`${apiBase}/api/budget-planner/${activePlan.id}`, {
+        method: "PATCH",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ parsedPlan: updatedPlan }),
+      });
+      if (!res.ok) throw new Error("Update failed.");
+      const rd = await fetch(`${apiBase}/api/budget-planner`, { headers: authHeaders() })
+        .then((r) => r.json()).then((j) => j.data ?? j);
+      setPlans(rd.plans ?? []);
+      setActivePlan(rd.activePlan ?? { ...activePlan, parsedPlan: updatedPlan });
+    } catch {
+      // Keep the edit visible locally even if the refresh failed
+      setActivePlan((ap) => (ap ? { ...ap, parsedPlan: updatedPlan } : ap));
+    }
+  }
+
   function onDrop(e) {
     e.preventDefault(); setDragOver(false);
     const file = e.dataTransfer.files[0];
@@ -970,6 +1183,7 @@ export default function BudgetPlannerPage({ apiBase = "", token = "", displayCur
         onImportGoal={handleImportGoal}
         importGoalBusy={importGoalBusy}
         importGoalDone={importGoalDone}
+        onUpdatePlan={handleUpdatePlan}
       />
     );
   }
