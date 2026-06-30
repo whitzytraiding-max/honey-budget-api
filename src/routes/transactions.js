@@ -29,8 +29,34 @@ import {
   createPartnerExpenseNotification,
 } from "../lib/builders.js";
 
-export function createTransactionRoutes({ budgetRepository, exchangeRateService, requireAuth }) {
+export function createTransactionRoutes({ budgetRepository, exchangeRateService, insightsService, requireAuth }) {
   const router = express.Router();
+
+  // Scan a receipt photo → extract { amount, currencyCode, category, description, date }.
+  // The client compresses the image first; the body parser limit is raised in app.js
+  // to accommodate the base64 image payload.
+  router.post(
+    "/api/transactions/scan-receipt",
+    requireAuth,
+    asyncHandler(async (request, response) => {
+      const { image, mimeType } = request.body ?? {};
+      if (!image || typeof image !== "string") {
+        throw new HttpError(400, "IMAGE_REQUIRED", "Please attach a receipt photo.");
+      }
+      if (!insightsService?.scanReceipt) {
+        throw new HttpError(503, "SCAN_UNAVAILABLE", "Receipt scanning is unavailable right now.");
+      }
+      try {
+        const result = await insightsService.scanReceipt({
+          imageBase64: image,
+          mimeType: typeof mimeType === "string" ? mimeType : "image/jpeg",
+        });
+        sendData(response, 200, result);
+      } catch (err) {
+        throw new HttpError(422, "SCAN_FAILED", err?.message || "Couldn't read that receipt.");
+      }
+    }),
+  );
 
   router.get(
     "/api/dashboard",

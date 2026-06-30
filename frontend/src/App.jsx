@@ -548,6 +548,7 @@ export default function App() {
             expenseForm={expenses.expenseForm}
             onExpenseChange={expenses.updateExpenseForm}
             onExpenseSubmit={expenses.handleExpenseSubmit}
+            onScanReceipt={expenses.scanReceipt}
             expenseBusy={expenses.expenseBusy}
             expenseSuccessCount={expenses.expenseSuccessCount}
             transactions={transactions}

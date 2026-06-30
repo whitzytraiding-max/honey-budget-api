@@ -35,7 +35,7 @@ function createApp({
   resetPasswordUrlBase = process.env.RESET_PASSWORD_URL_BASE || process.env.APP_BASE_URL || "",
   jwtSecret = process.env.JWT_SECRET || "",
   jwtExpiresIn = process.env.JWT_EXPIRES_IN || "30d",
-  jsonParser = express.json(),
+  jsonParser = express.json({ limit: "10mb" }),
 }) {
   const isProduction = process.env.NODE_ENV === "production";
   const effectiveResetPasswordUrlBase =

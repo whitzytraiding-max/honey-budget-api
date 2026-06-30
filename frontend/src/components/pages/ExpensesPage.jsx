@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  CalendarDays, Car, ChevronDown, Coffee, Cookie, Delete,
-  Heart, Home, Pencil, Plane, ShoppingBag, ShoppingBasket,
-  Sparkles, Trash2, Utensils, Wallet, X,
+  CalendarDays, Camera, Car, ChevronDown, Coffee, Cookie, Delete,
+  Heart, Home, Loader2, Pencil, Plane, ShoppingBag, ShoppingBasket,
+  SlidersHorizontal, Sparkles, Trash2, Utensils, Wallet, X,
 } from "lucide-react";
 import { useLanguage } from "../../i18n/LanguageProvider.jsx";
 import { currency, getCurrencyOptions } from "../../lib/format.js";
@@ -30,6 +30,27 @@ const CATEGORY_GRID = [
   { label: "Medical",   icon: Heart,           value: "Medical" },
   { label: "Travel",    icon: Plane,           value: "Travel" },
 ];
+
+/* Resize + JPEG-compress an image File to keep the OCR upload small */
+function fileToCompressedBase64(file, maxDim = 1280, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      if (width >= height && width > maxDim) { height = Math.round((height * maxDim) / width); width = maxDim; }
+      else if (height > maxDim) { width = Math.round((width * maxDim) / height); height = maxDim; }
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      resolve({ base64: dataUrl.split(",")[1], mimeType: "image/jpeg" });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't load that image.")); };
+    img.src = url;
+  });
+}
 
 function formatDateDisplay(isoDate) {
   if (!isoDate) return "Select date";
@@ -122,6 +143,7 @@ function ExpensesPage({
   expenseForm,
   onExpenseChange,
   onExpenseSubmit,
+  onScanReceipt,
   expenseBusy,
   expenseSuccessCount = 0,
   transactions,
@@ -141,9 +163,12 @@ function ExpensesPage({
 
   /* Numpad amount state — synced to expenseForm.amount */
   const [numStr, setNumStr] = useState(expenseForm.amount ? String(expenseForm.amount) : "");
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showOptions, setShowOptions] = useState(false);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [loggedFlash, setLoggedFlash] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanFlash, setScanFlash] = useState(false);
+  const fileInputRef = useRef(null);
 
   /* Available expense currencies derived from the user's two configured currencies */
   const expenseCurrencies = [...new Set([baseCurrencyCode, currencyCode].filter(Boolean))];
@@ -188,6 +213,37 @@ function ExpensesPage({
     const n = parseFloat(numStr);
     if (isNaN(n)) return "0.00";
     return n.toFixed(numStr.includes(".") && !numStr.endsWith(".") ? 2 : undefined).replace(/(\.\d?)$/, (m) => m.padEnd(3, "0")).slice(0, 10);
+  }
+
+  /* Scan a receipt photo → prefill the form with the parsed total + category */
+  async function handleReceiptFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // allow re-picking the same file
+    if (!file || !onScanReceipt) return;
+    setScanning(true);
+    setScanFlash(false);
+    try {
+      const { base64, mimeType } = await fileToCompressedBase64(file);
+      const result = await onScanReceipt(base64, mimeType);
+      if (result?.amount) {
+        const amt = String(result.amount);
+        setNumStr(amt);
+        onExpenseChange({ target: { name: "amount", value: amt } });
+        if (result.category) onExpenseChange({ target: { name: "category", value: result.category } });
+        if (result.description) onExpenseChange({ target: { name: "description", value: result.description } });
+        if (result.currencyCode && expenseCurrencies.includes(result.currencyCode)) {
+          onExpenseChange({ target: { name: "currencyCode", value: result.currencyCode } });
+        }
+        if (result.date) onExpenseChange({ target: { name: "date", value: result.date } });
+        hapticSuccess();
+        setScanFlash(true);
+        setTimeout(() => setScanFlash(false), 4000);
+      }
+    } catch {
+      /* onScanReceipt surfaces API errors via pageError; ignore compression hiccups */
+    } finally {
+      setScanning(false);
+    }
   }
 
   /* ── Recent tab ─────────────────────────────────────────────────────── */
@@ -265,6 +321,7 @@ function ExpensesPage({
       <input type="hidden" name="amount" value={numStr || "0"} readOnly />
       <input type="hidden" name="currencyCode" value={expenseForm.currencyCode || ""} readOnly />
       <input type="hidden" name="category" value={expenseForm.category || "Dining"} readOnly />
+      <input type="hidden" name="description" value={expenseForm.description || ""} readOnly />
 
       {/* Editing banner */}
       {editingTransactionId ? (
@@ -277,6 +334,47 @@ function ExpensesPage({
             <X className="h-4 w-4" />
             {t("expenses.cancelEdit")}
           </button>
+        </div>
+      ) : null}
+
+      {/* Quick actions — Scan receipt + More options (promoted to the top) */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => { hapticLight(); fileInputRef.current?.click(); }}
+          disabled={scanning}
+          className="flex items-center justify-center gap-2 rounded-[1.2rem] py-3 text-sm font-semibold transition active:scale-[0.98] disabled:opacity-60"
+          style={{ background: "var(--hb-accent-soft-bg)", color: "var(--hb-accent-text)", border: "1px solid var(--hb-accent-line)" }}
+        >
+          {scanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          {scanning ? "Scanning…" : "Scan receipt"}
+        </button>
+        <button
+          type="button"
+          onClick={() => { hapticLight(); setShowOptions(true); }}
+          className="flex items-center justify-center gap-2 rounded-[1.2rem] py-3 text-sm font-semibold transition active:scale-[0.98]"
+          style={{ background: "var(--hb-surface-soft)", color: "var(--hb-text)", border: "1px solid var(--hb-border)" }}
+        >
+          <SlidersHorizontal className="h-4 w-4" /> More options
+        </button>
+      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleReceiptFile}
+      />
+
+      {/* Scan success banner */}
+      {scanFlash ? (
+        <div
+          className="flex items-center gap-2 rounded-[1.2rem] px-4 py-2.5 text-sm"
+          style={{ background: "var(--hb-good-soft-bg)", border: "1px solid var(--hb-good)", color: "var(--hb-good-text)" }}
+        >
+          <Sparkles className="h-4 w-4 shrink-0" />
+          <span>Scanned ✓ — check the details below, then tap Add.</span>
         </div>
       ) : null}
 
@@ -452,21 +550,30 @@ function ExpensesPage({
             <NumpadKey label="+/-" onPress={handleNumKey} />
           </div>
 
-          {/* Advanced options (collapsed) */}
-          <button
-            type="button"
-            className="text-xs font-medium text-center py-1 transition"
-            style={{ color: "var(--hb-text-muted)" }}
-            onClick={() => setShowAdvanced((v) => !v)}
-          >
-            {showAdvanced ? "▲ Hide options" : "▼ More options"}
-          </button>
-
-          {showAdvanced && (
+          {/* More options — bottom-sheet popup (kept inside <form> so submit reads these fields) */}
+          {showOptions && (
             <div
-              className="rounded-[1.35rem] p-4 space-y-4"
-              style={{ background: "var(--hb-surface-soft)", border: "1px solid var(--hb-border)" }}
+              className="fixed inset-0 z-50 flex items-end justify-center"
+              style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}
+              onClick={() => setShowOptions(false)}
             >
+              <div
+                className="w-full max-w-md rounded-t-[1.75rem] p-5 pb-8 space-y-4 max-h-[85vh] overflow-y-auto"
+                style={{ background: "var(--hb-surface-strong)", borderTop: "1px solid var(--hb-border)", boxShadow: "var(--hb-shadow)" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold" style={{ color: "var(--hb-text)" }}>More options</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowOptions(false)}
+                    className="p-1.5 rounded-full transition"
+                    style={{ background: "var(--hb-surface-soft)" }}
+                  >
+                    <X className="h-4 w-4" style={{ color: "var(--hb-text-muted)" }} />
+                  </button>
+                </div>
+
               {/* Note */}
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.15em]" style={{ color: "var(--hb-text-muted)" }}>
@@ -557,6 +664,16 @@ function ExpensesPage({
                   </div>
                 );
               })()}
+
+                <button
+                  type="button"
+                  onClick={() => setShowOptions(false)}
+                  className="w-full rounded-[1.2rem] py-3 text-sm font-bold transition active:scale-[0.98]"
+                  style={{ background: "var(--hb-accent-strong)", color: "var(--hb-accent-contrast)" }}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           )}
     </form>

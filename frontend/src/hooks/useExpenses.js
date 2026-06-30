@@ -46,6 +46,21 @@ export function useExpenses({ appData, showConfirm, navigate }) {
     setExpenseForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
   }
 
+  // Send a compressed receipt photo to the vision OCR endpoint.
+  // Returns { amount, currencyCode, category, description, date } or null on failure.
+  async function scanReceipt(imageBase64, mimeType) {
+    setPageError("");
+    try {
+      return await apiFetch("/api/transactions/scan-receipt", {
+        method: "POST",
+        body: JSON.stringify({ image: imageBase64, mimeType }),
+      });
+    } catch (err) {
+      setPageError(err.message || "Couldn't read the receipt — try a clearer, flatter photo.");
+      return null;
+    }
+  }
+
   function resetExpenseEditor() {
     setEditingTransactionId(null);
     setExpenseForm({ ...TRANSACTION_FIELDS, currencyCode: getDefaultExpenseCurrency(baseCurrencyCode), date: getTodayLocalIso() });
@@ -161,5 +176,6 @@ export function useExpenses({ appData, showConfirm, navigate }) {
     handleEditTransaction,
     handleDeleteTransaction,
     handleExpenseSubmit,
+    scanReceipt,
   };
 }

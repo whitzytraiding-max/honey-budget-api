@@ -987,8 +987,90 @@ ${financialBrief}`;
     }
   }
 
-  return { getAiInsights, chatWithTools };
+  // ── RECEIPT SCAN (vision OCR) ───────────────────────────────────────────────
+  // Reads a receipt photo and extracts the final total + a best-guess category.
+  // Prefers a Groq vision model (free, reliable); falls back to Gemini vision.
+  async function scanReceipt({ imageBase64, mimeType = "image/jpeg" }) {
+    if (!imageBase64) throw new Error("No image provided.");
+
+    const today = new Date().toISOString().slice(0, 10);
+    const prompt = `You are a receipt-reading assistant. Read this receipt photo and return the FINAL amount the customer paid — the grand TOTAL at the bottom (after tax/tip/discounts), NOT a subtotal or any single line item.
+
+Pick the single best category from EXACTLY this list:
+${RECEIPT_CATEGORIES.join(", ")}
+
+Rules:
+- "amount": the final total as a plain number (no currency symbol, no thousands separators).
+- "currencyCode": ISO 4217 code shown on the receipt (e.g. USD, MMK, EUR, GBP, THB). If none is visible, use null.
+- "category": one value from the list above that best matches the merchant/items. A supermarket = Groceries; a restaurant/cafe = Dining; a bar = Drinks; a pharmacy/clinic = Medical; fuel station = Fuel; etc.
+- "description": the merchant/store name if visible, otherwise a 2-3 word summary.
+- "date": the purchase date in YYYY-MM-DD if printed on the receipt, otherwise "${today}".
+
+Return ONLY valid JSON, no markdown, no commentary:
+{"amount": number, "currencyCode": string|null, "category": string, "description": string, "date": "YYYY-MM-DD"}`;
+
+    let rawText = "";
+
+    if (groqClient) {
+      const visionModel = process.env.GROQ_VISION_MODEL || "meta-llama/llama-4-scout-17b-16e-instruct";
+      const completion = await groqClient.chat.completions.create({
+        model: visionModel,
+        max_tokens: 400,
+        temperature: 0,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            { type: "image_url", image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+          ],
+        }],
+      });
+      rawText = completion.choices?.[0]?.message?.content?.trim() ?? "";
+    } else if (geminiClient) {
+      const gModel = geminiClient.getGenerativeModel({ model: geminiModel });
+      const result = await gModel.generateContent([
+        { text: prompt },
+        { inlineData: { mimeType, data: imageBase64 } },
+      ]);
+      rawText = result.response.text()?.trim() ?? "";
+    } else {
+      throw new Error("Receipt scanning is unavailable — no vision model configured.");
+    }
+
+    const match = rawText.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("Couldn't read the receipt. Try a clearer, flatter photo.");
+
+    let parsed;
+    try { parsed = JSON.parse(match[0]); } catch { throw new Error("Couldn't read the receipt. Try a clearer, flatter photo."); }
+
+    const amount = Number(String(parsed.amount ?? "").replace(/[^0-9.]/g, ""));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error("Couldn't find a total on that receipt. Try a clearer photo or enter it manually.");
+    }
+
+    const category = RECEIPT_CATEGORIES.includes(parsed.category) ? parsed.category : "Others";
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : today;
+
+    return {
+      amount: Math.round(amount * 100) / 100,
+      currencyCode: typeof parsed.currencyCode === "string" ? parsed.currencyCode.toUpperCase().slice(0, 3) : null,
+      category,
+      description: typeof parsed.description === "string" ? parsed.description.slice(0, 80) : "",
+      date,
+    };
+  }
+
+  return { getAiInsights, chatWithTools, scanReceipt };
 }
+
+// Allowed expense categories (mirrors the frontend CATEGORIES list in ExpensesPage.jsx)
+const RECEIPT_CATEGORIES = [
+  "Dining", "Housing", "Utilities", "Streaming", "Insurance", "Groceries",
+  "Transport", "Fuel", "Debt Payment", "Medical", "Personal Care", "Childcare",
+  "Pets", "Phone & Internet", "Entertainment", "Education", "Shopping",
+  "Gifts", "Taxes", "Emergency", "Travel", "Wellness", "Drinks", "Snacks",
+  "Others",
+];
 
 function heuristicChat(message, context) {
   const q = message.toLowerCase();
