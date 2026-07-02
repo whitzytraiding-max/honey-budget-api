@@ -35,7 +35,11 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   ios: {
-    contentInset: "always",
+    // "never" = don't let WKWebView auto-adjust its own top inset. The web
+    // layer already pads for the notch via body { padding-top: env(safe-area-inset-top) }.
+    // "always" double-counted the status bar and left a stuck gap at the top
+    // after a pull-down/rubber-band overscroll.
+    contentInset: "never",
     backgroundColor: "#1a1108",
     limitsNavigationsToAppBoundDomains: true,
   },
